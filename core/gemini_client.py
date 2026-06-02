@@ -6,20 +6,34 @@ from datetime import datetime
 
 load_dotenv()
 
-client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+# Vertex AI con Application Default Credentials (gcloud auth application-default login)
+# Usa scope cloud-platform — compatible con proyectos de organización Google Cloud
+_project = os.getenv("GOOGLE_CLOUD_PROJECT", "rima-ai-498117")
+client = genai.Client(
+    vertexai=True,
+    project=_project,
+    location="us-central1"
+)
+
 
 class GeminiClient:
-    def __init__(self, model="gemini-2.0-flash"):
+    def __init__(self, model="google/gemini-2.5-flash"):
         self.model_name = model
 
     def generate(self, prompt: str, system_prompt: str = None) -> str:
-        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
+        contents = prompt
+        config = {}
+        if system_prompt:
+            config["system_instruction"] = system_prompt
+
         response = client.models.generate_content(
             model=self.model_name,
-            contents=full_prompt
+            contents=contents,
+            config=config if config else None
         )
-        self._log(prompt, response.text)
-        return response.text
+        text = response.text
+        self._log(prompt, text)
+        return text
 
     def _log(self, prompt: str, response: str):
         log_entry = {
@@ -31,5 +45,6 @@ class GeminiClient:
         os.makedirs("logs", exist_ok=True)
         with open("logs/agent_calls.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(log_entry) + "\n")
+
 
 gemini = GeminiClient()
