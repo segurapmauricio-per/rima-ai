@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Imágenes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
+    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
+    .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
+    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05);border-color:rgba(124,58,237,0.22)}
+    .tab-btn{transition:all .2s;border-bottom:2px solid transparent;padding-bottom:10px}
+    .tab-btn.active{border-bottom-color:#7C3AED;color:#fff}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    .img-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;overflow:hidden;transition:all .15s;cursor:pointer}
+    .img-card:hover{border-color:rgba(124,58,237,0.4);background:rgba(124,58,237,0.05)}
+    .img-card:hover .img-actions{opacity:1}
+    .img-actions{opacity:0;transition:opacity .2s;position:absolute;top:6px;right:6px;display:flex;gap:4px}
+    .drop-zone{border:2px dashed rgba(255,255,255,0.12);border-radius:16px;transition:all .2s}
+    .drop-zone:hover,.drop-zone.dragover{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.05)}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- SIDEBAR (condensado) -->
+<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5">
+  <div class="px-5 py-5 border-b border-white/5">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bp flex items-center justify-center" style="box-shadow:0 0 20px rgba(124,58,237,.22)">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+      </div>
+      <div><span class="font-bold text-base gt">RIMA</span><p class="text-[10px] text-slate-500 -mt-0.5">Marketing AI · LATAM</p></div>
+    </div>
+  </div>
+  <div class="px-4 py-3 border-b border-white/5">
+    <div class="flex items-center gap-2.5 mb-2.5">
+      <div class="w-9 h-9 rounded-full p-[2px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-xs font-bold text-white">FL</span></div></div>
+      <div class="flex-1 min-w-0"><p class="text-xs font-semibold text-white truncate">FitLife Studio</p><p class="text-[10px] text-slate-500">@fitlifestudio_mx</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300">12.4K</p><p class="text-[8px] text-slate-500">Seg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300">48</p><p class="text-[8px] text-slate-500">Msg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p class="text-xs font-bold text-emerald-300">$18K</p><p class="text-[8px] text-slate-500">Ventas</p></div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 py-3 overflow-y-auto space-y-3">
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Comencemos</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z"/></svg></div><span class="text-[11px] text-slate-400">Dashboard</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25"/></svg></div><span class="text-[11px] text-slate-400">Calendario</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-pink-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/></svg></div><span class="text-[11px] text-slate-400">Contenido</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-sky-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></div><span class="text-[11px] text-slate-400">Estudio de mercado</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-blue-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09"/></svg></div><span class="text-[11px] text-slate-400">META Ads</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-emerald-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg></div><span class="text-[11px] text-slate-400">Ventas</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-amber-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8"/></svg></div><span class="text-[11px] text-slate-400">Landing</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Mi Negocio</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75"/></svg></div><span class="text-[11px] text-slate-400">Información de la marca</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-rose-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757"/></svg></div><span class="text-[11px] text-slate-400">Referencias</span></div>
+        <!-- IMÁGENES ACTIVE -->
+        <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(6,182,212,.08));border-color:rgba(124,58,237,.45)">
+          <div class="w-5 h-5 rounded bg-cyan-500/20 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg></div>
+          <span class="text-[11px] font-semibold text-white">Imágenes</span>
+        </div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-orange-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg></div><span class="text-[11px] text-slate-400">Videos</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-slate-500/15 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/></svg></div><span class="text-[11px] text-slate-400">Credenciales</span><span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span></div>
+      </div>
+    </div>
+  </nav>
+  <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2.5">
+    <div class="w-7 h-7 rounded-full p-[1.5px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-[9px] font-bold text-white">FL</span></div></div>
+    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500">Plan Pro</p></div></div>
+    <button class="w-6 h-6 rounded-lg glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Tab bar -->
+  <div class="px-6 pt-5 pb-0 border-b border-white/5 flex-shrink-0">
+    <div class="flex items-end justify-between mb-3">
+      <div>
+        <div class="flex items-center gap-2 mb-0.5">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+          <h1 class="text-sm font-semibold text-white">Imágenes</h1>
+          <span id="header-badge" class="text-[9px] px-2 py-0.5 rounded-full font-medium border" style="background:rgba(6,182,212,.15);color:#67E8F9;border-color:rgba(6,182,212,.3)">0 archivos · 0 MB</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Banco de imágenes para historias y carruseles</p>
+      </div>
+      <button class="bp px-4 py-2 rounded-lg text-white text-xs font-semibold cursor-pointer flex items-center gap-2">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+        Subir imágenes
+      </button>
+    </div>
+    <div class="flex gap-6 text-xs font-medium text-slate-500">
+      <button onclick="switchTab('historias')" id="tab-historias" class="tab-btn active cursor-pointer flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded-sm" style="background:linear-gradient(135deg,#F43F5E,#F97316)"></div>
+        Para Historias <span class="text-[9px] text-slate-600 ml-0.5">56</span>
+      </button>
+      <button onclick="switchTab('carruseles')" id="tab-carruseles" class="tab-btn cursor-pointer flex items-center gap-1.5">
+        <div class="w-3 h-3 rounded-sm" style="background:linear-gradient(135deg,#06B6D4,#3B82F6)"></div>
+        Para Carruseles <span class="text-[9px] text-slate-600 ml-0.5">28</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="flex-1 overflow-y-auto px-6 py-5">
+
+    <!-- HISTORIAS -->
+    <div id="panel-historias" class="tab-panel active space-y-5">
+
+      <!-- Zona de carga -->
+      <div class="drop-zone p-6 flex flex-col items-center justify-center gap-2 cursor-pointer" onclick="document.getElementById('upload-h').click()">
+        <input type="file" id="upload-h" multiple accept="image/*" class="hidden" />
+        <div class="w-10 h-10 rounded-xl glass flex items-center justify-center"><svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg></div>
+        <p class="text-xs font-medium text-slate-300">Arrastra imágenes aquí o <span class="text-violet-400 cursor-pointer">selecciona archivos</span></p>
+        <p class="text-[10px] text-slate-600">PNG, JPG, WEBP · Recomendado 1080×1920 (9:16) · Máx. 10 MB</p>
+      </div>
+
+      <!-- Toolbar filtros -->
+      <div class="flex items-center gap-3">
+        <div class="flex-1 relative">
+          <svg class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          <input type="text" placeholder="Buscar por nombre..." class="w-full pl-9 pr-4 py-2 rounded-lg text-xs glass text-slate-300 placeholder-slate-600 outline-none focus:border-violet-500/50" style="border:1px solid rgba(255,255,255,0.08)" />
+        </div>
+        <select class="glass px-3 py-2 rounded-lg text-xs text-slate-400 outline-none cursor-pointer" style="border:1px solid rgba(255,255,255,0.08)">
+          <option>Más recientes</option><option>Más antiguas</option><option>Nombre A-Z</option><option>Mayor tamaño</option>
+        </select>
+        <div class="flex gap-1 glass rounded-lg p-1">
+          <button class="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer" style="background:rgba(124,58,237,0.2)"><svg class="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6z"/></svg></button>
+          <button class="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer gh"><svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Grid de imágenes -->
+      <div id="grid-historias" class="grid grid-cols-6 gap-3">
+
+        <!-- Imagen con estado de selección múltiple -->
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#1a0d2e,#0d1a2e)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass flex items-center justify-center cursor-pointer gh"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass flex items-center justify-center cursor-pointer gh"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>
+          </div>
+          <div class="p-2">
+            <p class="text-[9px] font-medium text-slate-300 truncate">rutina_amanecer_01.jpg</p>
+            <p class="text-[8px] text-slate-600">1.2 MB · hace 2 días</p>
+          </div>
+        </div>
+
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#0d1f1a,#0a0d12)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>
+          </div>
+          <div class="p-2"><p class="text-[9px] font-medium text-slate-300 truncate">gym_tarde_pose.jpg</p><p class="text-[8px] text-slate-600">890 KB · hace 3 días</p></div>
+        </div>
+
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#1a1a0d,#0f0a0a)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg></button>
+          </div>
+          <div class="p-2"><p class="text-[9px] font-medium text-slate-300 truncate">nutricion_bowl.jpg</p><p class="text-[8px] text-slate-600">1.1 MB · hace 4 días</p></div>
+        </div>
+
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#0d0d1f,#0a0f1a)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79"/></svg></button>
+          </div>
+          <div class="p-2"><p class="text-[9px] font-medium text-slate-300 truncate">resultado_90dias.jpg</p><p class="text-[8px] text-slate-600">2.4 MB · hace 5 días</p></div>
+        </div>
+
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#1a0d0d,#120a0a)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9"/></svg></button>
+          </div>
+          <div class="p-2"><p class="text-[9px] font-medium text-slate-300 truncate">testimonio_maria.jpg</p><p class="text-[8px] text-slate-600">980 KB · hace 1 sem.</p></div>
+        </div>
+
+        <div class="img-card relative group">
+          <div class="aspect-[9/16] rounded-t-xl overflow-hidden" style="background:linear-gradient(180deg,#0a1a0d,#0a0f0d)">
+            <div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1920</div>
+          </div>
+          <div class="img-actions">
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652"/></svg></button>
+            <button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9"/></svg></button>
+          </div>
+          <div class="p-2"><p class="text-[9px] font-medium text-slate-300 truncate">suplementos_mesa.jpg</p><p class="text-[8px] text-slate-600">1.3 MB · hace 1 sem.</p></div>
+        </div>
+
+        <!-- Más cards grises (relleno) -->
+        <div class="img-card relative group"><div class="aspect-[9/16] rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">clase_grupal_lunes.jpg</p><p class="text-[8px] text-slate-700">740 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-[9/16] rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">equipo_pesas.jpg</p><p class="text-[8px] text-slate-700">1.0 MB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-[9/16] rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">cardio_bici.jpg</p><p class="text-[8px] text-slate-700">820 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-[9/16] rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">smoothie_verde.jpg</p><p class="text-[8px] text-slate-700">650 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-[9/16] rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">yoga_exterior.jpg</p><p class="text-[8px] text-slate-700">1.5 MB</p></div></div>
+        <!-- Add card -->
+        <div class="img-card border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer" style="aspect-ratio:9/16;min-height:120px" onclick="document.getElementById('upload-h').click()">
+          <svg class="w-6 h-6 text-slate-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+          <p class="text-[9px] text-slate-600">Subir</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARRUSELES -->
+    <div id="panel-carruseles" class="tab-panel space-y-5">
+      <div class="drop-zone p-6 flex flex-col items-center justify-center gap-2 cursor-pointer" onclick="document.getElementById('upload-c').click()">
+        <input type="file" id="upload-c" multiple accept="image/*" class="hidden" />
+        <div class="w-10 h-10 rounded-xl glass flex items-center justify-center"><svg class="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg></div>
+        <p class="text-xs font-medium text-slate-300">Arrastra imágenes aquí o <span class="text-violet-400">selecciona archivos</span></p>
+        <p class="text-[10px] text-slate-600">PNG, JPG · Recomendado 1080×1080 (1:1) o 1080×1350 (4:5) · Máx. 10 MB</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="flex-1 relative">
+          <svg class="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+          <input type="text" placeholder="Buscar..." class="w-full pl-9 pr-4 py-2 rounded-lg text-xs glass text-slate-300 placeholder-slate-600 outline-none" style="border:1px solid rgba(255,255,255,0.08)" />
+        </div>
+        <select class="glass px-3 py-2 rounded-lg text-xs text-slate-400 outline-none cursor-pointer" style="border:1px solid rgba(255,255,255,0.08)"><option>Más recientes</option><option>Nombre A-Z</option></select>
+      </div>
+      <!-- Grid 1:1 para carruseles -->
+      <div id="grid-carruseles" class="grid grid-cols-7 gap-3">
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl overflow-hidden" style="background:linear-gradient(135deg,#0d1a2e,#1a0d2e)"><div class="w-full h-full flex items-center justify-center text-slate-700 text-[10px]">1080×1080</div></div><div class="img-actions"><button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652"/></svg></button><button class="w-6 h-6 rounded-md glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9"/></svg></button></div><div class="p-2"><p class="text-[9px] text-slate-300 truncate">cover_5errores.jpg</p><p class="text-[8px] text-slate-600">1.4 MB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">slide2_cardio.jpg</p><p class="text-[8px] text-slate-700">980 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">slide3_nutricion.jpg</p><p class="text-[8px] text-slate-700">1.1 MB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">cover_mitos.jpg</p><p class="text-[8px] text-slate-700">880 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">info_proteina.jpg</p><p class="text-[8px] text-slate-700">760 KB</p></div></div>
+        <div class="img-card relative group"><div class="aspect-square rounded-t-xl" style="background:rgba(255,255,255,0.02)"></div><div class="p-2"><p class="text-[9px] text-slate-600 truncate">cta_membresia.jpg</p><p class="text-[8px] text-slate-700">1.2 MB</p></div></div>
+        <div class="img-card border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer aspect-square" onclick="document.getElementById('upload-c').click()"><svg class="w-5 h-5 text-slate-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg><p class="text-[9px] text-slate-600">Subir</p></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════
+// Estado global
+// ═══════════════════════════════════════════════
+var STATE = {
+  historias:  { images: [], view: 'grid', sort: 'recientes', search: '' },
+  carruseles: { images: [], view: 'grid', sort: 'recientes', search: '' },
+  activeTab: 'historias',
+  // archivos pendientes de confirmar (por categoría)
+  staging: { historias: [], carruseles: [] }
+};
+
+// ── Tabs ──
+function switchTab(t) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + t).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + t).classList.add('active');
+  STATE.activeTab = t;
+  loadImages(t);
+}
+
+// ═══════════════════════════════════════════════
+// Carga y render
+// ═══════════════════════════════════════════════
+async function loadImages(category) {
+  try {
+    const r = await fetch('/api/images?category=' + category);
+    const data = await r.json();
+    STATE[category].images = data.images || [];
+    renderGrid(category);
+    updateTabCount(category, data.total || 0);
+  } catch(e) { console.error('Error:', e); }
+}
+
+function updateTabCount(category, total) {
+  const tab = document.getElementById('tab-' + category);
+  if (tab) { const s = tab.querySelector('span'); if (s) s.textContent = total; }
+  updateHeaderBadge();
+}
+
+function updateHeaderBadge() {
+  const allImages = [...(STATE.historias.images || []), ...(STATE.carruseles.images || [])];
+  const total = allImages.length;
+  const totalMB = allImages.reduce((sum, img) => sum + (img.size_mb || 0), 0);
+  const display = totalMB >= 1024
+    ? (totalMB / 1024).toFixed(1) + ' GB'
+    : totalMB.toFixed(0) + ' MB';
+  const badge = document.getElementById('header-badge');
+  if (badge) badge.textContent = total + ' archivo' + (total !== 1 ? 's' : '') + ' · ' + display;
+}
+
+function getFilteredImages(category) {
+  const s = STATE[category];
+  let imgs = [...s.images];
+  // filtrar por búsqueda
+  if (s.search.trim()) {
+    const q = s.search.trim().toLowerCase();
+    imgs = imgs.filter(i => (i.original || i.name).toLowerCase().includes(q));
+  }
+  // ordenar
+  if (s.sort === 'recientes')   imgs.sort((a,b) => b.uploaded_at - a.uploaded_at);
+  if (s.sort === 'antiguos')    imgs.sort((a,b) => a.uploaded_at - b.uploaded_at);
+  if (s.sort === 'nombre-az')   imgs.sort((a,b) => (a.original||a.name).localeCompare(b.original||b.name));
+  if (s.sort === 'mayor-size')  imgs.sort((a,b) => b.size_mb - a.size_mb);
+  return imgs;
+}
+
+function renderGrid(category) {
+  const s = STATE[category];
+  const gridId = 'grid-' + category;
+  const grid = document.getElementById(gridId);
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const isHistorias = category === 'historias';
+  const isList = s.view === 'list';
+
+  // Vista lista: tabla
+  if (isList) {
+    grid.style.cssText = 'display:flex;flex-direction:column;gap:4px';
+    getFilteredImages(category).forEach(img => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);transition:all .15s;cursor:pointer';
+      row.onmouseenter = () => row.style.borderColor = 'rgba(124,58,237,0.3)';
+      row.onmouseleave = () => row.style.borderColor = 'rgba(255,255,255,0.06)';
+      const thumb = document.createElement('img');
+      thumb.src = img.url; thumb.style.cssText = 'width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0';
+      const info = document.createElement('div');
+      info.style.cssText = 'flex:1;min-width:0';
+      info.innerHTML = '<p style="font-size:11px;font-weight:500;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(img.original||img.name)+'</p>'
+        +'<p style="font-size:9px;color:#475569">'+img.size_mb+' MB · '+fmtDate(img.uploaded_at)+'</p>';
+      const delBtn = mkDelBtn(img, category, row);
+      const eyeBtn = mkEyeBtn(img);
+      row.appendChild(thumb); row.appendChild(info); row.appendChild(eyeBtn); row.appendChild(delBtn);
+      grid.appendChild(row);
+    });
+    return;
+  }
+
+  // Vista galería: grid
+  const cols = isHistorias ? 6 : 7;
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat('+cols+',1fr);gap:12px';
+
+  getFilteredImages(category).forEach(img => {
+    grid.appendChild(buildImageCard(img, category));
+  });
+
+  // Botón +
+  const addCard = document.createElement('div');
+  addCard.className = 'img-card border-dashed';
+  addCard.style.cssText = 'border:2px dashed rgba(255,255,255,0.1);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;border-radius:12px;' + (isHistorias ? 'aspect-ratio:9/16;' : 'aspect-ratio:1/1;');
+  addCard.innerHTML = '<svg style="width:20px;height:20px;color:#334155;margin-bottom:4px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg><p style="font-size:9px;color:#334155">Subir</p>';
+  addCard.addEventListener('click', () => triggerFileInput(category));
+  grid.appendChild(addCard);
+}
+
+function buildImageCard(img, category) {
+  const isHistorias = category === 'historias';
+  const card = document.createElement('div');
+  card.className = 'img-card relative group';
+
+  const thumb = document.createElement('div');
+  thumb.style.cssText = (isHistorias ? 'aspect-ratio:9/16' : 'aspect-ratio:1/1') + ';border-radius:10px 10px 0 0;overflow:hidden;background:#0d0d14';
+  const imgEl = document.createElement('img');
+  imgEl.src = img.url; imgEl.alt = img.name;
+  imgEl.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+  imgEl.loading = 'lazy';
+  thumb.appendChild(imgEl);
+
+  const actions = document.createElement('div');
+  actions.className = 'img-actions';
+  actions.appendChild(mkEyeBtn(img));
+  actions.appendChild(mkDelBtn(img, category, card));
+
+  const info = document.createElement('div');
+  info.style.cssText = 'padding:5px 8px';
+  info.innerHTML = '<p style="font-size:9px;font-weight:500;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(img.original||img.name)+'</p>'
+    +'<p style="font-size:8px;color:#475569">'+img.size_mb+' MB · '+fmtDate(img.uploaded_at)+'</p>';
+
+  card.appendChild(thumb); card.appendChild(actions); card.appendChild(info);
+  return card;
+}
+
+function mkEyeBtn(img) {
+  const btn = document.createElement('button');
+  btn.title = 'Vista previa';
+  btn.style.cssText = 'width:24px;height:24px;border-radius:6px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;cursor:pointer';
+  btn.innerHTML = '<svg style="width:11px;height:11px;color:#CBD5E1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>';
+  btn.addEventListener('click', e => { e.stopPropagation(); openPreview(img.url, img.original || img.name); });
+  return btn;
+}
+
+function mkDelBtn(img, category, container) {
+  const btn = document.createElement('button');
+  btn.title = 'Eliminar';
+  btn.style.cssText = 'width:24px;height:24px;border-radius:6px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer';
+  btn.innerHTML = '<svg style="width:11px;height:11px;color:#fb7185" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg>';
+  btn.addEventListener('click', async function(e) {
+    e.stopPropagation();
+    if (!confirm('¿Eliminar esta imagen?')) return;
+    try {
+      await fetch('/api/images/' + category + '/' + img.name, { method: 'DELETE' });
+      STATE[category].images = STATE[category].images.filter(i => i.name !== img.name);
+      renderGrid(category);
+      updateTabCount(category, STATE[category].images.length);
+      updateHeaderBadge();
+      if (window.rimaToast) rimaToast('Imagen eliminada');
+    } catch(err) { if (window.rimaToast) rimaToast('Error', 'error'); }
+  });
+  return btn;
+}
+
+function fmtDate(ts) {
+  if (!ts) return '';
+  return new Date(ts * 1000).toLocaleDateString('es', {day:'numeric', month:'short'});
+}
+
+// ═══════════════════════════════════════════════
+// Staging: preview antes de subir
+// ═══════════════════════════════════════════════
+function showStaging(files, category) {
+  STATE.staging[category] = files;
+
+  var panel = document.getElementById('staging-' + category);
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'staging-' + category;
+    panel.style.cssText = 'background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.25);border-radius:14px;padding:14px;margin-bottom:14px';
+    const grid = document.getElementById('grid-' + category);
+    grid.parentElement.insertBefore(panel, grid);
+  }
+
+  const totalMB = files.reduce((s, f) => s + f.size / (1024*1024), 0).toFixed(1);
+  panel.innerHTML = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'
+    + '<div>'
+    + '<p style="font-size:12px;font-weight:600;color:#A78BFA;margin:0">' + files.length + ' imagen(es) seleccionada(s) · ' + totalMB + ' MB total</p>'
+    + '<p style="font-size:10px;color:#475569;margin:2px 0 0">Revisá las miniaturas y confirmá para subir al servidor</p>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<button id="staging-cancel-'+category+'" style="padding:6px 16px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#94A3B8;font-size:11px;cursor:pointer">Cancelar</button>'
+    + '<button id="staging-confirm-'+category+'" style="padding:6px 16px;border-radius:8px;background:linear-gradient(135deg,#7C3AED,#6D28D9);border:none;color:#fff;font-size:11px;font-weight:600;cursor:pointer">Subir ' + files.length + ' imagen(es) →</button>'
+    + '</div></div>'
+    + '<div id="staging-thumbs-'+category+'" style="display:flex;flex-wrap:wrap;gap:10px;max-height:200px;overflow-y:auto;padding:2px"></div>';
+
+  const thumbsEl = panel.querySelector('#staging-thumbs-' + category);
+  const isH = category === 'historias';
+  files.forEach(function(file, idx) {
+    const sizeMB = (file.size / (1024*1024)).toFixed(1);
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'position:relative;border-radius:10px;overflow:hidden;background:#0d0d14;flex-shrink:0;cursor:pointer;'
+      + (isH ? 'width:70px;height:124px;' : 'width:90px;height:90px;');
+    // X para quitar del staging
+    const removeBtn = document.createElement('div');
+    removeBtn.style.cssText = 'position:absolute;top:4px;right:4px;width:16px;height:16px;border-radius:50%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;cursor:pointer;z-index:2;line-height:1';
+    removeBtn.textContent = '✕';
+    removeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      STATE.staging[category] = STATE.staging[category].filter((_,i) => i !== idx);
+      wrap.remove();
+      // actualizar contador
+      const remaining = STATE.staging[category].length;
+      const countEl = panel.querySelector('p');
+      if (countEl) countEl.textContent = remaining + ' imagen(es) seleccionada(s) · ' + STATE.staging[category].reduce((s,f)=>s+f.size/(1024*1024),0).toFixed(1) + ' MB total';
+      const confirmBtn = document.getElementById('staging-confirm-' + category);
+      if (confirmBtn) confirmBtn.textContent = 'Subir ' + remaining + ' imagen(es) →';
+      if (remaining === 0) panel.remove();
+    });
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block';
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.readAsDataURL(file);
+    const label = document.createElement('div');
+    label.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);padding:3px 5px';
+    label.innerHTML = '<p style="font-size:7px;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0">' + file.name + '</p>'
+      + '<p style="font-size:7px;color:#475569;margin:0">' + sizeMB + ' MB</p>';
+    wrap.appendChild(removeBtn); wrap.appendChild(img); wrap.appendChild(label);
+    thumbsEl.appendChild(wrap);
+  });
+
+  document.getElementById('staging-cancel-' + category).addEventListener('click', function() {
+    STATE.staging[category] = [];
+    panel.remove();
+  });
+  document.getElementById('staging-confirm-' + category).addEventListener('click', function() {
+    confirmUpload(category);
+  });
+}
+
+async function confirmUpload(category) {
+  const files = STATE.staging[category];
+  if (!files || files.length === 0) return;
+
+  const btn = document.getElementById('staging-confirm-' + category);
+  if (btn) { btn.textContent = 'Subiendo...'; btn.disabled = true; }
+
+  const fd = new FormData();
+  files.forEach(f => fd.append('files', f));
+  fd.append('category', category);
+
+  try {
+    const r = await fetch('/api/images/upload', { method: 'POST', body: fd });
+    const data = await r.json();
+    const panel = document.getElementById('staging-' + category);
+    if (panel) panel.remove();
+    STATE.staging[category] = [];
+    if (data.saved && data.saved.length > 0) {
+      if (window.rimaToast) rimaToast(data.saved.length + ' imagen(es) subida(s)');
+      loadImages(category);
+    }
+    if (data.errors && data.errors.length > 0) {
+      if (window.rimaToast) rimaToast(data.errors.map(e => e.error).join(', '), 'error');
+    }
+  } catch(e) {
+    if (window.rimaToast) rimaToast('Error al subir', 'error');
+    if (btn) { btn.textContent = 'Confirmar subida →'; btn.disabled = false; }
+  }
+}
+
+// ── Trigger file input ──
+function triggerFileInput(category) {
+  const id = category === 'historias' ? 'upload-h' : 'upload-c';
+  document.getElementById(id).click();
+}
+
+// ═══════════════════════════════════════════════
+// Preview modal
+// ═══════════════════════════════════════════════
+function openPreview(url, name) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+  const inner = document.createElement('div');
+  inner.style.cssText = 'position:relative;max-height:90vh;display:flex;flex-direction:column;align-items:center;gap:8px';
+  const img = document.createElement('img');
+  img.src = url; img.alt = name;
+  img.style.cssText = 'max-height:82vh;max-width:88vw;object-fit:contain;border-radius:12px;display:block';
+  const label = document.createElement('p');
+  label.style.cssText = 'font-size:10px;color:#475569;text-align:center';
+  label.textContent = name;
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'position:absolute;top:-14px;right:-14px;width:28px;height:28px;border-radius:50%;background:#1e1e2e;border:1px solid rgba(255,255,255,0.1);color:#94A3B8;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center';
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  inner.appendChild(closeBtn); inner.appendChild(img); inner.appendChild(label);
+  modal.appendChild(inner);
+  document.body.appendChild(modal);
+}
+
+// ═══════════════════════════════════════════════
+// Controles: búsqueda, orden, vista
+// ═══════════════════════════════════════════════
+function setupControls(category) {
+  const panelId = 'panel-' + category;
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+
+  // Búsqueda
+  const searchInput = panel.querySelector('input[type="text"]');
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      STATE[category].search = this.value;
+      renderGrid(category);
+    });
+  }
+
+  // Orden
+  const sortSelect = panel.querySelector('select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+      const map = { 'Más recientes':'recientes', 'Más antiguas':'antiguos', 'Nombre A-Z':'nombre-az', 'Mayor tamaño':'mayor-size' };
+      STATE[category].sort = map[this.value] || 'recientes';
+      renderGrid(category);
+    });
+  }
+
+  // Vista galería / lista
+  const viewBtns = panel.querySelectorAll('.flex.gap-1.glass button');
+  if (viewBtns.length >= 2) {
+    viewBtns[0].addEventListener('click', function() {
+      STATE[category].view = 'grid';
+      viewBtns[0].style.background = 'rgba(124,58,237,0.2)';
+      viewBtns[1].style.background = 'transparent';
+      renderGrid(category);
+    });
+    viewBtns[1].addEventListener('click', function() {
+      STATE[category].view = 'list';
+      viewBtns[1].style.background = 'rgba(124,58,237,0.2)';
+      viewBtns[0].style.background = 'transparent';
+      renderGrid(category);
+    });
+  }
+
+  // Drag & drop en la drop-zone
+  const dz = panel.querySelector('.drop-zone');
+  if (dz) {
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', function(e) {
+      e.preventDefault(); dz.classList.remove('dragover');
+      const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+      if (files.length) showStaging(files, category);
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  // File inputs → staging (no upload directo)
+  ['historias','carruseles'].forEach(function(cat) {
+    const inputId = cat === 'historias' ? 'upload-h' : 'upload-c';
+    const input = document.getElementById(inputId);
+    if (input) {
+      input.addEventListener('change', function() {
+        if (this.files.length > 0) {
+          // Acumular: si ya hay staging, agregar los nuevos
+          const existing = STATE.staging[cat] || [];
+          const incoming = Array.from(this.files);
+          STATE.staging[cat] = existing.concat(incoming);
+          // Quitar staging anterior y volver a mostrar con todos
+          const old = document.getElementById('staging-' + cat);
+          if (old) old.remove();
+          showStaging(STATE.staging[cat], cat);
+        }
+        this.value = '';
+      });
+    }
+    setupControls(cat);
+  });
+
+  // Botón "Subir imágenes" del header → abre file picker de tab activa
+  document.querySelectorAll('button').forEach(function(btn) {
+    if (btn.textContent.trim() === 'Subir imágenes') {
+      btn.addEventListener('click', function() {
+        triggerFileInput(STATE.activeTab);
+      });
+    }
+  });
+
+  // Cargar ambas para que el badge del header tenga el total real
+  loadImages('historias');
+  loadImages('carruseles');
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Información de la Marca</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
+    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
+    .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
+    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+
+    /* Tabs */
+    .sec-tab{display:flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;cursor:pointer;transition:all .18s;font-size:11px;font-weight:500;color:#94A3B8;white-space:nowrap;border:1px solid transparent}
+    .sec-tab.active{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border-color:rgba(124,58,237,0.4);color:#fff}
+    .sec-tab:not(.active):hover{background:rgba(255,255,255,0.05);color:#CBD5E1}
+    .sec-panel{display:none}.sec-panel.active{display:block}
+
+    /* Form fields */
+    .field-group{margin-bottom:20px}
+    .field-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748B;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+    .field-label .req{color:#7C3AED;font-size:10px}
+    .field-hint{font-size:9px;color:#475569;margin-bottom:5px;line-height:1.5}
+    .f-input,.f-textarea,.f-select{
+      width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);
+      border-radius:10px;padding:9px 13px;font-size:12px;color:#F1F5F9;
+      font-family:'Inter',sans-serif;outline:none;transition:all .2s;
+    }
+    .f-input:focus,.f-textarea:focus,.f-select:focus{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.05);box-shadow:0 0 0 2px rgba(124,58,237,0.1)}
+    .f-input::placeholder,.f-textarea::placeholder{color:#475569;font-style:italic}
+    .f-textarea{resize:vertical;line-height:1.6;min-height:72px}
+    .f-select{cursor:pointer;appearance:none}
+
+    /* Chip selector */
+    .chip-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+    .chip{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:500;cursor:pointer;transition:all .15s;border:1px solid rgba(255,255,255,0.1);color:#94A3B8;background:rgba(255,255,255,0.04)}
+    .chip.selected{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.5);color:#A78BFA}
+    .chip:hover:not(.selected){background:rgba(255,255,255,0.07);color:#CBD5E1}
+
+    /* Progress bar */
+    .progress-fill{height:3px;border-radius:2px;background:linear-gradient(90deg,#7C3AED,#06B6D4);transition:width .4s ease}
+
+    /* Case card */
+    .case-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:16px;margin-bottom:10px}
+
+    /* Tool status */
+    .tool-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+    .tool-row:last-child{border-bottom:none}
+
+    /* Toggle */
+    .toggle{width:34px;height:18px;background:rgba(255,255,255,0.1);border-radius:9px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+    .toggle.on{background:linear-gradient(135deg,#7C3AED,#6D28D9)}
+    .toggle::after{content:'';position:absolute;width:12px;height:12px;background:white;border-radius:50%;top:3px;left:3px;transition:all .2s}
+    .toggle.on::after{left:19px}
+
+    /* Section divider */
+    .sec-divider{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#334155;margin:24px 0 16px;display:flex;align-items:center;gap:8px}
+    .sec-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.05)}
+
+    /* Saved indicator */
+    @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+    .saved{animation:fadein .3s ease}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- SIDEBAR -->
+<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5">
+  <div class="px-5 py-5 border-b border-white/5 flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bp flex items-center justify-center" style="box-shadow:0 0 20px rgba(124,58,237,.22)"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>
+    <div><span class="font-bold text-base gt">RIMA</span><p class="text-[10px] text-slate-500 -mt-0.5">Marketing AI · LATAM</p></div>
+  </div>
+  <div class="px-4 py-3 border-b border-white/5">
+    <div class="flex items-center gap-2.5 mb-2">
+      <div class="w-9 h-9 rounded-full p-[2px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-xs font-bold text-white">FL</span></div></div>
+      <div><p class="text-xs font-semibold text-white">FitLife Studio</p><p class="text-[10px] text-slate-500">@fitlifestudio_mx</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300">12.4K</p><p class="text-[8px] text-slate-500">Seg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300">48</p><p class="text-[8px] text-slate-500">Msg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p class="text-xs font-bold text-emerald-300">$18K</p><p class="text-[8px] text-slate-500">Ventas</p></div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 py-3 overflow-y-auto space-y-3">
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Comencemos</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z"/></svg></div><span class="text-[11px] text-slate-400">Dashboard</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5"/></svg></div><span class="text-[11px] text-slate-400">Calendario</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-pink-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23"/></svg></div><span class="text-[11px] text-slate-400">Contenido</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-sky-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></div><span class="text-[11px] text-slate-400">Estudio de mercado</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-blue-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="text-[11px] text-slate-400">META Ads</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-emerald-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307"/></svg></div><span class="text-[11px] text-slate-400">Ventas</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-amber-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8"/></svg></div><span class="text-[11px] text-slate-400">Landing</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Mi Negocio</p>
+      <div class="space-y-0.5">
+        <!-- INFORMACIÓN ACTIVE -->
+        <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)">
+          <div class="w-5 h-5 rounded bg-violet-500/20 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg></div>
+          <span class="text-[11px] font-semibold text-white">Información de la marca</span>
+        </div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-rose-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5"/></svg></div><span class="text-[11px] text-slate-400">Referencias</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-cyan-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div><span class="text-[11px] text-slate-400">Imágenes</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-orange-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38"/></svg></div><span class="text-[11px] text-slate-400">Videos</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-slate-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912"/></svg></div><span class="text-[11px] text-slate-400">Credenciales</span><span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400"></span></div>
+      </div>
+    </div>
+  </nav>
+  <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2.5">
+    <div class="w-7 h-7 rounded-full p-[1.5px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-[9px] font-bold text-white">FL</span></div></div>
+    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500">Plan Pro</p></div></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Header fijo -->
+  <div class="px-6 pt-5 pb-4 border-b border-white/5 flex-shrink-0">
+    <div class="flex items-center justify-between mb-3">
+      <div>
+        <div class="flex items-center gap-2 mb-0.5">
+          <svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+          <h1 class="text-sm font-semibold text-white">Brief de Marca</h1>
+          <span id="save-indicator" class="text-[9px] text-emerald-400 hidden saved">✓ Guardado</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Campos incompletos = outputs genéricos · Cuanto más completo, mejores los resultados de RIMA</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Progress -->
+        <div class="flex items-center gap-2">
+          <div class="w-32 rounded-full bg-white/5" style="height:6px"><div class="progress-fill" id="progress-bar" style="width:45%"></div></div>
+          <span class="text-[10px] text-slate-400">45% completo</span>
+        </div>
+        <button onclick="saveForm()" class="bp px-4 py-2 rounded-xl text-white text-[10px] font-semibold cursor-pointer flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-7a2 2 0 012-2h2m3-4H9a2 2 0 00-2 2v7a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-1M12 1v8m0 0l-3-3m3 3l3-3"/></svg>
+          Guardar cambios
+        </button>
+      </div>
+    </div>
+
+    <!-- Section tabs scrollable -->
+    <div class="flex gap-1.5 overflow-x-auto pb-1" style="scrollbar-width:none">
+      <button onclick="goSec('negocio')" id="st-negocio" class="sec-tab active">
+        <span class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></span>1 · Negocio
+      </button>
+      <button onclick="goSec('oferta')" id="st-oferta" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span>2 · Oferta
+      </button>
+      <button onclick="goSec('cliente')" id="st-cliente" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-pink-400 flex-shrink-0"></span>3 · Cliente ideal
+      </button>
+      <button onclick="goSec('leadmagnet')" id="st-leadmagnet" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>4 · Lead Magnet
+      </button>
+      <button onclick="goSec('casos')" id="st-casos" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>5 · Casos de éxito
+      </button>
+      <button onclick="goSec('ventas')" id="st-ventas" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>6 · Equipo ventas
+      </button>
+      <button onclick="goSec('tono')" id="st-tono" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-rose-400 flex-shrink-0"></span>7 · Tono y voz
+      </button>
+      <button onclick="goSec('objeciones')" id="st-objeciones" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-orange-400 flex-shrink-0"></span>8 · Objeciones
+      </button>
+      <button onclick="goSec('contenido')" id="st-contenido" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-sky-400 flex-shrink-0"></span>9 · Contenido
+      </button>
+      <button onclick="goSec('herramientas')" id="st-herramientas" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0"></span>10 · Herramientas
+      </button>
+    </div>
+  </div>
+
+  <!-- Form content -->
+  <div class="flex-1 overflow-y-auto px-6 py-6">
+
+    <!-- ===== 1. NEGOCIO ===== -->
+    <div id="sp-negocio" class="sec-panel active">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr">
+
+        <!-- Columna izquierda -->
+        <div>
+          <div class="sec-divider">Datos básicos</div>
+          <div class="field-group">
+            <div class="field-label">Nombre del negocio / marca personal <span class="req">*</span></div>
+            <input class="f-input" placeholder="ej: FitLife Studio · Transformación90 con Juan López" value="FitLife Studio" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Tu nombre <span class="req">*</span></div>
+            <input class="f-input" placeholder="ej: Carlos Mendoza" value="Carlos Mendoza" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="field-group">
+              <div class="field-label">Instagram <span class="req">*</span></div>
+              <input class="f-input" placeholder="@tunegocio" value="@fitlifestudio_mx" />
+            </div>
+            <div class="field-group">
+              <div class="field-label">Ciudad / País</div>
+              <input class="f-input" placeholder="ej: CDMX, México" value="CDMX, México" />
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Industria / Nicho</div>
+            <div class="chip-group">
+              <span class="chip selected" onclick="toggleChip(this)">Fitness</span>
+              <span class="chip" onclick="toggleChip(this)">Nutrición</span>
+              <span class="chip" onclick="toggleChip(this)">Coaching</span>
+              <span class="chip" onclick="toggleChip(this)">Negocios</span>
+              <span class="chip" onclick="toggleChip(this)">Bienestar</span>
+              <span class="chip" onclick="toggleChip(this)">Educación</span>
+              <span class="chip" onclick="toggleChip(this)">Inmobiliario</span>
+              <span class="chip" onclick="toggleChip(this)">Otro</span>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div class="field-group">
+              <div class="field-label">Modelo de negocio</div>
+              <div class="chip-group">
+                <span class="chip selected" onclick="toggleChip(this)">Done With You</span>
+                <span class="chip" onclick="toggleChip(this)">Done For You</span>
+                <span class="chip" onclick="toggleChip(this)">Infoproducto</span>
+                <span class="chip" onclick="toggleChip(this)">Agencia</span>
+                <span class="chip" onclick="toggleChip(this)">SaaS</span>
+              </div>
+            </div>
+            <div class="field-group">
+              <div class="field-label">Tiempo en el mercado</div>
+              <div class="chip-group">
+                <span class="chip" onclick="toggleChip(this)">Menos de 6m</span>
+                <span class="chip" onclick="toggleChip(this)">6–12 meses</span>
+                <span class="chip selected" onclick="toggleChip(this)">1–3 años</span>
+                <span class="chip" onclick="toggleChip(this)">+3 años</span>
+              </div>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Número de clientes atendidos</div>
+            <div class="field-hint">Aparece en landing y VSL como prueba social.</div>
+            <input class="f-input" placeholder="ej: Más de 200 personas" value="Más de 200 personas" />
+          </div>
+        </div>
+
+        <!-- Columna derecha -->
+        <div>
+          <div class="sec-divider">Propuesta de valor</div>
+          <div class="field-group">
+            <div class="field-label">¿A quién ayudás específicamente? <span class="req">*</span></div>
+            <div class="field-hint">Nicho + segmento + situación actual. Cuanto más específico, mejor.</div>
+            <textarea class="f-textarea" rows="3" placeholder="ej: Personas de 30-50 años con trabajo sedentario en CDMX que llevan meses intentando bajar de peso sin resultados...">Personas de 30-50 años con trabajo sedentario en CDMX que llevan meses intentando bajar de peso sin resultados y no tienen tiempo para ir al gym horas al día</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">¿Cuál es el DOLOR PRINCIPAL? <span class="req">*</span></div>
+            <div class="field-hint">La raíz del problema, no el síntoma.</div>
+            <textarea class="f-textarea" rows="3" placeholder="ej: Llevan meses probando sin resultados. Se sienten frustrados y ya no confían en que algo funcione para ellos">Llevan meses probando rutinas de YouTube y dietas que no se sostienen. Se sienten frustrados porque hacen esfuerzo y no ven resultados. La falta de acompañamiento es la diferencia.</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">¿Qué intentaron antes y por qué no funcionó?</div>
+            <textarea class="f-textarea" rows="2" placeholder="ej: Apps de fitness, YouTube, dietas de moda — falló porque faltó personalización y seguimiento real">Apps, YouTube, dietas de redes sociales. Falló porque no había personalización ni seguimiento — cuando no ven resultados rápidos, abandonan.</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Historia de origen — ¿por qué empezaste este negocio?</div>
+            <div class="field-hint">Humaniza la marca. Aparece en VSL y reels de autoridad.</div>
+            <textarea class="f-textarea" rows="3" placeholder="ej: Yo mismo pasé por esto. Trabajaba 10 horas al día, subí 15kg y no encontraba tiempo ni método. Ahí desarrollé el sistema que hoy uso con mis clientes"></textarea>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== 2. OFERTA ===== -->
+    <div id="sp-oferta" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr">
+      <div>
+      <div class="sec-divider">El programa o servicio</div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">Nombre del programa / servicio <span class="req">*</span></div>
+          <input class="f-input" placeholder="ej: Programa Transformación90 · FitSystem CDMX" value="Programa Transformación 90" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Duración del programa</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">30 días</span>
+            <span class="chip" onclick="toggleChip(this)">60 días</span>
+            <span class="chip selected" onclick="toggleChip(this)">90 días</span>
+            <span class="chip" onclick="toggleChip(this)">6 meses</span>
+            <span class="chip" onclick="toggleChip(this)">12 meses</span>
+            <span class="chip" onclick="toggleChip(this)">Retainer mensual</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Descripción breve del programa (1-2 oraciones)</div>
+        <textarea class="f-textarea" placeholder="ej: Sistema de entrenamiento personalizado de 90 días con rutinas de 15 minutos, plan de alimentación flexible y seguimiento semanal. Diseñado para personas con poco tiempo que quieren resultados reales." rows="2">Sistema de transformación de 90 días con rutinas de 15 minutos, plan de alimentación flexible y seguimiento semanal. Para personas ocupadas que quieren resultados sin sacrificar su vida.</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Resultado prometido + tiempo <span class="req">*</span></div>
+        <div class="field-hint">Específico y visualizable. No "mejorar tu salud" — "bajar 8-12kg en 90 días".</div>
+        <input class="f-input" placeholder="ej: Bajar entre 8 y 15kg en 90 días sin dietas extremas ni horas de gym" value="Transformar el cuerpo visible en 90 días — 8 a 15kg menos con 15 min al día" />
+      </div>
+
+      </div><!-- /col izquierda oferta -->
+      <div>
+      <div class="sec-divider">Framework Hormozi</div>
+
+      <div class="field-group">
+        <div class="field-label">¿Qué resultado soñado ofrece? <span class="req">*</span></div>
+          <div class="field-hint">Lo que el cliente visualiza al comprar. Específico y tangible.</div>
+          <textarea class="f-textarea" placeholder="ej: Verse bien en el espejo, tener energía todo el día, sentir confianza en su cuerpo por primera vez en años" rows="2">Verse bien en el espejo. Tener energía todo el día. Sentir confianza en su cuerpo sin depender de dietas extremas.</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">¿Qué hace que el proceso sea simple?</div>
+          <div class="field-hint">Minimizar el esfuerzo percibido.</div>
+          <textarea class="f-textarea" placeholder="ej: Solo 15 minutos al día. Sin contar calorías. Sin ir al gym." rows="2">Solo 15 minutos al día. Sin contar calorías obsesivamente. Sin necesitar equipo especial. El plan se adapta a su horario real.</textarea>
+        </div>
+
+      <div class="sec-divider">Precios y garantía</div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="field-group">
+          <div class="field-label">Precio — pago único</div>
+          <input class="f-input" placeholder="ej: $1,800 USD" value="$1,500 USD" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Precio — en cuotas</div>
+          <input class="f-input" placeholder="ej: 3 x $650 USD" value="3 x $550 USD" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Ticket promedio actual</div>
+          <input class="f-input" placeholder="ej: $1,200 USD" value="$1,500 USD" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Garantía <span class="req">*</span></div>
+        <div class="field-hint">La garantía sube la conversión más que cualquier otro elemento. Fórmula: "Si no logras X en Y días → devolución total".</div>
+        <textarea class="f-textarea" placeholder="ej: Si seguís el programa al pie de la letra y en 30 días no ves ningún resultado, te devolvemos cada centavo. Sin preguntas." rows="2">Si seguís el programa completo y en 30 días no ves resultados visibles, te devolvemos cada centavo. Sin preguntas. Sin letra chica.</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">3 pilares del programa (qué incluye por resultado, no por entregable)</div>
+        <div class="field-hint">No "12 llamadas 1:1". Sí "Acompañamiento semanal para que nunca te quedes estancado".</div>
+        <div class="space-y-2">
+          <input class="f-input" placeholder="Pilar 1: nombre → resultado que logra este pilar" value="Rutinas personalizadas → resultados físicos visibles en las primeras 4 semanas" />
+          <input class="f-input" placeholder="Pilar 2: nombre → resultado" value="Plan de alimentación flexible → sin privarte, sostenible de por vida" />
+          <input class="f-input" placeholder="Pilar 3: nombre → resultado" value="Seguimiento semanal → ajuste en tiempo real hasta llegar a la meta" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">¿Qué diferencia tu oferta de la competencia?</div>
+        <textarea class="f-textarea" placeholder="ej: No vendemos rutinas genéricas. Cada plan es diseñado para el cuerpo, el tiempo y la cocina del cliente.">Personalización real — no hay dos programas iguales. El seguimiento semanal garantiza que nunca te quedas sin saber qué hacer. La mayoría de gimnasios te dan un plan y te dejan solo.</textarea>
+      </div>
+      </div><!-- /col derecha oferta -->
+      </div><!-- /grid oferta -->
+    </div>
+
+    <!-- ===== 3. CLIENTE IDEAL ===== -->
+    <div id="sp-cliente" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Avatar del cliente ideal</div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="field-group">
+          <div class="field-label">Edad promedio</div>
+          <input class="f-input" placeholder="ej: 35-50 años" value="32-50 años" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Género principal</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Hombre</span>
+            <span class="chip" onclick="toggleChip(this)">Mujer</span>
+            <span class="chip selected" onclick="toggleChip(this)">Ambos</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Ingreso mensual aprox.</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">$500–1K USD</span>
+            <span class="chip selected" onclick="toggleChip(this)">$1K–3K USD</span>
+            <span class="chip" onclick="toggleChip(this)">$3K–8K USD</span>
+            <span class="chip" onclick="toggleChip(this)">$8K+ USD</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Situación de vida típica del cliente ideal</div>
+        <div class="field-hint">Trabajo, familia, rutina diaria. Cuanto más específico, mejor el contenido que genera RIMA.</div>
+        <textarea class="f-textarea" placeholder="ej: Trabaja 8-10 horas al día en oficina o desde casa, tiene 1-2 hijos, no tiene tiempo para ir al gym, come fuera de casa frecuentemente, se siente cansado al final del día">Trabaja 8-10 horas diarias, generalmente en oficina o home office. Tiene familia. Come fuera frecuentemente. Se siente sin energía al final del día y pospone el ejercicio porque no sabe por dónde empezar.</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">¿Qué siente antes de encontrarte? (frustraciones emocionales)</div>
+        <div class="field-hint">Estas emociones alimentan los hooks de los reels y el primer párrafo del VSL.</div>
+        <textarea class="f-textarea" placeholder="ej: Frustración de hacer esfuerzo sin ver resultados · Vergüenza de como se ve en fotos · Miedo de que ya sea muy tarde para cambiar · Culpa por no ser constante">Frustración de esforzarse y no ver resultados. Vergüenza con fotos. Sensación de que "para mi no funciona". Culpa por no ser constante. Miedo de que ya sea muy tarde para cambiar.</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">¿Qué desea sentir/tener/lograr? (resultado soñado profundo)</div>
+        <textarea class="f-textarea" placeholder="ej: Verse bien sin ropa · Tener energía para jugar con sus hijos · Sentir orgullo de sí mismo · Volver a usar ropa que le quedaba hace 5 años">Verse bien en el espejo y en fotos. Tener energía para sus hijos y pareja. Sentir orgullo de sí mismo. Volver a sentirse joven y capaz.</textarea>
+      </div>
+
+      </div><div><!-- col derecha cliente -->
+      <div class="sec-divider">Calificación del lead</div>
+
+      <div class="grid grid-cols-1 gap-3">
+        <div class="field-group">
+          <div class="field-label">¿Quién SÍ es tu cliente ideal? <span class="req">*</span></div>
+          <div class="field-hint">Criterios mínimos para que sea un buen cliente.</div>
+          <textarea class="f-textarea" placeholder="ej: Hombre o mujer 30-50 años, trabajo estable, puede invertir $1,500, tiene al menos 20 min al día, quiere un cambio real y no solo bajar de peso">Persona de 30-50 años con trabajo estable. Puede invertir $1,500. Tiene 20 min al día disponibles. Quiere un cambio sostenible, no una dieta rápida. Dispuesta a seguir el proceso.</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">¿Quién NO es tu cliente ideal? <span class="req">*</span></div>
+          <div class="field-hint">El cliente que no vale la pena seguir aunque pague.</div>
+          <textarea class="f-textarea" placeholder="ej: Quiere resultados en 2 semanas sin esfuerzo · No puede invertir el monto mínimo · Busca solo pastillas o soluciones mágicas · Ya tiene condición médica sin atención">Busca solución mágica en 2 semanas. No puede invertir el mínimo. Tiene condición médica grave sin tratamiento médico. No está dispuesto a cambiar ningún hábito. Compra impulsivamente y luego pide reembolso.</textarea>
+        </div>
+      </div>
+    </div>
+
+      </div></div></div><!-- /grid cliente -->
+    </div>
+
+    <!-- ===== 4. LEAD MAGNET ===== -->
+    <div id="sp-leadmagnet" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Lead magnet principal</div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">Nombre del lead magnet <span class="req">*</span></div>
+          <input class="f-input" placeholder="ej: Guía: Las 5 razones por las que no bajás de peso" value="Rutina de 15 min para empezar hoy — gratis" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Tipo de lead magnet</div>
+          <div class="chip-group">
+            <span class="chip selected" onclick="toggleChip(this)">PDF / Guía</span>
+            <span class="chip" onclick="toggleChip(this)">Clase grabada</span>
+            <span class="chip" onclick="toggleChip(this)">Video</span>
+            <span class="chip" onclick="toggleChip(this)">Masterclass</span>
+            <span class="chip" onclick="toggleChip(this)">Checklist</span>
+            <span class="chip" onclick="toggleChip(this)">Plantilla</span>
+            <span class="chip" onclick="toggleChip(this)">Audio</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">¿Cómo se entrega?</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Link directo</span>
+            <span class="chip selected" onclick="toggleChip(this)">ManyChat keyword</span>
+            <span class="chip" onclick="toggleChip(this)">Email</span>
+            <span class="chip" onclick="toggleChip(this)">WhatsApp</span>
+            <span class="chip" onclick="toggleChip(this)">Telegram</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Keyword de ManyChat (si aplica)</div>
+          <input class="f-input" placeholder="ej: RUTINA · GUIA · GRATIS" value="RUTINA" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">¿Qué valor entrega este lead magnet? ¿Por qué lo quiere el cliente?</div>
+        <textarea class="f-textarea" placeholder="ej: Les da la primera victoria rápida — ven que pueden entrenar 15 minutos y se sienten bien. Eso crea la confianza necesaria para dar el siguiente paso">Da la primera victoria inmediata. Ven que pueden hacer 15 min y sentirse bien. Eso rompe la creencia de que no tienen tiempo o capacidad. El lead magnet es el primer paso del método real.</textarea>
+      </div>
+
+      </div><div><!-- col derecha leadmagnet -->
+      <div class="sec-divider">Segundo lead magnet (si existe)</div>
+
+      <div class="grid grid-cols-1 gap-3">
+        <div class="field-group">
+          <div class="field-label">Nombre del segundo lead magnet</div>
+          <input class="f-input" placeholder="ej: Clase gratuita: Cómo comer bien sin dieta" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Tipo</div>
+          <input class="f-input" placeholder="ej: Masterclass de 45 min grabada" />
+        </div>
+      </div>
+    </div>
+
+      </div></div></div><!-- /grid leadmagnet -->
+    </div>
+
+    <!-- ===== 5. CASOS DE ÉXITO ===== -->
+    <div id="sp-casos" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="rounded-xl p-4 mb-5 flex items-start gap-3" style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.2)">
+        <svg class="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+        <p class="text-[10px] text-slate-300 leading-relaxed">Estos datos aparecen en el VSL, en el copy MOFU, en los testimonios de la landing y en los mensajes de follow-up. Cuanto más concretos los números, mejor convierten.</p>
+      </div>
+
+      <!-- Caso 1 -->
+      <div class="case-card">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style="background:#7C3AED">1</span>
+          <p class="text-xs font-semibold text-white">Caso de éxito 1</p>
+          <span class="text-[9px] px-2 py-0.5 rounded-full text-emerald-400" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.25)">Estrella — usar en VSL y landing</span>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="field-group">
+            <div class="field-label">Nombre y perfil del cliente</div>
+            <input class="f-input" placeholder="ej: María R. · mamá de 2 hijos, 38 años, trabajo office" value="María R. · 38 años · ejecutiva con 2 hijos" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Tiempo que tardó en lograr el resultado</div>
+            <input class="f-input" placeholder="ej: 90 días exactos" value="90 días" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="field-group">
+            <div class="field-label">Situación de partida (punto A)</div>
+            <textarea class="f-textarea" placeholder="ej: 15kg de sobrepeso, sin energía, nunca había seguido un programa por más de 2 semanas" rows="2">15kg de sobrepeso, sin energía en el trabajo, había intentado 3 dietas diferentes sin resultados sostenidos</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Resultado logrado (punto B)</div>
+            <textarea class="f-textarea" placeholder="ej: Bajó 12kg, corre 5km sin parar, tiene energía para sus hijos y se siente 10 años más joven" rows="2">Bajó 12kg, recuperó energía para su familia, ahora hace 20 min de ejercicio diario sin fuerza de voluntad</textarea>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Cita textual (si existe)</div>
+          <textarea class="f-textarea" placeholder='ej: "Nunca pensé que con 15 minutos al día iba a lograr lo que no pude con 2 horas en el gym durante años"' rows="2" value="">"Nunca pensé que con tan poco tiempo podía lograr tanto. El seguimiento semanal fue lo que marcó la diferencia."</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">¿Hay video o foto del testimonio?</div>
+          <div class="chip-group">
+            <span class="chip selected" onclick="toggleChip(this)">Foto antes/después</span>
+            <span class="chip" onclick="toggleChip(this)">Video testimonio</span>
+            <span class="chip" onclick="toggleChip(this)">Screenshot de mensaje</span>
+            <span class="chip" onclick="toggleChip(this)">Solo texto</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Caso 2 -->
+      <div class="case-card">
+        <div class="flex items-center gap-2 mb-4">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0" style="background:#06B6D4">2</span>
+          <p class="text-xs font-semibold text-white">Caso de éxito 2</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3">
+          <div class="field-group">
+            <div class="field-label">Nombre y perfil</div>
+            <input class="f-input" placeholder="ej: Carlos M. · 44 años · trabaja desde casa" value="Carlos M. · 44 años · home office" />
+          </div>
+          <div class="field-group">
+            <div class="field-label">Tiempo</div>
+            <input class="f-input" placeholder="ej: 6 semanas" value="6 semanas" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="field-group">
+            <div class="field-label">Punto A</div>
+            <textarea class="f-textarea" placeholder="Situación inicial" rows="2">Sin hábito de ejercicio, dolores de espalda frecuentes por estar sentado, sin energía por las tardes</textarea>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Punto B</div>
+            <textarea class="f-textarea" placeholder="Resultado logrado" rows="2">Desaparecieron los dolores de espalda, duplicó su energía y productividad, bajó 6kg sin dieta</textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agregar más casos -->
+      <button class="w-full glass gh rounded-xl py-3 text-[10px] text-slate-400 cursor-pointer flex items-center justify-center gap-2 mt-2">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+        Agregar caso de éxito
+      </button>
+      </div>
+      <div><!-- col derecha casos: info de uso -->
+        <div class="sec-divider">¿Dónde aparecen estos datos?</div>
+        <div class="space-y-3">
+          <div class="rounded-xl p-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)"><p class="text-[10px] font-semibold text-violet-300 mb-1">VSL</p><p class="text-[9px] text-slate-400">El caso estrella aparece en el paso 4 del VSL como prueba social concreta. "María bajó 12kg en 90 días usando exactamente este método."</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18)"><p class="text-[10px] font-semibold text-cyan-300 mb-1">Ads MOFU</p><p class="text-[9px] text-slate-400">Los casos con resultado numérico concreto convierten 2.4x más en MOFU que el contenido educativo.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.18)"><p class="text-[10px] font-semibold text-emerald-300 mb-1">Landing page</p><p class="text-[9px] text-slate-400">Sección de testimonios debajo del VSL. Mínimo 2 casos para activar. Ideal 3–5 con foto o video.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18)"><p class="text-[10px] font-semibold text-amber-300 mb-1">Reels de contenido</p><p class="text-[9px] text-slate-400">El ángulo "Transformación/Testimonio" usa estos datos. RIMA genera el reel con los números del caso real.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.18)"><p class="text-[10px] font-semibold text-rose-300 mb-1">DMs de setting</p><p class="text-[9px] text-slate-400">Cuando el lead pregunta "¿funciona de verdad?" — el setter usa el caso más relevante al perfil del lead.</p></div>
+        </div>
+      </div>
+      </div><!-- /grid casos -->
+    </div>
+
+    <!-- ===== 6. EQUIPO DE VENTAS ===== -->
+    <div id="sp-ventas" class="sec-panel">
+      <div class="sec-divider">Estructura del equipo comercial</div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">¿Quién hace el setting (DMs)?</div>
+          <div class="chip-group">
+            <span class="chip selected" onclick="toggleChip(this)">Yo mismo</span>
+            <span class="chip" onclick="toggleChip(this)">Tengo setter</span>
+            <span class="chip" onclick="toggleChip(this)">Voy a contratar</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">¿Quién hace las llamadas de cierre?</div>
+          <div class="chip-group">
+            <span class="chip selected" onclick="toggleChip(this)">Yo mismo</span>
+            <span class="chip" onclick="toggleChip(this)">Tengo closer</span>
+            <span class="chip" onclick="toggleChip(this)">Voy a contratar</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">Link de Calendly o agenda</div>
+          <input class="f-input" placeholder="ej: calendly.com/fitlifestudio" value="calendly.com/fitlifestudio" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Capacidad de llamadas por día</div>
+          <input class="f-input" placeholder="ej: 3-4 llamadas" value="3 llamadas diarias" />
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Canal de confirmación de llamadas</div>
+        <div class="chip-group">
+          <span class="chip selected" onclick="toggleChip(this)">WhatsApp</span>
+          <span class="chip" onclick="toggleChip(this)">Instagram DM</span>
+          <span class="chip" onclick="toggleChip(this)">Email</span>
+          <span class="chip" onclick="toggleChip(this)">Telegram</span>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Nombre del setter (si aplica)</div>
+        <input class="f-input" placeholder="ej: Andrea M." />
+      </div>
+
+      <div class="sec-divider">Métricas actuales de ventas</div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="field-group">
+          <div class="field-label">Tasa de setting actual</div>
+          <input class="f-input" placeholder="ej: 60% — de cada 10 DMs, 6 agendan" value="63%" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Tasa de cierre en llamada</div>
+          <input class="f-input" placeholder="ej: 40%" value="40%" />
+        </div>
+        <div class="field-group">
+          <div class="field-label">Revenue mensual actual</div>
+          <input class="f-input" placeholder="ej: $8,000 USD" value="$18,000 MXN" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 7. TONO Y VOZ ===== -->
+    <div id="sp-tono" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Personalidad y voz</div>
+
+      <div class="field-group">
+        <div class="field-label">Tono de voz (seleccioná todos los que aplican) <span class="req">*</span></div>
+        <div class="chip-group">
+          <span class="chip" onclick="toggleChip(this)">Formal</span>
+          <span class="chip selected" onclick="toggleChip(this)">Cercano-informal</span>
+          <span class="chip" onclick="toggleChip(this)">Directo-agresivo</span>
+          <span class="chip selected" onclick="toggleChip(this)">Empático-cálido</span>
+          <span class="chip" onclick="toggleChip(this)">Analítico-técnico</span>
+          <span class="chip selected" onclick="toggleChip(this)">Motivacional</span>
+          <span class="chip" onclick="toggleChip(this)">Humorístico</span>
+          <span class="chip" onclick="toggleChip(this)">Autoritario-experto</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4">
+        <div class="field-group">
+          <div class="field-label">Pronombre <span class="req">*</span></div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Vos</span>
+            <span class="chip selected" onclick="toggleChip(this)">Tú</span>
+            <span class="chip" onclick="toggleChip(this)">Usted</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Uso de emojis <span class="req">*</span></div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Sí, frecuentes</span>
+            <span class="chip selected" onclick="toggleChip(this)">Sí, pocos estratégicos</span>
+            <span class="chip" onclick="toggleChip(this)">Solo al inicio</span>
+            <span class="chip" onclick="toggleChip(this)">No</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Longitud de textos</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Muy cortos (1-2 líneas)</span>
+            <span class="chip selected" onclick="toggleChip(this)">Medios (3-5 líneas)</span>
+            <span class="chip" onclick="toggleChip(this)">Largos y detallados</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">Palabras/frases que SÍ representan tu marca</div>
+          <div class="field-hint">RIMA las usará para generar copy con tu voz.</div>
+          <textarea class="f-textarea" placeholder="ej: sistema, proceso, resultados reales, sin excusas, a tu ritmo, sin privarte, transformación visible" rows="2">sistema, proceso, resultados reales, a tu ritmo, sostenible, sin privarte, transformación visible, energía real</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Palabras/frases que NO querés que aparezcan</div>
+          <textarea class="f-textarea" placeholder='ej: "fácil", "rápido", "milagroso", "sin esfuerzo", "quemar grasa", "dieta"' rows="2">"fácil", "rápido", "sin esfuerzo", "milagroso", "quemar grasa", "dieta", "detox"</textarea>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">¿Mostrás tu cara en contenido? <span class="req">*</span></div>
+        <div class="chip-group">
+          <span class="chip selected" onclick="toggleChip(this)">Sí, soy la cara del negocio</span>
+          <span class="chip" onclick="toggleChip(this)">A veces, prefiero no siempre</span>
+          <span class="chip" onclick="toggleChip(this)">No, marca sin cara visible</span>
+        </div>
+      </div>
+
+      </div><div><!-- col derecha tono -->
+      <div class="sec-divider">Referencias de comunicación</div>
+      <div class="field-group">
+        <div class="field-label">3 marcas o personas cuyo tono admiras</div>
+        <div class="field-hint">Referentes de comunicación, no necesariamente del mismo nicho.</div>
+        <div class="space-y-2">
+          <input class="f-input" placeholder="ej: @alexfit_mx — directo, sin rodeos, mucho testimonio real" value="@alexfit_mx — directo, mucho testimonio real" />
+          <input class="f-input" placeholder="ej: @nutrifit.pro — empático, mucha educación con humor" />
+          <input class="f-input" placeholder="ej: Otro referente de comunicación que te inspire" />
+        </div>
+      </div>
+    </div>
+
+      </div></div></div><!-- /grid tono -->
+    </div>
+
+    <!-- ===== 8. OBJECIONES ===== -->
+    <div id="sp-objeciones" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Las 5 objeciones más frecuentes</div>
+
+      <div class="field-group">
+        <div class="field-label">Las 5 objeciones más frecuentes y cómo las manejás <span class="req">*</span></div>
+        <div class="field-hint">RIMA las usa para generar el guión de ventas, los mensajes de follow-up y los ads MOFU.</div>
+        <div class="space-y-3">
+          <div>
+            <div class="field-hint mb-1">Objeción 1</div>
+            <input class="f-input mb-1" placeholder="Objeción: ej: Es muy caro" value="Es muy caro" />
+            <textarea class="f-textarea" placeholder="Cómo la manejás en la llamada" rows="2">¿Caro comparado con qué? Llevar 6 meses sin resultados también tiene un costo — solo que se paga en frustración y tiempo. ¿Cuánto tiempo llevas buscando la solución solo?</textarea>
+          </div>
+          <div>
+            <div class="field-hint mb-1">Objeción 2</div>
+            <input class="f-input mb-1" placeholder="Objeción" value="No tengo tiempo" />
+            <textarea class="f-textarea" placeholder="Cómo la manejás" rows="2">Exactamente diseñé el programa para personas con poco tiempo. Son 15 min al día. Si no tienes tiempo para eso, ¿cuánto tiempo estás perdiendo en cosas que no te dan resultados?</textarea>
+          </div>
+          <div>
+            <div class="field-hint mb-1">Objeción 3</div>
+            <input class="f-input mb-1" placeholder="Objeción" value="Lo consulto con mi pareja" />
+            <textarea class="f-textarea" placeholder="Cómo la manejás" rows="2">Claro. ¿Qué información necesita tu pareja para entender mejor la decisión? Podría unirse a esta llamada ahora mismo o agendamos una nueva con los dos.</textarea>
+          </div>
+          <div>
+            <div class="field-hint mb-1">Objeción 4</div>
+            <input class="f-input mb-1" placeholder="Objeción" value="Ya intenté algo similar y no funcionó" />
+            <textarea class="f-textarea" placeholder="Cómo la manejás" rows="2">¿Qué fue lo diferente en ese programa? [escuchar] Exactamente eso es lo que diferencia nuestro método — el seguimiento semanal garantiza que no te quedes estancado.</textarea>
+          </div>
+          <div>
+            <div class="field-hint mb-1">Objeción 5</div>
+            <input class="f-input mb-1" placeholder="Objeción" value="Lo pienso y te aviso" />
+            <textarea class="f-textarea" placeholder="Cómo la manejás" rows="2">¿Qué parte específica necesitás pensar? Porque quiero asegurarme de que tenés toda la información antes de decidir — no quiero que te vayas con dudas.</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      </div>
+      <div><!-- col derecha objeciones: cómo responder -->
+        <div class="sec-divider">¿Cómo las usa RIMA?</div>
+        <div class="space-y-3">
+          <div class="rounded-xl p-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)"><p class="text-[10px] font-semibold text-violet-300 mb-1">Guión de llamada</p><p class="text-[9px] text-slate-400">Las respuestas que escribas aquí aparecen como cards en la sección "Objeciones" del guión de llamada, listos para usar en tiempo real.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.18)"><p class="text-[10px] font-semibold text-rose-300 mb-1">Ads MOFU — Ángulo Objeción</p><p class="text-[9px] text-slate-400">El ángulo 2 de MOFU ataca la objeción más común antes de que el lead la exprese. Convierte muy bien con seguidores que ya te conocen.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18)"><p class="text-[10px] font-semibold text-cyan-300 mb-1">Carruseles educativos</p><p class="text-[9px] text-slate-400">Cada objeción es un carrusel: "X razones por las que 'no tengo tiempo' ya no es una excusa". Los carruseles de objeción tienen alta Fuerza promedio.</p></div>
+          <div class="rounded-xl p-3" style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.18)"><p class="text-[10px] font-semibold text-emerald-300 mb-1">Follow-up de DMs</p><p class="text-[9px] text-slate-400">Cuando un lead dice "lo pienso" por DM, RIMA sugiere el mensaje de seguimiento basado en la objeción detectada.</p></div>
+        </div>
+      </div>
+      </div><!-- /grid objeciones -->
+    </div>
+
+    <!-- ===== 9. CONTENIDO ===== -->
+    <div id="sp-contenido" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Pilares de contenido para RIMA</div>
+
+      <div class="field-group">
+        <div class="field-label">Pilares de contenido (temáticas que publicás) <span class="req">*</span></div>
+        <div class="field-hint">RIMA organiza el calendario de contenido en base a estos pilares.</div>
+        <div class="chip-group">
+          <span class="chip selected" onclick="toggleChip(this)">Transformación / Antes-Después</span>
+          <span class="chip selected" onclick="toggleChip(this)">Educación / Tips</span>
+          <span class="chip selected" onclick="toggleChip(this)">Testimonio de clientes</span>
+          <span class="chip selected" onclick="toggleChip(this)">Venta / Oferta</span>
+          <span class="chip" onclick="toggleChip(this)">Entretenimiento / Humor</span>
+          <span class="chip" onclick="toggleChip(this)">Día a día / Behind the scenes</span>
+          <span class="chip" onclick="toggleChip(this)">Motivación</span>
+          <span class="chip" onclick="toggleChip(this)">Controversia / Mito desmontado</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field-group">
+          <div class="field-label">Formato de contenido preferido</div>
+          <div class="chip-group">
+            <span class="chip selected" onclick="toggleChip(this)">Reels</span>
+            <span class="chip selected" onclick="toggleChip(this)">Carruseles</span>
+            <span class="chip selected" onclick="toggleChip(this)">Historias</span>
+            <span class="chip" onclick="toggleChip(this)">Posts estáticos</span>
+            <span class="chip" onclick="toggleChip(this)">YouTube Shorts</span>
+            <span class="chip" onclick="toggleChip(this)">Lives</span>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Frecuencia de publicación objetivo</div>
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">1-2 por semana</span>
+            <span class="chip" onclick="toggleChip(this)">3-4 por semana</span>
+            <span class="chip selected" onclick="toggleChip(this)">5-7 por semana</span>
+            <span class="chip" onclick="toggleChip(this)">Más de 7</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Temas tabú o que NO querés tocar en el contenido</div>
+        <textarea class="f-textarea" placeholder="ej: No mencionar nombres de competidores · No hablar de política · No prometer resultados ilegales · No usar imágenes corporales extremas">No hablar de dietas extremas. No prometer "perder X kg por semana" (poco realista). No nombrar competidores. No usar imágenes de cuerpos extremos.</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Keywords de tu nicho — palabras que tu cliente busca</div>
+        <div class="field-hint">Aparecen en los captions y en los hooks de los reels.</div>
+        <textarea class="f-textarea" placeholder="ej: bajar de peso, perder barriga, rutina en casa, comer sano sin dieta, ejercicio para principiantes, fitness CDMX">bajar de peso, perder barriga, rutina en casa, comer sano sin dieta, transformación, fitness CDMX, ejercicio para ocupados</textarea>
+      </div>
+
+      <div class="field-group">
+        <div class="field-label">Referentes de contenido en tu nicho (cuentas que modelamos)</div>
+        <div class="field-hint">Ya están cargados en Estudio de mercado — confirmá cuáles quiere RIMA priorizar para el calendario.</div>
+        <div class="space-y-2">
+          <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@alexfit_mx" />
+          <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@nutrifit.pro" />
+          <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@gympepe_oficial" />
+        </div>
+      </div>
+    </div>
+
+      </div>
+      <div><!-- col derecha contenido -->
+        <div class="sec-divider">Keywords y referentes</div>
+        <div class="field-group">
+          <div class="field-label">Keywords que tu cliente busca</div>
+          <div class="field-hint">Aparecen en captions y hooks.</div>
+          <textarea class="f-textarea" rows="3" placeholder="ej: bajar de peso, perder barriga, rutina en casa, comer sano sin dieta">bajar de peso, perder barriga, rutina en casa, comer sano sin dieta, transformación, fitness CDMX, ejercicio para ocupados</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Temas tabú — NO tocar</div>
+          <textarea class="f-textarea" rows="2" placeholder="ej: No mencionar competidores · No prometer resultados ilegales · No usar imágenes extremas">No hablar de dietas extremas. No prometer "perder X kg por semana". No usar imágenes de cuerpos extremos.</textarea>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Referentes de contenido a modelar</div>
+          <div class="space-y-2">
+            <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@alexfit_mx" />
+            <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@nutrifit.pro" />
+            <input class="f-input" placeholder="@cuenta de IG o canal de YouTube" value="@gympepe_oficial" />
+          </div>
+        </div>
+      </div>
+      </div><!-- /grid contenido -->
+    </div>
+
+    <!-- ===== 10. HERRAMIENTAS ===== -->
+    <div id="sp-herramientas" class="sec-panel">
+      <div class="grid gap-6" style="grid-template-columns:1fr 1fr"><div>
+      <div class="sec-divider">Stack de herramientas activas</div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">ManyChat</p>
+          <p class="text-[9px] text-slate-500">Automatización de DMs en Instagram</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="chip-group">
+            <span class="chip" onclick="toggleChip(this)">Free</span>
+            <span class="chip selected" onclick="toggleChip(this)">Pro</span>
+          </div>
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">WhatsApp Business</p>
+          <p class="text-[9px] text-slate-500">Para confirmaciones y seguimiento de leads</p>
+        </div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">Landing page en la bio</p>
+          <p class="text-[9px] text-slate-500">Un solo destino — sin Linktree</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <input class="f-input" style="width:200px;padding:5px 10px" placeholder="URL de tu landing" value="fitlifestudio.mx/agenda" />
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">CRM</p>
+          <p class="text-[9px] text-slate-500">Para gestionar leads y pipeline de ventas</p>
+        </div>
+        <div class="chip-group">
+          <span class="chip" onclick="toggleChip(this)">GHL</span>
+          <span class="chip" onclick="toggleChip(this)">HubSpot</span>
+          <span class="chip" onclick="toggleChip(this)">Notion</span>
+          <span class="chip selected" onclick="toggleChip(this)">Ninguno aún</span>
+          <span class="chip" onclick="toggleChip(this)">Otro</span>
+        </div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">Calendly / agenda</p>
+          <p class="text-[9px] text-slate-500">Para agendar llamadas de venta</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <input class="f-input" style="width:200px;padding:5px 10px" placeholder="URL de Calendly" value="calendly.com/fitlifestudio" />
+          <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+        </div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">Plataforma de pago</p>
+          <p class="text-[9px] text-slate-500">¿Cómo cobra el cliente final?</p>
+        </div>
+        <div class="chip-group">
+          <span class="chip selected" onclick="toggleChip(this)">Stripe</span>
+          <span class="chip" onclick="toggleChip(this)">PayPal</span>
+          <span class="chip" onclick="toggleChip(this)">Transferencia</span>
+          <span class="chip" onclick="toggleChip(this)">MercadoPago</span>
+          <span class="chip" onclick="toggleChip(this)">Otro</span>
+        </div>
+      </div>
+
+      <div class="tool-row">
+        <div>
+          <p class="text-[11px] font-medium text-slate-300">Herramienta de email marketing</p>
+          <p class="text-[9px] text-slate-500">Para seguimiento de leads que no cierran de inmediato</p>
+        </div>
+        <div class="chip-group">
+          <span class="chip" onclick="toggleChip(this)">ActiveCampaign</span>
+          <span class="chip" onclick="toggleChip(this)">MailerLite</span>
+          <span class="chip" onclick="toggleChip(this)">Klaviyo</span>
+          <span class="chip selected" onclick="toggleChip(this)">No tengo aún</span>
+        </div>
+      </div>
+
+      </div>
+      <div><!-- col derecha herramientas -->
+        <div class="sec-divider">Notas adicionales para RIMA</div>
+        <div class="field-group">
+          <div class="field-label">Cualquier cosa relevante que no entre en las secciones anteriores</div>
+          <textarea class="f-textarea" placeholder="Contexto adicional, restricciones, objetivos de corto plazo, situación actual del negocio..." rows="4"></textarea>
+        </div>
+        <div class="rounded-xl p-3 mt-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)">
+          <p class="text-[10px] font-semibold text-violet-300 mb-2">¿Cómo usa RIMA este brief?</p>
+          <ul class="space-y-1.5 text-[9px] text-slate-400">
+            <li>· El brief alimenta todos los agentes automáticamente</li>
+            <li>· Cada pieza de contenido usa tu tono, nicho y oferta</li>
+            <li>· Los guiones de venta y DMs se personalizan con tus objeciones reales</li>
+            <li>· La landing y el VSL se generan con tus casos de éxito</li>
+            <li>· Los ads MOFU/BOFU usan tus ángulos específicos</li>
+          </ul>
+        </div>
+      </div>
+      </div><!-- /grid herramientas -->
+    </div>
+
+  </div>
+</main>
+
+<script>
+// Tab navigation
+function goSec(id){
+  document.querySelectorAll('.sec-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sec-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('sp-'+id).classList.add('active');
+  document.getElementById('st-'+id).classList.add('active');
+}
+
+// Chip toggle
+function toggleChip(el){
+  el.classList.toggle('selected');
+}
+
+// Save
+function saveForm(){
+  const ind = document.getElementById('save-indicator');
+  ind.classList.remove('hidden');
+  setTimeout(()=>ind.classList.add('hidden'), 2500);
+}
+</script>
+</body>
+</html>

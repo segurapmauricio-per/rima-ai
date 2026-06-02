@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — META Ads</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
+    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
+    .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
+    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .tab-btn{transition:all .2s;border-bottom:2px solid transparent;padding-bottom:10px;cursor:pointer}
+    .tab-btn.active{border-bottom-color:#1877F2;color:#fff}
+    .tab-panel{display:none}.tab-panel.active{display:block}
+    @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
+    .pulsing{animation:pulse-v 2s ease-in-out infinite}
+    .kpi-ok{color:#34D399}
+    .kpi-warn{color:#FBBF24}
+    .kpi-bad{color:#F87171}
+    .audience-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;transition:all .2s;cursor:pointer}
+    .audience-card:hover{border-color:rgba(24,119,242,0.4);background:rgba(24,119,242,0.04)}
+    .audience-card.active-card{background:rgba(24,119,242,0.08);border-color:rgba(24,119,242,0.4)}
+    .angle-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;transition:all .15s}
+    .angle-card:hover{background:rgba(255,255,255,0.05)}
+    .temp-hot{background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.3);color:#FB7185}
+    .temp-warm{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:#FBBF24}
+    .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
+    .badge-active{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
+    .badge-learning{background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.25)}
+    .badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}
+    .badge-warn{background:rgba(244,63,94,0.15);color:#F87171;border:1px solid rgba(244,63,94,0.25)}
+    .progress-bar{height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,0.06)}
+    .freq-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.06);position:relative}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- SIDEBAR -->
+<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5">
+  <div class="px-5 py-5 border-b border-white/5 flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bp flex items-center justify-center" style="box-shadow:0 0 20px rgba(124,58,237,.22)"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>
+    <div><span class="font-bold text-base gt">RIMA</span><p class="text-[10px] text-slate-500 -mt-0.5">Marketing AI · LATAM</p></div>
+  </div>
+  <div class="px-4 py-3 border-b border-white/5">
+    <div class="flex items-center gap-2.5 mb-2.5">
+      <div class="w-9 h-9 rounded-full p-[2px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-xs font-bold text-white">FL</span></div></div>
+      <div><p class="text-xs font-semibold text-white">FitLife Studio</p><p class="text-[10px] text-slate-500">@fitlifestudio_mx</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300">12.4K</p><p class="text-[8px] text-slate-500">Seg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300">48</p><p class="text-[8px] text-slate-500">Msg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p class="text-xs font-bold text-emerald-300">$18K</p><p class="text-[8px] text-slate-500">Ventas</p></div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 py-3 overflow-y-auto space-y-3">
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Comencemos</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z"/></svg></div><span class="text-[11px] text-slate-400">Dashboard</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5"/></svg></div><span class="text-[11px] text-slate-400">Calendario</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-pink-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15"/></svg></div><span class="text-[11px] text-slate-400">Contenido</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-sky-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></div><span class="text-[11px] text-slate-400">Estudio de mercado</span></div>
+        <!-- META ACTIVE -->
+        <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(24,119,242,0.15),rgba(59,130,246,0.08));border-color:rgba(24,119,242,0.45)">
+          <div class="w-5 h-5 rounded flex items-center justify-center" style="background:rgba(24,119,242,0.25)"><svg class="w-2.5 h-2.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div>
+          <span class="text-[11px] font-semibold text-white">META Ads</span>
+          <span class="ml-auto badge badge-active">Activo</span>
+        </div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-emerald-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519"/></svg></div><span class="text-[11px] text-slate-400">Ventas</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-amber-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8"/></svg></div><span class="text-[11px] text-slate-400">Landing</span></div>
+      </div>
+    </div>
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Mi Negocio</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75"/></svg></div><span class="text-[11px] text-slate-400">Información de la marca</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-rose-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5"/></svg></div><span class="text-[11px] text-slate-400">Referencias</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-cyan-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div><span class="text-[11px] text-slate-400">Imágenes</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-orange-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38"/></svg></div><span class="text-[11px] text-slate-400">Videos</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-slate-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912"/></svg></div><span class="text-[11px] text-slate-400">Credenciales</span><span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400"></span></div>
+      </div>
+    </div>
+  </nav>
+  <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2.5">
+    <div class="w-7 h-7 rounded-full p-[1.5px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-[9px] font-bold text-white">FL</span></div></div>
+    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500">Plan Pro</p></div></div>
+    <button class="w-6 h-6 rounded-lg glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- HEADER — budget + setup status -->
+  <div class="px-6 pt-5 pb-0 border-b border-white/5 flex-shrink-0">
+
+    <!-- Fila 1: título + alertas -->
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <svg class="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+          <h1 class="text-sm font-semibold text-white">META Ads</h1>
+          <span class="badge badge-active">Campañas activas</span>
+          <span class="badge badge-learning pulsing">1 en aprendizaje</span>
+        </div>
+        <p class="text-[11px] text-slate-500">Semana del 9–13 Jun · $30/día · Distribución TOFU/MOFU/BOFU</p>
+      </div>
+      <!-- Budget input + distribución -->
+      <div class="flex items-center gap-3">
+        <div class="glass rounded-xl px-3 py-2 flex items-center gap-2">
+          <span class="text-[10px] text-slate-500">Budget diario</span>
+          <input type="text" value="$30" class="w-14 bg-transparent text-xs font-bold text-white text-right outline-none" />
+          <span class="text-[9px] text-slate-600">USD/día</span>
+        </div>
+        <button class="bp px-3 py-2 rounded-xl text-white text-[10px] font-semibold cursor-pointer">Abrir Ads Manager →</button>
+      </div>
+    </div>
+
+    <!-- Fila 2: distribución visual + setup checklist -->
+    <div class="flex items-center gap-4 mb-4">
+
+      <!-- Barra TOFU/MOFU/BOFU -->
+      <div class="flex-1 glass rounded-xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[10px] font-semibold text-slate-300">Distribución del presupuesto</span>
+          <span class="text-[10px] text-slate-500">$30/día total</span>
+        </div>
+        <div class="flex rounded-lg overflow-hidden h-5 mb-2">
+          <div class="flex items-center justify-center text-[9px] font-bold text-white" style="width:70%;background:rgba(59,130,246,0.7)">TOFU · $21</div>
+          <div class="flex items-center justify-center text-[9px] font-bold text-white" style="width:20%;background:rgba(245,158,11,0.7)">MOFU · $6</div>
+          <div class="flex items-center justify-center text-[9px] font-bold text-white" style="width:10%;background:rgba(244,63,94,0.7)">BOFU · $3</div>
+        </div>
+        <div class="flex gap-4 text-[9px] text-slate-500">
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:rgba(59,130,246,0.7)"></span>TOFU 70% — Tráfico a perfil, audiencias frías</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:rgba(245,158,11,0.7)"></span>MOFU 20% — Leads de seguidores</span>
+          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:rgba(244,63,94,0.7)"></span>BOFU 10% — Retargeting caliente</span>
+        </div>
+      </div>
+
+      <!-- Setup checklist -->
+      <div class="glass rounded-xl p-3 flex-shrink-0" style="min-width:220px">
+        <p class="text-[10px] font-semibold text-slate-300 mb-2">Setup obligatorio</p>
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-2"><div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3)"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div><span class="text-[10px] text-slate-300">Business Manager verificado</span></div>
+          <div class="flex items-center gap-2"><div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3)"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div><span class="text-[10px] text-slate-300">Cuenta publicitaria activa</span></div>
+          <div class="flex items-center gap-2"><div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3)"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div><span class="text-[10px] text-slate-300">Instagram conectada al BM</span></div>
+          <div class="flex items-center gap-2"><div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3)"><svg class="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg></div><span class="text-[10px] text-amber-300">Pixel instalado — verificar</span></div>
+          <div class="flex items-center gap-2"><div class="w-4 h-4 rounded flex items-center justify-center flex-shrink-0" style="background:rgba(148,163,184,0.1);border:1px solid rgba(148,163,184,0.2)"><svg class="w-2.5 h-2.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></div><span class="text-[10px] text-slate-500">CSV de clientes — pendiente</span></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-6 text-xs font-medium text-slate-500">
+      <button onclick="switchTab('tofu')" id="tab-tofu" class="tab-btn active flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-sm" style="background:rgba(59,130,246,0.8)"></span> TOFU
+        <span class="text-[9px] text-slate-600 ml-0.5">$21/día</span>
+      </button>
+      <button onclick="switchTab('mofu')" id="tab-mofu" class="tab-btn flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-sm" style="background:rgba(245,158,11,0.8)"></span> MOFU
+        <span class="text-[9px] text-slate-600 ml-0.5">$6/día</span>
+      </button>
+      <button onclick="switchTab('bofu')" id="tab-bofu" class="tab-btn flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-sm" style="background:rgba(244,63,94,0.8)"></span> BOFU
+        <span class="text-[9px] text-slate-600 ml-0.5">$3/día</span>
+      </button>
+      <button onclick="switchTab('fma')" id="tab-fma" class="tab-btn flex items-center gap-1.5">
+        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41"/></svg>
+        Follow Me Ads
+      </button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="flex-1 overflow-y-auto px-6 py-5">
+
+    <!-- ============ TOFU ============ -->
+    <div id="panel-tofu" class="tab-panel active">
+      <div class="grid grid-cols-3 gap-5">
+
+        <!-- Col izquierda: 3 conjuntos -->
+        <div class="col-span-2 space-y-4">
+
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-white">3 conjuntos de audiencia</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">Objetivo: Tráfico → Perfil de Instagram · Cada conjunto corre independiente</p>
+            </div>
+            <div class="flex items-center gap-2 text-[9px] text-slate-500">
+              <svg class="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+              Nunca edites antes de 7 días — reinicia el aprendizaje
+            </div>
+          </div>
+
+          <!-- Conjunto 1: Broad -->
+          <div class="audience-card active-card p-4">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white" style="background:linear-gradient(135deg,#1877F2,#3B5998)">B</div>
+                <div>
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <p class="text-xs font-semibold text-white">Broad — Segmentación abierta</p>
+                    <span class="badge badge-active">Activo · día 5</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500">Solo países, sin intereses · MX, CO, CL, PE, US · Meta decide</p>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-white">$7/día</p>
+            </div>
+            <!-- KPIs -->
+            <div class="grid grid-cols-4 gap-2 mb-3">
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-ok">$0.04</p>
+                <p class="text-[8px] text-slate-500">CPV perfil</p>
+                <p class="text-[8px] text-emerald-400/60">meta &lt;$0.06 ✓</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-ok">3.2%</p>
+                <p class="text-[8px] text-slate-500">CTR</p>
+                <p class="text-[8px] text-emerald-400/60">meta &gt;2% ✓</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-ok">31%</p>
+                <p class="text-[8px] text-slate-500">Hook rate</p>
+                <p class="text-[8px] text-emerald-400/60">meta &gt;27% ✓</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-ok">1.3</p>
+                <p class="text-[8px] text-slate-500">Frecuencia</p>
+                <p class="text-[8px] text-emerald-400/60">ok &lt;1.7</p>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 text-[9px] text-emerald-400">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                Conjunto ganador · Considera duplicar al día 7
+              </div>
+              <span class="text-[9px] text-slate-600">2 días para poder editar</span>
+            </div>
+          </div>
+
+          <!-- Conjunto 2: Segmentado -->
+          <div class="audience-card p-4">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9)">S</div>
+                <div>
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <p class="text-xs font-semibold text-white">Segmentado — Con intereses</p>
+                    <span class="badge badge-learning pulsing">Aprendiendo</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500">Fitness · Nutrición · Wellness · Gym · MX, CO, CL</p>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-white">$7/día</p>
+            </div>
+            <div class="grid grid-cols-4 gap-2 mb-3">
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-warn">$0.07</p>
+                <p class="text-[8px] text-slate-500">CPV perfil</p>
+                <p class="text-[8px] text-amber-400/60">sobre meta</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-warn">1.8%</p>
+                <p class="text-[8px] text-slate-500">CTR</p>
+                <p class="text-[8px] text-amber-400/60">bajo meta</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold kpi-warn">24%</p>
+                <p class="text-[8px] text-slate-500">Hook rate</p>
+                <p class="text-[8px] text-amber-400/60">bajo meta</p>
+              </div>
+              <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)">
+                <p class="text-xs font-bold text-slate-400">—</p>
+                <p class="text-[8px] text-slate-500">Frecuencia</p>
+                <p class="text-[8px] text-slate-600">en fase inicial</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 text-[9px] text-amber-400">
+              <svg class="w-3 h-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
+              En aprendizaje · esperar hasta día 7 antes de evaluar o pausar
+            </div>
+          </div>
+
+          <!-- Conjunto 3: Lookalike -->
+          <div class="audience-card p-4">
+            <div class="flex items-start justify-between mb-3">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-[10px] font-bold text-white" style="background:linear-gradient(135deg,#10B981,#059669)">L</div>
+                <div>
+                  <div class="flex items-center gap-2 mb-0.5">
+                    <p class="text-xs font-semibold text-white">Lookalike — Similar a clientes</p>
+                    <span class="badge badge-paused">CSV pendiente</span>
+                  </div>
+                  <p class="text-[10px] text-slate-500">Requiere subir CSV de clientes → META busca perfiles similares</p>
+                </div>
+              </div>
+              <p class="text-xs font-bold text-white">$7/día</p>
+            </div>
+            <div class="rounded-xl p-3 flex items-center gap-3" style="background:rgba(255,255,255,0.025);border:1px dashed rgba(255,255,255,0.1)">
+              <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/></svg>
+              <div class="flex-1"><p class="text-[10px] text-slate-400">Sube el CSV de clientes para activar este conjunto</p><p class="text-[9px] text-slate-600">Mínimo 100 contactos · ideal 500+</p></div>
+              <button class="bp px-3 py-1.5 rounded-lg text-[10px] text-white cursor-pointer">Subir CSV</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Col derecha: creativos recomendados -->
+        <div class="space-y-4">
+
+          <!-- Creativos sugeridos por RIMA -->
+          <div class="glass rounded-2xl border border-white/5 overflow-hidden">
+            <div class="px-4 py-3 border-b border-white/5 flex items-center gap-2">
+              <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.499z"/></svg>
+              <p class="text-xs font-semibold text-white">Creativos a boostar</p>
+            </div>
+            <div class="p-3 space-y-2.5">
+              <p class="text-[9px] text-slate-500 px-1">RIMA seleccionó estos reels por superar el promedio orgánico</p>
+
+              <!-- Creativo 1 -->
+              <div class="flex gap-2.5 p-2 rounded-xl cursor-pointer" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2)">
+                <div class="w-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:linear-gradient(180deg,#1a0d2e,#0d1a2e);min-height:56px">
+                  <svg class="w-3 h-3 text-violet-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[10px] font-semibold text-white truncate">Antes/Después 90 días</p>
+                  <div class="flex gap-2 mt-0.5">
+                    <span class="text-[8px] text-emerald-400">9.3K views</span>
+                    <span class="text-[8px] text-slate-500">Fuerza 8.3%</span>
+                  </div>
+                  <p class="text-[8px] text-emerald-400/80 mt-0.5">3.7x sobre promedio · ideal para TOFU</p>
+                </div>
+              </div>
+
+              <!-- Creativo 2 -->
+              <div class="flex gap-2.5 p-2 rounded-xl cursor-pointer" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <div class="w-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:linear-gradient(180deg,#0d1f1a,#0a0a0f);min-height:56px">
+                  <svg class="w-3 h-3 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[10px] font-semibold text-white truncate">HIIT 15 min sin equipo</p>
+                  <div class="flex gap-2 mt-0.5">
+                    <span class="text-[8px] text-slate-400">5.1K views</span>
+                    <span class="text-[8px] text-slate-500">Fuerza 5.8%</span>
+                  </div>
+                  <p class="text-[8px] text-slate-500 mt-0.5">2.2x sobre promedio</p>
+                </div>
+              </div>
+
+              <!-- Creativo 3 -->
+              <div class="flex gap-2.5 p-2 rounded-xl cursor-pointer" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <div class="w-10 rounded-lg flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:linear-gradient(180deg,#1a1a0d,#0a0a0f);min-height:56px">
+                  <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-[10px] font-semibold text-white truncate">Rutina 5AM</p>
+                  <div class="flex gap-2 mt-0.5">
+                    <span class="text-[8px] text-slate-400">4.2K views</span>
+                    <span class="text-[8px] text-slate-500">Fuerza 4.9%</span>
+                  </div>
+                  <p class="text-[8px] text-slate-500 mt-0.5">1.9x sobre promedio</p>
+                </div>
+              </div>
+
+              <p class="text-[9px] text-slate-600 px-1">Máx. 4–5 anuncios por conjunto · Meta concentra el gasto en los 2–3 mejores</p>
+            </div>
+          </div>
+
+          <!-- Regla de los 7 días -->
+          <div class="rounded-xl p-3 space-y-2" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2)">
+            <div class="flex items-center gap-2"><svg class="w-3.5 h-3.5 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p class="text-[10px] font-semibold text-amber-300">Regla de los 7 días</p></div>
+            <ul class="space-y-1 text-[9px] text-slate-400">
+              <li>· Cada edición reinicia el aprendizaje</li>
+              <li>· Semanas 1–2: solo observar CPM</li>
+              <li>· Semana 3: duplicar el ganador · pausar los $2+ más caros</li>
+              <li>· Escalar máx. 20% del presupuesto a la vez</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ MOFU ============ -->
+    <div id="panel-mofu" class="tab-panel">
+      <div class="grid grid-cols-3 gap-5">
+        <div class="col-span-2 space-y-4">
+
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-white">Campaña MOFU — Leads de seguidores</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">Objetivo: Clientes potenciales · Audiencia: Seguidores de IG · Placement: Solo Instagram</p>
+            </div>
+            <!-- Aviso si pocos seguidores -->
+            <div class="flex items-center gap-2 rounded-lg px-3 py-1.5" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2)">
+              <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+              <span class="text-[10px] text-emerald-300">12.4K seguidores — audiencia suficiente</span>
+            </div>
+          </div>
+
+          <!-- 4 ángulos -->
+          <div class="grid grid-cols-2 gap-3">
+
+            <!-- Ángulo 1: Problema -->
+            <div class="angle-card p-4">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(244,63,94,0.15);border:1px solid rgba(244,63,94,0.3)">😤</div>
+                <div><p class="text-[11px] font-bold text-white">Problema</p><p class="text-[9px] text-slate-500">Nombra la frustración exacta</p></div>
+                <span class="ml-auto badge badge-active">Activo</span>
+              </div>
+              <div class="rounded-lg p-3 mb-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Copy generado por RIMA</p>
+                <p class="text-[11px] text-slate-200 leading-relaxed italic">"Llevas meses en el gym sin ver resultados. No es falta de disciplina — es que nadie te enseñó el sistema correcto. Esto es lo que lo cambia."</p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[9px]">
+                <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold kpi-ok">$1.20</p><p class="text-slate-500">CPL</p></div>
+                <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold text-white">8</p><p class="text-slate-500">Leads semana</p></div>
+              </div>
+            </div>
+
+            <!-- Ángulo 2: Objeción -->
+            <div class="angle-card p-4">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3)">🛑</div>
+                <div><p class="text-[11px] font-bold text-white">Objeción</p><p class="text-[9px] text-slate-500">Ataca la razón por la que no compran</p></div>
+                <span class="ml-auto badge badge-active">Activo</span>
+              </div>
+              <div class="rounded-lg p-3 mb-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Copy generado por RIMA</p>
+                <p class="text-[11px] text-slate-200 leading-relaxed italic">"Antes de decir que no tienes tiempo para ponerte en forma, mira esto. 15 minutos al día fueron suficientes para María — y para más de 40 clientes nuestros."</p>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[9px]">
+                <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold kpi-warn">$2.40</p><p class="text-slate-500">CPL</p></div>
+                <div class="rounded-lg p-2 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold text-white">4</p><p class="text-slate-500">Leads semana</p></div>
+              </div>
+            </div>
+
+            <!-- Ángulo 3: Resultado -->
+            <div class="angle-card p-4">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(52,211,153,0.15);border:1px solid rgba(52,211,153,0.3)">📈</div>
+                <div><p class="text-[11px] font-bold text-white">Resultado</p><p class="text-[9px] text-slate-500">Transformación real con números</p></div>
+                <span class="ml-auto badge badge-paused">Paused</span>
+              </div>
+              <div class="rounded-lg p-3 mb-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Copy generado por RIMA</p>
+                <p class="text-[11px] text-slate-300 leading-relaxed italic opacity-60">"María bajó 12kg en 90 días sin dietas extremas. Esto es lo que hicimos diferente y por qué funciona cuando todo lo demás falla."</p>
+              </div>
+              <button class="w-full py-1.5 rounded-lg text-[10px] text-slate-400 glass gh cursor-pointer text-center">Activar ángulo</button>
+            </div>
+
+            <!-- Ángulo 4: Autoridad -->
+            <div class="angle-card p-4">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs" style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3)">🏆</div>
+                <div><p class="text-[11px] font-bold text-white">Autoridad</p><p class="text-[9px] text-slate-500">Demostración de expertise</p></div>
+                <span class="ml-auto badge badge-paused">Paused</span>
+              </div>
+              <div class="rounded-lg p-3 mb-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Copy generado por RIMA</p>
+                <p class="text-[11px] text-slate-300 leading-relaxed italic opacity-60">"Más de 200 personas transformaron su cuerpo con FitLife en los últimos 2 años. Este es el sistema exacto que usan todas."</p>
+              </div>
+              <button class="w-full py-1.5 rounded-lg text-[10px] text-slate-400 glass gh cursor-pointer text-center">Activar ángulo</button>
+            </div>
+
+          </div>
+
+          <!-- CTA note -->
+          <div class="rounded-xl px-4 py-3 flex items-center gap-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2)">
+            <svg class="w-4 h-4 text-violet-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757"/></svg>
+            <p class="text-[10px] text-slate-300">CTA recomendado: <span class="text-violet-300 font-semibold">"Agenda tu clase gratuita"</span> con link directo. Cada paso extra en el funnel reduce conversiones ~30%. Sin formularios ni pasos intermedios.</p>
+          </div>
+        </div>
+
+        <!-- Col derecha: métricas generales MOFU -->
+        <div class="space-y-4">
+          <div class="glass rounded-2xl border border-white/5 p-4">
+            <p class="text-xs font-semibold text-white mb-3">Resumen MOFU · Esta semana</p>
+            <div class="space-y-3">
+              <div>
+                <div class="flex justify-between text-[10px] mb-1"><span class="text-slate-400">Total leads</span><span class="font-bold text-white">12</span></div>
+                <div class="progress-bar"><div class="h-full rounded-full bg-amber-500" style="width:60%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] mb-1"><span class="text-slate-400">CPL promedio</span><span class="font-bold kpi-ok">$1.80</span></div>
+                <div class="progress-bar"><div class="h-full rounded-full bg-emerald-500" style="width:72%"></div></div>
+              </div>
+              <div>
+                <div class="flex justify-between text-[10px] mb-1"><span class="text-slate-400">Gasto total</span><span class="font-bold text-white">$21.60</span></div>
+                <div class="progress-bar"><div class="h-full rounded-full bg-blue-500" style="width:51%"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-xl p-3 space-y-2" style="background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2)">
+            <p class="text-[10px] font-semibold text-blue-300">Regla MOFU</p>
+            <ul class="space-y-1 text-[9px] text-slate-400">
+              <li>· Solo usar seguidores IG como audiencia</li>
+              <li>· Sin segmentación adicional por intereses</li>
+              <li>· Placement: solo Instagram (feed + stories + reels)</li>
+              <li>· &lt;500 seguidores = no lanzar MOFU, invertir todo en TOFU</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ BOFU ============ -->
+    <div id="panel-bofu" class="tab-panel">
+      <div class="grid grid-cols-3 gap-5">
+        <div class="col-span-2 space-y-4">
+
+          <div>
+            <p class="text-xs font-semibold text-white">Audiencias de retargeting</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Combinar todas en un solo conjunto · Excluir clientes actuales · $3/día</p>
+          </div>
+
+          <!-- 3 micro-audiencias -->
+          <div class="space-y-3">
+
+            <!-- DMs calientes -->
+            <div class="rounded-xl p-4" style="background:rgba(244,63,94,0.07);border:1px solid rgba(244,63,94,0.25)">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold temp-hot border">Muy caliente</span>
+                  <p class="text-xs font-semibold text-white">Enviaron DM en los últimos 30 días</p>
+                </div>
+                <span class="text-[10px] text-slate-500">~48 personas</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mb-2">Cuenta de Instagram → Personas que enviaron mensaje · Ventana: 30 días</p>
+              <div class="rounded-lg p-2.5" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Contenido recomendado</p>
+                <p class="text-[10px] text-slate-300">Testimonios en video · Oferta directa · Objeciones respondidas</p>
+              </div>
+            </div>
+
+            <!-- Visitantes landing -->
+            <div class="rounded-xl p-4" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold temp-warm border">Tibia</span>
+                  <p class="text-xs font-semibold text-white">Visitaron landing 2+ veces · últimos 30 días</p>
+                </div>
+                <span class="text-[10px] text-slate-500">Requiere Pixel</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mb-2">Sitio web → Página específica → últimos 30 días · Configura el evento en Ads Manager</p>
+              <div class="rounded-lg p-2.5" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Contenido recomendado</p>
+                <p class="text-[10px] text-slate-300">Recordatorio de la oferta · Prueba social · Urgencia</p>
+              </div>
+            </div>
+
+            <!-- Agendaron y no compraron -->
+            <div class="rounded-xl p-4" style="background:rgba(148,163,184,0.05);border:1px solid rgba(148,163,184,0.15)">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-3">
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);border:1px solid rgba(148,163,184,0.2);color:#94A3B8">Tibia</span>
+                  <p class="text-xs font-semibold text-white">Agendaron pero no compraron · CSV</p>
+                </div>
+                <button class="bp px-2.5 py-1 rounded-lg text-[9px] text-white cursor-pointer">Subir CSV</button>
+              </div>
+              <p class="text-[10px] text-slate-400 mb-2">Exportar los leads sin cierre del CRM → subir CSV → crear audiencia personalizada</p>
+              <div class="rounded-lg p-2.5" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[9px] text-slate-500 mb-1 uppercase font-medium tracking-wider">Contenido recomendado</p>
+                <p class="text-[10px] text-slate-300">Testimonios de resultados · Oferta de baja fricción · Conversaciones de WhatsApp reales</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Exclusiones -->
+          <div class="rounded-xl px-4 py-3 flex items-center gap-3" style="background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.2)">
+            <svg class="w-4 h-4 text-rose-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+            <p class="text-[10px] text-slate-300"><span class="text-rose-400 font-semibold">Excluir siempre:</span> clientes actuales de MOFU y BOFU. Sin esto, gastas presupuesto en personas que ya compraron.</p>
+          </div>
+
+        </div>
+
+        <!-- Col derecha: contenido BOFU -->
+        <div class="space-y-4">
+          <div class="glass rounded-2xl border border-white/5 p-4">
+            <p class="text-xs font-semibold text-white mb-3">Creativos recomendados</p>
+            <p class="text-[10px] text-slate-500 mb-3">Para BOFU los mejores creativos son testimonios en video. Si no tienes, usa capturas de conversaciones de WhatsApp.</p>
+            <div class="space-y-2">
+              <div class="flex items-center gap-2 p-2 rounded-lg glass gh cursor-pointer">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div><p class="text-[10px] text-slate-300">Testimonio María — 12kg</p><p class="text-[9px] text-slate-600">Video · Resultado concreto</p></div>
+              </div>
+              <div class="flex items-center gap-2 p-2 rounded-lg glass gh cursor-pointer">
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+                <div><p class="text-[10px] text-slate-300">Testimonio Carlos — energía</p><p class="text-[9px] text-slate-600">Video · Transformación</p></div>
+              </div>
+              <button class="w-full py-2 rounded-lg text-[10px] text-slate-400 glass gh cursor-pointer text-center">+ Agregar testimonio</button>
+            </div>
+          </div>
+
+          <div class="rounded-xl p-3 space-y-2" style="background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.2)">
+            <p class="text-[10px] font-semibold text-rose-300">Regla de temperatura</p>
+            <p class="text-[9px] text-slate-400 leading-relaxed">Mientras más directa la oferta, más pequeña y caliente debe ser la audiencia. Para DMs (muy calientes) → oferta directa. Para visitantes → awareness primero.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ FOLLOW ME ADS ============ -->
+    <div id="panel-fma" class="tab-panel">
+      <div class="grid grid-cols-3 gap-5">
+        <div class="col-span-2 space-y-4">
+
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-white">Follow Me Ads — Crecer la audiencia</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">$5–10/día · Objetivo: costo por seguidor &lt;$1 USD · Rotar creativos cada 10–14 días</p>
+            </div>
+            <div class="glass rounded-lg px-3 py-2 text-center">
+              <p class="text-xs font-bold text-white">$0.62</p>
+              <p class="text-[9px] text-slate-500">CPF actual</p>
+            </div>
+          </div>
+
+          <!-- Creativos candidatos con frecuencia -->
+          <div class="space-y-3">
+            <p class="text-[10px] text-slate-500">RIMA seleccionó estos reels basándose en conversaciones generadas, no solo vistas</p>
+
+            <!-- Creativo 1 — ganador -->
+            <div class="glass rounded-xl p-4 border" style="border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.04)">
+              <div class="flex gap-4">
+                <div class="w-12 rounded-xl flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:linear-gradient(180deg,#1a0d2e,#0d1a2e);min-height:64px;border:1px solid rgba(52,211,153,0.3)">
+                  <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="flex items-center gap-2 mb-0.5">
+                        <p class="text-xs font-semibold text-white">Antes/Después 90 días</p>
+                        <span class="badge badge-active">Boosteando</span>
+                      </div>
+                      <p class="text-[10px] text-slate-500">147 comentarios de DMs · 9 conversaciones calificadas</p>
+                    </div>
+                    <p class="text-xs font-bold kpi-ok">$0.48 CPF</p>
+                  </div>
+                  <!-- Barra de frecuencia -->
+                  <div class="mb-2">
+                    <div class="flex justify-between text-[9px] mb-1">
+                      <span class="text-slate-500">Frecuencia: <span class="text-white font-semibold">1.3</span></span>
+                      <span class="text-emerald-400">Saludable · límite 1.7</span>
+                    </div>
+                    <div class="freq-bar">
+                      <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-amber-500" style="width:76%"></div>
+                      <div class="absolute right-[17%] top-0 bottom-0 w-px bg-rose-500/50"></div>
+                    </div>
+                    <div class="flex justify-between text-[8px] mt-0.5 text-slate-600"><span>0</span><span class="text-rose-400/70">1.7 — quemado</span><span>2.0</span></div>
+                  </div>
+                  <div class="grid grid-cols-3 gap-2 text-[9px]">
+                    <div class="rounded-lg p-1.5 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold kpi-ok">$0.48</p><p class="text-slate-500">CPF</p></div>
+                    <div class="rounded-lg p-1.5 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold text-white">9.3K</p><p class="text-slate-500">Vistas org.</p></div>
+                    <div class="rounded-lg p-1.5 text-center" style="background:rgba(255,255,255,0.04)"><p class="font-bold text-white">9</p><p class="text-slate-500">DMs qual.</p></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Creativo 2 — próximo a quemarse -->
+            <div class="glass rounded-xl p-4 border" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.04)">
+              <div class="flex gap-4">
+                <div class="w-12 rounded-xl flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:linear-gradient(180deg,#1a1a0d,#0a0a0f);min-height:64px;border:1px solid rgba(245,158,11,0.3)">
+                  <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="flex items-center gap-2 mb-0.5">
+                        <p class="text-xs font-semibold text-white">Rutina 5AM</p>
+                        <span class="badge badge-learning pulsing">Próximo a quemarse</span>
+                      </div>
+                      <p class="text-[10px] text-slate-500">82 comentarios · 5 conversaciones calificadas</p>
+                    </div>
+                    <p class="text-xs font-bold kpi-warn">$0.71 CPF</p>
+                  </div>
+                  <div class="mb-2">
+                    <div class="flex justify-between text-[9px] mb-1">
+                      <span class="text-slate-500">Frecuencia: <span class="text-amber-300 font-semibold">1.61</span></span>
+                      <span class="text-amber-400">Preparar reemplazo</span>
+                    </div>
+                    <div class="freq-bar">
+                      <div class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-red-500" style="width:94%"></div>
+                      <div class="absolute right-[17%] top-0 bottom-0 w-px bg-rose-500/80"></div>
+                    </div>
+                    <div class="flex justify-between text-[8px] mt-0.5 text-slate-600"><span>0</span><span class="text-rose-400/70">1.7 — quemado</span><span>2.0</span></div>
+                  </div>
+                  <div class="rounded-lg px-3 py-2 flex items-center gap-2" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2)">
+                    <svg class="w-3 h-3 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <p class="text-[9px] text-amber-300">Preparar un nuevo creativo del mismo ángulo. El ángulo no se quema, el video sí.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Creativo 3 — candidato -->
+            <div class="glass rounded-xl p-4">
+              <div class="flex gap-4">
+                <div class="w-12 rounded-xl flex-shrink-0 flex items-center justify-center" style="aspect-ratio:9/16;background:rgba(255,255,255,0.02);min-height:64px;border:1px dashed rgba(255,255,255,0.1)">
+                  <svg class="w-4 h-4 text-slate-600" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+                <div class="flex-1">
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="flex items-center gap-2 mb-0.5">
+                        <p class="text-xs font-semibold text-slate-300">HIIT 15 min</p>
+                        <span class="badge badge-paused">Candidato</span>
+                      </div>
+                      <p class="text-[10px] text-slate-500">5.1K vistas · 44 comentarios · No boosteado aún</p>
+                    </div>
+                    <button class="bp px-2.5 py-1 rounded-lg text-[9px] text-white cursor-pointer">Activar</button>
+                  </div>
+                  <p class="text-[9px] text-slate-500">Cuando "Rutina 5AM" llegue a 1.7, activa este como reemplazo del mismo ángulo (Entrenamiento sin excusas).</p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Col derecha: config + benchmarks -->
+        <div class="space-y-4">
+          <div class="glass rounded-2xl border border-white/5 p-4">
+            <p class="text-xs font-semibold text-white mb-3">KPIs de Follow Me Ads</p>
+            <div class="space-y-3">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">CPF B2C (fitness)</span>
+                <span class="text-[10px] font-bold text-white">$0.25–$0.50</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">CPF actual FitLife</span>
+                <span class="text-[10px] font-bold kpi-ok">$0.62 ✓</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">Frecuencia límite</span>
+                <span class="text-[10px] font-bold text-white">1.6–1.7</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">Rotación creativos</span>
+                <span class="text-[10px] font-bold text-white">10–14 días</span>
+              </div>
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] text-slate-400">Max. anuncios/conjunto</span>
+                <span class="text-[10px] font-bold text-white">4–5</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass rounded-2xl border border-white/5 p-4">
+            <p class="text-xs font-semibold text-white mb-3">Segmentaciones activas</p>
+            <div class="space-y-2">
+              <div class="flex items-center justify-between p-2 rounded-lg" style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2)">
+                <div><p class="text-[10px] font-medium text-slate-200">Segmentación abierta</p><p class="text-[9px] text-slate-500">Solo países · Sin intereses</p></div>
+                <span class="badge badge-active">OK</span>
+              </div>
+              <div class="flex items-center justify-between p-2 rounded-lg glass gh cursor-pointer">
+                <div><p class="text-[10px] font-medium text-slate-400">Lookalike clientes</p><p class="text-[9px] text-slate-600">Requiere CSV</p></div>
+                <span class="badge badge-paused">Pendiente</span>
+              </div>
+            </div>
+            <div class="mt-3 rounded-lg p-2" style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06)">
+              <p class="text-[9px] text-slate-500 leading-relaxed">Países activos: MX · CO · CL · PE · US · Excluidos: AR · VE · BO (calidad de leads histórica baja)</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl p-3 space-y-1.5" style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07)">
+            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Errores que queman plata</p>
+            <ul class="space-y-1 text-[9px] text-slate-500">
+              <li>✗ Botón azul de Instagram — siempre Ads Manager</li>
+              <li>✗ Editar antes de 7 días — reinicia aprendizaje</li>
+              <li>✗ Mezclar audiencias frías y calientes</li>
+              <li>✗ Escalar +20% de golpe</li>
+              <li>✗ Boostar videos virales random — solo los de nicho</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function switchTab(t){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+t).classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+}
+</script>
+</body>
+</html>

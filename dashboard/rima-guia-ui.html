@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Guía de Componentes UI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #0F0F18; color: #F1F5F9; }
+    .label {
+      position: absolute;
+      background: #FACC15;
+      color: #0a0a0f;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 20px;
+      white-space: nowrap;
+      z-index: 10;
+      letter-spacing: 0.03em;
+    }
+    .label::after {
+      content: '';
+      position: absolute;
+      background: #FACC15;
+    }
+    .line {
+      position: absolute;
+      background: #FACC15;
+      opacity: 0.6;
+      z-index: 9;
+    }
+    .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+    .gradient-text { background: linear-gradient(135deg,#7C3AED,#06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .btn-primary { background: linear-gradient(135deg,#7C3AED,#6D28D9); }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #94A3B8; margin-bottom: 24px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .term-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 16px; }
+    .term-name { font-size: 13px; font-weight: 700; color: #FACC15; margin-bottom: 4px; }
+    .term-alt { font-size: 10px; color: #64748B; margin-bottom: 6px; }
+    .term-desc { font-size: 11px; color: #94A3B8; line-height: 1.6; }
+    .callout-line { border-left: 2px solid #FACC15; padding-left: 10px; }
+  </style>
+</head>
+<body class="p-8">
+
+  <div class="max-w-6xl mx-auto">
+
+    <!-- Header -->
+    <div class="mb-10">
+      <div class="flex items-center gap-3 mb-2">
+        <div class="w-8 h-8 rounded-lg btn-primary flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+        </div>
+        <div>
+          <span class="text-xl font-bold gradient-text">RIMA — Guía de Componentes UI</span>
+          <p class="text-xs text-slate-500 mt-0.5">Referencia visual para comunicarnos con precisión</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 1: LAYOUT GENERAL ===== -->
+    <div class="mb-12">
+      <p class="section-title">01 · Layout General — La estructura de toda pantalla</p>
+
+      <div class="flex gap-8 items-start">
+        <!-- Mini diagrama del layout -->
+        <div class="flex-shrink-0 relative" style="width:360px; height:240px">
+          <div class="absolute inset-0 rounded-2xl overflow-hidden flex" style="border:1px solid rgba(255,255,255,0.1)">
+            <!-- Sidebar -->
+            <div class="flex-shrink-0 h-full" style="width:90px;background:rgba(124,58,237,0.08);border-right:1px solid rgba(255,255,255,0.08)">
+              <div class="p-2 border-b" style="border-color:rgba(255,255,255,0.06)">
+                <div class="w-5 h-5 rounded btn-primary mx-auto mb-1"></div>
+                <div class="h-2 w-10 rounded bg-white/10 mx-auto"></div>
+              </div>
+              <div class="p-2 border-b" style="border-color:rgba(255,255,255,0.06)">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 mx-auto mb-1"></div>
+                <div class="grid grid-cols-3 gap-0.5">
+                  <div class="h-4 rounded bg-violet-500/20"></div>
+                  <div class="h-4 rounded bg-cyan-500/20"></div>
+                  <div class="h-4 rounded bg-emerald-500/20"></div>
+                </div>
+              </div>
+              <div class="p-1.5 space-y-0.5">
+                <div class="h-4 rounded bg-white/5 flex items-center px-1 gap-1"><div class="w-2 h-2 rounded-sm bg-violet-500/40"></div><div class="h-1.5 w-8 rounded bg-white/10"></div></div>
+                <div class="h-4 rounded" style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4)"><div class="h-full flex items-center px-1 gap-1"><div class="w-2 h-2 rounded-sm bg-violet-500/60"></div><div class="h-1.5 w-8 rounded bg-white/20"></div></div></div>
+                <div class="h-4 rounded bg-white/5 flex items-center px-1 gap-1"><div class="w-2 h-2 rounded-sm bg-pink-500/40"></div><div class="h-1.5 w-8 rounded bg-white/10"></div></div>
+                <div class="h-4 rounded bg-white/5 flex items-center px-1 gap-1"><div class="w-2 h-2 rounded-sm bg-sky-500/40"></div><div class="h-1.5 w-8 rounded bg-white/10"></div></div>
+                <div class="h-4 rounded bg-white/5 flex items-center px-1 gap-1"><div class="w-2 h-2 rounded-sm bg-blue-500/40"></div><div class="h-1.5 w-8 rounded bg-white/10"></div></div>
+              </div>
+              <div class="absolute bottom-2 left-1 right-1 h-6 rounded" style="width:88px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06)"></div>
+            </div>
+            <!-- Main -->
+            <div class="flex-1 flex flex-col">
+              <!-- Topbar -->
+              <div class="flex-shrink-0 h-8 flex items-center px-3 gap-2" style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                <div class="h-2 w-16 rounded bg-white/15"></div>
+                <div class="ml-auto h-5 w-20 rounded-lg btn-primary opacity-80"></div>
+              </div>
+              <!-- Tab bar -->
+              <div class="flex-shrink-0 h-6 flex items-end px-3 gap-3" style="border-bottom:1px solid rgba(255,255,255,0.06)">
+                <div class="h-4 w-12 rounded-t" style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);border-bottom:none"></div>
+                <div class="h-3 w-12 rounded-t bg-white/5"></div>
+                <div class="h-3 w-12 rounded-t bg-white/5"></div>
+              </div>
+              <!-- Content area -->
+              <div class="flex-1 p-2 flex gap-2">
+                <div class="flex-1 space-y-1.5">
+                  <div class="h-16 rounded-lg bg-white/3" style="border:1px solid rgba(255,255,255,0.06)">
+                    <div class="p-1.5 space-y-1">
+                      <div class="h-1.5 w-20 rounded bg-white/15"></div>
+                      <div class="h-1.5 w-14 rounded bg-white/8"></div>
+                    </div>
+                  </div>
+                  <div class="h-24 rounded-lg bg-white/3" style="border:1px solid rgba(255,255,255,0.06)">
+                    <div class="p-1.5 space-y-1">
+                      <div class="h-1.5 w-16 rounded bg-white/15"></div>
+                      <div class="flex gap-1 mt-2">
+                        <div class="w-8 h-8 rounded bg-white/6"></div>
+                        <div class="w-8 h-8 rounded bg-white/6"></div>
+                        <div class="w-8 h-8 rounded bg-white/6"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Right panel -->
+                <div class="w-20 space-y-1.5">
+                  <div class="h-20 rounded-lg" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2)"></div>
+                  <div class="h-16 rounded-lg bg-white/3" style="border:1px solid rgba(255,255,255,0.06)"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Labels sobre el diagrama -->
+          <div class="label" style="top:-14px;left:10px">A · Sidebar</div>
+          <div class="line" style="top:0;left:45px;width:1px;height:14px"></div>
+
+          <div class="label" style="top:-14px;left:130px">B · Topbar</div>
+          <div class="line" style="top:0;left:185px;width:1px;height:14px"></div>
+
+          <div class="label" style="top:22px;right:-80px">C · Tab bar</div>
+          <div class="line" style="top:34px;right:0;width:80px;height:1px"></div>
+
+          <div class="label" style="bottom:70px;right:-90px">D · Área de contenido</div>
+          <div class="line" style="bottom:80px;right:0;width:90px;height:1px"></div>
+
+          <div class="label" style="bottom:20px;right:-80px">E · Panel lateral</div>
+          <div class="line" style="bottom:30px;right:0;width:80px;height:1px"></div>
+
+          <div class="label" style="bottom:-14px;left:10px">F · Footer del sidebar</div>
+          <div class="line" style="bottom:0;left:45px;width:1px;height:14px"></div>
+        </div>
+
+        <!-- Glossario del layout -->
+        <div class="flex-1 grid grid-cols-2 gap-3">
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">A</span><span class="term-name m-0">Sidebar</span></div>
+            <p class="term-alt">Panel lateral / Navegación</p>
+            <p class="term-desc">La barra fija de la izquierda. Contiene el logo, perfil del cliente, menú de navegación y footer.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">B</span><span class="term-name m-0">Topbar</span></div>
+            <p class="term-alt">Barra superior / Header</p>
+            <p class="term-desc">Barra horizontal en la parte superior del contenido. Muestra el título de la sección y acciones principales.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">C</span><span class="term-name m-0">Tab bar</span></div>
+            <p class="term-alt">Barra de pestañas / Tabs</p>
+            <p class="term-desc">Fila de pestañas que divide una sección en sub-vistas. Ej: Historias / Carruseles / Reels en Contenido.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">D</span><span class="term-name m-0">Área de contenido</span></div>
+            <p class="term-alt">Content area / Main panel</p>
+            <p class="term-desc">La zona principal donde vive el contenido de cada pantalla. Tiene scroll vertical independiente.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">E</span><span class="term-name m-0">Panel lateral derecho</span></div>
+            <p class="term-alt">Right panel / Side panel</p>
+            <p class="term-desc">Columna auxiliar a la derecha del contenido principal. Ej: Generando contenido, Cola de validación.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">F</span><span class="term-name m-0">Footer del sidebar</span></div>
+            <p class="term-alt">Client footer</p>
+            <p class="term-desc">Parte inferior fija del sidebar. Muestra el nombre del cliente, plan activo y acceso a configuración.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 2: COMPONENTES DEL SIDEBAR ===== -->
+    <div class="mb-12">
+      <p class="section-title">02 · Componentes del Sidebar</p>
+      <div class="flex gap-8">
+
+        <!-- Mini sidebar -->
+        <div class="flex-shrink-0 relative" style="width:160px">
+          <div class="rounded-2xl overflow-hidden" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08)">
+            <!-- Logo area -->
+            <div class="p-3 border-b relative" style="border-color:rgba(255,255,255,0.06);background:rgba(124,58,237,0.06)">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-md btn-primary flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-white/60"></div></div>
+                <div><div class="h-2.5 w-10 rounded bg-gradient-to-r from-violet-400 to-cyan-400"></div><div class="h-1.5 w-16 rounded bg-white/10 mt-1"></div></div>
+              </div>
+            </div>
+            <!-- Profile card -->
+            <div class="p-2.5 border-b" style="border-color:rgba(255,255,255,0.06);background:rgba(255,255,255,0.02)">
+              <div class="flex items-center gap-2 mb-2">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex-shrink-0"></div>
+                <div><div class="h-2 w-14 rounded bg-white/20 mb-1"></div><div class="h-1.5 w-18 rounded bg-white/10"></div></div>
+              </div>
+              <div class="grid grid-cols-3 gap-1">
+                <div class="h-6 rounded" style="background:rgba(124,58,237,0.15)"></div>
+                <div class="h-6 rounded" style="background:rgba(6,182,212,0.15)"></div>
+                <div class="h-6 rounded" style="background:rgba(52,211,153,0.15)"></div>
+              </div>
+            </div>
+            <!-- Nav section label -->
+            <div class="px-3 pt-2.5 pb-1">
+              <div class="h-1.5 w-16 rounded bg-white/20 mb-2"></div>
+              <!-- Nav items -->
+              <div class="space-y-0.5">
+                <div class="h-6 rounded flex items-center px-2 gap-1.5" style="background:rgba(255,255,255,0.04)">
+                  <div class="w-3 h-3 rounded-sm bg-violet-500/30"></div><div class="h-1.5 w-12 rounded bg-white/15"></div>
+                </div>
+                <!-- Active nav item -->
+                <div class="h-6 rounded flex items-center px-2 gap-1.5" style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4)">
+                  <div class="w-3 h-3 rounded-sm bg-violet-500/60"></div><div class="h-1.5 w-14 rounded bg-white/30"></div><div class="w-1.5 h-1.5 rounded-full bg-violet-400 ml-auto"></div>
+                </div>
+                <div class="h-6 rounded flex items-center px-2 gap-1.5" style="background:rgba(255,255,255,0.04)">
+                  <div class="w-3 h-3 rounded-sm bg-pink-500/30"></div><div class="h-1.5 w-12 rounded bg-white/15"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Footer -->
+            <div class="p-2.5 mt-2 border-t" style="border-color:rgba(255,255,255,0.06)">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-full bg-gradient-to-br from-orange-400 to-pink-500"></div>
+                <div class="flex-1"><div class="h-2 w-12 rounded bg-white/20 mb-1"></div><div class="h-1.5 w-16 rounded bg-white/10"></div></div>
+                <div class="w-5 h-5 rounded bg-white/5 flex items-center justify-center"><div class="w-2 h-2 rounded-full bg-white/20"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Labels -->
+          <div class="label" style="top:8px;right:-70px">1 · Logo area</div>
+          <div class="line" style="top:16px;right:0;width:70px;height:1px"></div>
+
+          <div class="label" style="top:58px;right:-80px">2 · Profile card</div>
+          <div class="line" style="top:66px;right:0;width:80px;height:1px"></div>
+
+          <div class="label" style="top:120px;right:-90px">3 · Nav section label</div>
+          <div class="line" style="top:128px;right:0;width:90px;height:1px"></div>
+
+          <div class="label" style="top:148px;right:-70px">4 · Nav item</div>
+          <div class="line" style="top:156px;right:0;width:70px;height:1px"></div>
+
+          <div class="label" style="top:167px;right:-80px">5 · Nav item activo</div>
+          <div class="line" style="top:175px;right:0;width:80px;height:1px"></div>
+
+          <div class="label" style="bottom:28px;right:-70px">6 · Client footer</div>
+          <div class="line" style="bottom:36px;right:0;width:70px;height:1px"></div>
+        </div>
+
+        <!-- Glossario sidebar -->
+        <div class="flex-1 grid grid-cols-2 gap-3">
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">1</span><span class="term-name m-0">Logo area</span></div>
+            <p class="term-alt">Área del logo / Marca</p>
+            <p class="term-desc">Zona fija superior del sidebar con el logo y nombre de RIMA. Define la identidad visual del producto.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">2</span><span class="term-name m-0">Profile card</span></div>
+            <p class="term-alt">Tarjeta de perfil / Cliente activo</p>
+            <p class="term-desc">Muestra la foto y usuario de IG del cliente, con sus 3 métricas clave (seguidores, mensajes, ventas).</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">3</span><span class="term-name m-0">Nav section label</span></div>
+            <p class="term-alt">Etiqueta de grupo / Título de sección</p>
+            <p class="term-desc">Texto pequeño en mayúsculas que agrupa ítems del menú. Ej: "COMENCEMOS" y "MI NEGOCIO".</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">4</span><span class="term-name m-0">Nav item</span></div>
+            <p class="term-alt">Ítem de navegación / Enlace del menú</p>
+            <p class="term-desc">Cada fila clickeable del menú. Tiene un ícono de color, texto y opcionalmente un dot de estado.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">5</span><span class="term-name m-0">Nav item activo</span></div>
+            <p class="term-alt">Estado activo / Selected state</p>
+            <p class="term-desc">El ítem que está seleccionado actualmente. Se distingue por el fondo violeta y el borde de color.</p>
+          </div>
+          <div class="term-card">
+            <div class="flex items-center gap-2 mb-2"><span class="text-xs font-bold text-yellow-400 bg-yellow-400/15 px-2 py-0.5 rounded-full">6</span><span class="term-name m-0">Client footer</span></div>
+            <p class="term-alt">Footer del cliente</p>
+            <p class="term-desc">Zona inferior del sidebar con nombre del cliente, plan, indicador de conexión y botón de configuración.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 3: COMPONENTES DE CONTENIDO ===== -->
+    <div class="mb-12">
+      <p class="section-title">03 · Componentes de Contenido — Los bloques dentro de cada pantalla</p>
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- Card -->
+        <div>
+          <div class="term-card mb-2 relative">
+            <div class="absolute -top-2.5 left-4"><span class="label" style="position:static;display:inline-block">Card / Tarjeta</span></div>
+            <div class="mt-3 p-3 rounded-xl" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08)">
+              <div class="h-2 w-20 rounded bg-white/20 mb-1.5"></div>
+              <div class="h-1.5 w-28 rounded bg-white/10 mb-3"></div>
+              <div class="grid grid-cols-3 gap-1.5">
+                <div class="h-8 rounded" style="background:rgba(124,58,237,0.1)"></div>
+                <div class="h-8 rounded" style="background:rgba(6,182,212,0.1)"></div>
+                <div class="h-8 rounded" style="background:rgba(52,211,153,0.1)"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-500 leading-relaxed">Contenedor principal con fondo glass (semi-transparente). Todo el contenido vive dentro de cards.</p>
+        </div>
+
+        <!-- Folder card -->
+        <div>
+          <div class="term-card mb-2 relative">
+            <div class="absolute -top-2.5 left-4"><span class="label" style="position:static;display:inline-block">Folder card</span></div>
+            <div class="mt-3 rounded-xl overflow-hidden" style="border:1px solid rgba(255,255,255,0.08)">
+              <div class="px-3 py-2 flex items-center gap-2 border-b" style="background:rgba(244,63,94,0.06);border-color:rgba(255,255,255,0.06)">
+                <div class="w-5 h-5 rounded-md" style="background:rgba(244,63,94,0.2)"></div>
+                <div><div class="h-2 w-14 rounded bg-white/20 mb-1"></div><div class="h-1.5 w-20 rounded bg-white/10"></div></div>
+              </div>
+              <div class="p-3 space-y-1.5">
+                <div class="h-8 rounded bg-white/3" style="border:1px solid rgba(255,255,255,0.05)"></div>
+                <div class="h-8 rounded bg-white/3" style="border:1px solid rgba(255,255,255,0.05)"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-500 leading-relaxed">Card con encabezado coloreado que agrupa propuestas por temática. Tiene header + filas de items.</p>
+        </div>
+
+        <!-- Row item -->
+        <div>
+          <div class="term-card mb-2 relative">
+            <div class="absolute -top-2.5 left-4"><span class="label" style="position:static;display:inline-block">Row item / Fila</span></div>
+            <div class="mt-3 space-y-1.5">
+              <div class="p-2.5 rounded-lg flex items-center gap-2" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)">
+                <div class="w-6 h-6 rounded-md bg-violet-500/20 flex-shrink-0"></div>
+                <div class="flex-1"><div class="h-2 w-20 rounded bg-white/20 mb-1"></div><div class="h-1.5 w-14 rounded bg-white/10"></div></div>
+                <div class="h-4 w-8 rounded-full bg-emerald-500/20"></div>
+              </div>
+              <div class="p-2.5 rounded-lg flex items-center gap-2" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)">
+                <div class="w-6 h-6 rounded-md bg-amber-500/20 flex-shrink-0"></div>
+                <div class="flex-1"><div class="h-2 w-16 rounded bg-white/15 mb-1"></div><div class="h-1.5 w-12 rounded bg-white/08"></div></div>
+                <div class="h-4 w-8 rounded-full bg-amber-500/20"></div>
+              </div>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-500 leading-relaxed">Fila individual dentro de una lista. Aparece en historial de entregas, cola de validación, etc.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 4: BADGES Y ETIQUETAS ===== -->
+    <div class="mb-12">
+      <p class="section-title">04 · Badges y Etiquetas — Los indicadores de estado y tipo</p>
+      <div class="grid grid-cols-2 gap-6">
+
+        <div>
+          <p class="text-xs font-semibold text-slate-400 mb-3">Badges de estado</p>
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.3)">Publicado</span>
+              <p class="text-[10px] text-slate-500">Verde — el contenido ya fue publicado en IG</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(14,165,233,0.15);color:#38BDF8;border:1px solid rgba(14,165,233,0.3)">Programado</span>
+              <p class="text-[10px] text-slate-500">Azul — tiene fecha y hora asignada, listo para publicar</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.3)">Validación</span>
+              <p class="text-[10px] text-slate-500">Amarillo — esperando aprobación del cliente por Telegram</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)">Pendiente</span>
+              <p class="text-[10px] text-slate-500">Gris — RIMA aún no ha generado este contenido</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(124,58,237,0.2);color:#A78BFA;border:1px solid rgba(124,58,237,0.35)">Activo</span>
+              <p class="text-[10px] text-slate-500">Violeta — sección o agente actualmente en uso</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-400 mb-3">Tags de tipo y modo</p>
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(124,58,237,0.15);color:#A78BFA">Automático</span>
+              <p class="text-[10px] text-slate-500">RIMA generó y publicó sin intervención manual</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(100,116,139,0.2);color:#94A3B8">Manual</span>
+              <p class="text-[10px] text-slate-500">El cliente o el equipo intervino en la publicación</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(244,63,94,0.15);color:#FB7185">Ventas</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(168,85,247,0.15);color:#C084FC">Testimonio</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(6,182,212,0.15);color:#67E8F9">Recurso</span>
+              <p class="text-[10px] text-slate-500">Temática del contenido</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(124,58,237,0.15);color:#A78BFA">Reel</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(6,182,212,0.15);color:#67E8F9">Carrusel</span>
+              <span class="text-[10px] px-2 py-0.5 rounded font-medium" style="background:rgba(244,63,94,0.15);color:#FB7185">Historia</span>
+              <p class="text-[10px] text-slate-500">Formato del contenido</p>
+            </div>
+          </div>
+
+          <p class="text-xs font-semibold text-slate-400 mb-3 mt-5">Status dot — punto de estado</p>
+          <div class="space-y-2.5">
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-emerald-400"></div><span class="text-[10px] text-slate-400">Verde</span></div>
+              <p class="text-[10px] text-slate-500">Listo / Conectado / Activo</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-violet-400"></div><span class="text-[10px] text-slate-400">Violeta</span></div>
+              <p class="text-[10px] text-slate-500">Procesando / Generando (con animación)</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-slate-600"></div><span class="text-[10px] text-slate-400">Gris</span></div>
+              <p class="text-[10px] text-slate-500">Inactivo / En cola / Sin iniciar</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 5: ELEMENTOS INTERACTIVOS ===== -->
+    <div class="mb-12">
+      <p class="section-title">05 · Elementos Interactivos — Botones, inputs y controles</p>
+      <div class="grid grid-cols-3 gap-4">
+
+        <div class="term-card">
+          <p class="term-name">Botón primario</p>
+          <p class="term-alt">Primary button / CTA</p>
+          <div class="my-3">
+            <button class="btn-primary px-4 py-2 rounded-lg text-white text-xs font-semibold">Aprobar</button>
+          </div>
+          <p class="term-desc">Gradiente violeta. Acción principal de cada sección: Aprobar, Agregar, Guardar.</p>
+        </div>
+
+        <div class="term-card">
+          <p class="term-name">Botón Telegram</p>
+          <p class="term-alt">Telegram button / Validación</p>
+          <div class="my-3">
+            <button class="px-4 py-2 rounded-lg text-white text-xs font-semibold" style="background:linear-gradient(135deg,#0EA5E9,#06B6D4)">Enviar</button>
+          </div>
+          <p class="term-desc">Gradiente cyan. Exclusivo para enviar contenido a validación por Telegram.</p>
+        </div>
+
+        <div class="term-card">
+          <p class="term-name">Botón secundario</p>
+          <p class="term-alt">Ghost button / Secondary</p>
+          <div class="my-3">
+            <button class="glass px-4 py-2 rounded-lg text-xs text-slate-300 font-medium">Editar</button>
+          </div>
+          <p class="term-desc">Fondo glass transparente. Acciones secundarias: Editar, Ver, Cancelar.</p>
+        </div>
+
+        <div class="term-card">
+          <p class="term-name">Metric chip</p>
+          <p class="term-alt">Chip de métrica / KPI card</p>
+          <div class="my-3 flex gap-2">
+            <div class="text-center p-2 rounded-lg flex-1" style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)">
+              <p class="text-xs font-bold" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">8.3%</p>
+              <p class="text-[8px] text-violet-400">Fuerza</p>
+            </div>
+            <div class="text-center p-2 rounded-lg flex-1" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)">
+              <p class="text-xs font-bold text-emerald-300">$18K</p>
+              <p class="text-[8px] text-emerald-500">Ventas</p>
+            </div>
+          </div>
+          <p class="term-desc">Tarjeta pequeña que muestra un número clave con su etiqueta. Color según tipo de métrica.</p>
+        </div>
+
+        <div class="term-card">
+          <p class="term-name">Progress bar</p>
+          <p class="term-alt">Barra de progreso</p>
+          <div class="my-3 space-y-2">
+            <div class="flex justify-between text-[9px] text-slate-400 mb-0.5"><span>Reels</span><span class="text-violet-400">4/8</span></div>
+            <div class="h-1.5 rounded-full bg-white/5"><div class="h-full rounded-full w-1/2" style="background:linear-gradient(90deg,#7C3AED,#06B6D4)"></div></div>
+          </div>
+          <p class="term-desc">Barra de relleno que indica avance de generación. Gradiente violeta→cyan.</p>
+        </div>
+
+        <div class="term-card">
+          <p class="term-name">Insight block</p>
+          <p class="term-alt">Bloque de insight / Recomendación</p>
+          <div class="my-3 p-2 rounded-lg flex items-start gap-2" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2)">
+            <svg class="w-3 h-3 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189"/></svg>
+            <p class="text-[9px] text-amber-300/80">Hook numérico + tiempo definido. Modelar para FitLife.</p>
+          </div>
+          <p class="term-desc">Recuadro amarillo/violeta/cyan con el análisis de RIMA sobre qué accionar.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== SECCIÓN 6: TÉRMINOS RÁPIDOS ===== -->
+    <div class="mb-8">
+      <p class="section-title">06 · Vocabulario rápido — Términos que usaremos al hablar</p>
+      <div class="grid grid-cols-4 gap-3">
+        <div class="term-card"><p class="term-name">Thumbnail</p><p class="term-desc">Imagen de vista previa de un Reel, Carrusel o Historia. La miniatura clickeable.</p></div>
+        <div class="term-card"><p class="term-name">Carpeta</p><p class="term-desc">Agrupación de propuestas por temática dentro de Contenido. Ej: "Carpeta Ventas".</p></div>
+        <div class="term-card"><p class="term-name">Propuesta</p><p class="term-desc">Una pieza de contenido generada por RIMA (un Reel, una secuencia de historias, etc.).</p></div>
+        <div class="term-card"><p class="term-name">Copy</p><p class="term-desc">El texto/descripción que acompaña una publicación. Incluye caption y hashtags.</p></div>
+        <div class="term-card"><p class="term-name">Referente</p><p class="term-desc">Una cuenta de IG o YouTube que modelamos. Aparece en Estudio de mercado.</p></div>
+        <div class="term-card"><p class="term-name">Fuerza</p><p class="term-desc">Métrica RIMA: (Vistas+Comentarios)/Seguidores×100. Mide impacto real de un post.</p></div>
+        <div class="term-card"><p class="term-name">Impacto</p><p class="term-desc">Métrica RIMA: Vistas / Vistas promedio del referente. Cuánto superó su propio promedio.</p></div>
+        <div class="term-card"><p class="term-name">Cola de validación</p><p class="term-desc">Lista de piezas listas para enviar por Telegram al cliente para su aprobación.</p></div>
+      </div>
+    </div>
+
+    <p class="text-center text-[10px] text-slate-600 pb-4">RIMA · Guía de Componentes UI · Para uso interno del equipo</p>
+  </div>
+
+</body>
+</html>

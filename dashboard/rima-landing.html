@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Landing</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
+    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
+    .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
+    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
+    .badge-ok{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
+    .badge-gen{background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.25)}
+
+    /* Proposal tabs */
+    .prop-tab{border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;cursor:pointer;transition:all .2s;text-align:left}
+    .prop-tab.active{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border-color:rgba(124,58,237,0.45)}
+    .prop-tab:not(.active):hover{background:rgba(255,255,255,0.05)}
+
+    /* Section cards in editor */
+    .section-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:12px}
+    .section-header{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .section-body{padding:14px}
+
+    /* Editable fields */
+    .field-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#64748B;margin-bottom:6px}
+    .edit-field{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 12px;font-size:11px;color:#F1F5F9;font-family:'Inter',sans-serif;resize:vertical;outline:none;transition:all .2s;line-height:1.6}
+    .edit-field:focus{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.05);box-shadow:0 0 0 2px rgba(124,58,237,0.1)}
+
+    /* Toggle switch */
+    .toggle{width:36px;height:20px;background:rgba(255,255,255,0.1);border-radius:10px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+    .toggle.on{background:linear-gradient(135deg,#7C3AED,#6D28D9)}
+    .toggle::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:3px;left:3px;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+    .toggle.on::after{left:19px}
+
+    /* Landing preview */
+    .preview-section{border-radius:8px;margin-bottom:8px;padding:12px;font-size:10px}
+    .preview-hero{background:linear-gradient(180deg,#0d0a1f,#0a0a0f);border:1px solid rgba(124,58,237,0.2);text-align:center;padding:20px 16px}
+    .preview-vsl{background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.08);aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;border-radius:8px;margin:8px 0}
+    .preview-testimonios{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06)}
+    .preview-cta{background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(6,182,212,0.2));border:1px solid rgba(124,58,237,0.4);text-align:center}
+    .preview-faq{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06)}
+
+    /* Script step */
+    .script-step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+
+    /* Pillar card */
+    .pilar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px;flex:1}
+
+    @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
+    .pulsing{animation:pulse-v 2s ease-in-out infinite}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<!-- SIDEBAR -->
+<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5">
+  <div class="px-5 py-5 border-b border-white/5 flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bp flex items-center justify-center" style="box-shadow:0 0 20px rgba(124,58,237,.22)"><svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg></div>
+    <div><span class="font-bold text-base gt">RIMA</span><p class="text-[10px] text-slate-500 -mt-0.5">Marketing AI · LATAM</p></div>
+  </div>
+  <div class="px-4 py-3 border-b border-white/5">
+    <div class="flex items-center gap-2.5 mb-2">
+      <div class="w-9 h-9 rounded-full p-[2px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-xs font-bold text-white">FL</span></div></div>
+      <div><p class="text-xs font-semibold text-white">FitLife Studio</p><p class="text-[10px] text-slate-500">@fitlifestudio_mx</p></div>
+    </div>
+    <div class="grid grid-cols-3 gap-1">
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300">12.4K</p><p class="text-[8px] text-slate-500">Seg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300">48</p><p class="text-[8px] text-slate-500">Msg.</p></div>
+      <div class="rounded-lg p-1.5 text-center" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p class="text-xs font-bold text-emerald-300">$18K</p><p class="text-[8px] text-slate-500">Ventas</p></div>
+    </div>
+  </div>
+  <nav class="flex-1 px-3 py-3 overflow-y-auto space-y-3">
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Comencemos</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6z"/></svg></div><span class="text-[11px] text-slate-400">Dashboard</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5"/></svg></div><span class="text-[11px] text-slate-400">Calendario</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-pink-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23"/></svg></div><span class="text-[11px] text-slate-400">Contenido</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-sky-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></div><span class="text-[11px] text-slate-400">Estudio de mercado</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-blue-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="text-[11px] text-slate-400">META Ads</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-emerald-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519"/></svg></div><span class="text-[11px] text-slate-400">Ventas</span></div>
+        <!-- LANDING ACTIVE -->
+        <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(251,146,60,0.08));border-color:rgba(245,158,11,0.45)">
+          <div class="w-5 h-5 rounded flex items-center justify-center" style="background:rgba(245,158,11,0.25)"><svg class="w-2.5 h-2.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg></div>
+          <span class="text-[11px] font-semibold text-white">Landing</span>
+          <span class="ml-auto badge badge-gen">3 propuestas</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1">Mi Negocio</p>
+      <div class="space-y-0.5">
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-violet-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75"/></svg></div><span class="text-[11px] text-slate-400">Información de la marca</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-rose-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5"/></svg></div><span class="text-[11px] text-slate-400">Referencias</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-cyan-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div><span class="text-[11px] text-slate-400">Imágenes</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-orange-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38"/></svg></div><span class="text-[11px] text-slate-400">Videos</span></div>
+        <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-slate-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912"/></svg></div><span class="text-[11px] text-slate-400">Credenciales</span><span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400"></span></div>
+      </div>
+    </div>
+  </nav>
+  <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2.5">
+    <div class="w-7 h-7 rounded-full p-[1.5px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-[9px] font-bold text-white">FL</span></div></div>
+    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500">Plan Pro</p></div></div>
+    <button class="w-6 h-6 rounded-lg glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="flex-1 flex flex-col overflow-hidden">
+
+  <!-- Header -->
+  <div class="px-6 pt-5 pb-4 border-b border-white/5 flex-shrink-0">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <div class="flex items-center gap-2 mb-1">
+          <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
+          <h1 class="text-sm font-semibold text-white">Landing Page</h1>
+          <span class="badge badge-gen">Generado por RIMA</span>
+        </div>
+        <p class="text-[11px] text-slate-500">3 propuestas basadas en tu brief y oferta · selecciona y edita · exporta el copy completo</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 text-[10px] text-slate-500 glass rounded-lg px-3 py-1.5">
+          <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <span>Conv. ref.: <span class="text-white font-semibold">1.1%</span></span>
+          <span class="text-slate-600 mx-1">·</span>
+          <span>Cierre ref.: <span class="text-white font-semibold">18.8%</span></span>
+        </div>
+        <button onclick="exportCopy()" class="bp px-4 py-2 rounded-xl text-white text-[10px] font-semibold cursor-pointer flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/></svg>
+          Exportar copy
+        </button>
+        <button class="glass gh px-4 py-2 rounded-xl text-slate-300 text-[10px] font-semibold cursor-pointer flex items-center gap-1.5" onclick="openPreview()">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
+          Ver landing
+        </button>
+      </div>
+    </div>
+
+    <!-- 3 Propuestas selector -->
+    <div class="grid grid-cols-3 gap-3">
+      <button onclick="selectProp('A')" id="prop-A" class="prop-tab active">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background:#7C3AED">A</span>
+          <span class="text-[10px] font-bold text-white">Ángulo Problema</span>
+          <span class="ml-auto badge badge-ok">Recomendada</span>
+        </div>
+        <p class="text-[9px] text-slate-400 leading-relaxed truncate">"Transforma tu cuerpo en 90 días sin dietas extremas ni horas de gym"</p>
+      </button>
+      <button onclick="selectProp('B')" id="prop-B" class="prop-tab">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background:#06B6D4">B</span>
+          <span class="text-[10px] font-bold text-slate-300">Ángulo Resultado</span>
+        </div>
+        <p class="text-[9px] text-slate-500 leading-relaxed truncate">"El método que usaron +200 personas para bajar 8-15kg en 90 días"</p>
+      </button>
+      <button onclick="selectProp('C')" id="prop-C" class="prop-tab">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0" style="background:#F59E0B">C</span>
+          <span class="text-[10px] font-bold text-slate-300">Ángulo Autoridad</span>
+        </div>
+        <p class="text-[9px] text-slate-500 leading-relaxed truncate">"FitLife Studio: el sistema probado con +200 casos de éxito en CDMX"</p>
+      </button>
+    </div>
+  </div>
+
+  <!-- Body: Editor + Preview -->
+  <div class="flex-1 overflow-hidden flex">
+
+    <!-- EDITOR (izquierda, scrollable) -->
+    <div class="flex-1 overflow-y-auto px-6 py-5 border-r border-white/5" style="max-width:55%">
+
+      <!-- ===== PROPUESTA A ===== -->
+      <div id="content-A" class="prop-content">
+
+        <!-- 1. OFERTA / HEADLINE -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#7C3AED">1</span>
+              <span class="text-[11px] font-semibold text-white">Oferta — Headline & Subheadline</span>
+              <span class="badge badge-gen">RIMA</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] text-slate-500">Fórmula: [Resultado] en [tiempo] sin [objeción]</span>
+            </div>
+          </div>
+          <div class="section-body space-y-3">
+            <div>
+              <div class="field-label">Headline principal</div>
+              <textarea class="edit-field" rows="2">Transforma tu cuerpo en 90 días sin dietas extremas ni horas de gym</textarea>
+            </div>
+            <div>
+              <div class="field-label">Subheadline — Amplía la promesa + prueba social</div>
+              <textarea class="edit-field" rows="2">El sistema que ya usaron más de 200 personas en CDMX para bajar entre 8 y 15kg con solo 15 minutos al día</textarea>
+            </div>
+            <div>
+              <div class="field-label">Bio de Instagram — 4 líneas listas para copiar</div>
+              <div class="rounded-lg p-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <p class="text-[11px] text-slate-300 leading-relaxed">Ayudo a personas ocupadas a transformar su cuerpo<br/>Sin dietas extremas ni horas de gym<br/>+200 casos de éxito en CDMX 🏆<br/>👇 Agenda tu sesión gratuita</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. VSL TOGGLE -->
+        <div class="section-card">
+          <div class="section-header" onclick="toggleVSL()">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#F59E0B">2</span>
+              <span class="text-[11px] font-semibold text-white">VSL — Video Sales Letter</span>
+              <span id="vsl-badge" class="badge badge-ok">Incluido</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] text-slate-500">10–15 min · pre-vende antes de la llamada</span>
+              <div id="vsl-toggle" class="toggle on" onclick="event.stopPropagation();toggleVSL()"></div>
+            </div>
+          </div>
+          <div id="vsl-body" class="section-body space-y-2">
+            <p class="text-[9px] text-slate-500 mb-3">Script generado por RIMA · adaptar con tu historia y casos reales</p>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(124,58,237,0.4)">1</span>
+                <span class="text-[10px] font-bold text-violet-300">PROMESA — resultado concreto en tiempo concreto</span>
+              </div>
+              <textarea class="edit-field" rows="2">"En los próximos 15 minutos te voy a mostrar el sistema exacto que han usado más de 200 personas en CDMX para transformar su cuerpo en 90 días, sin dietas extremas ni horas en el gym."</textarea>
+            </div>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(6,182,212,0.4)">2</span>
+                <span class="text-[10px] font-bold text-cyan-300">POR QUÉ ESCUCHARME — prueba social + credencial</span>
+              </div>
+              <textarea class="edit-field" rows="2">"Me llamo [nombre], llevo 8 años en el mundo del fitness en México. Empecé igual que tú — sin saber qué hacer, probando de todo. Hoy tenemos más de 200 casos documentados de personas que lograron su objetivo con este método."</textarea>
+            </div>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(245,158,11,0.4)">3</span>
+                <span class="text-[10px] font-bold text-amber-300">PASO A PASO — el método en 3 pilares simples</span>
+              </div>
+              <textarea class="edit-field" rows="2">"El sistema tiene 3 pilares: Primero, rutinas de 15 minutos diseñadas para tu cuerpo y nivel actual. Segundo, un plan de alimentación que no te priva de nada. Tercero, seguimiento semanal para ajustar en tiempo real."</textarea>
+            </div>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(168,85,247,0.4)">4</span>
+                <span class="text-[10px] font-bold text-purple-300">MÁS PRUEBA SOCIAL — casos que usaron el mismo método</span>
+              </div>
+              <textarea class="edit-field" rows="2">"María usó exactamente este sistema y bajó 12kg en 90 días mientras trabajaba tiempo completo. Carlos recuperó su energía en 6 semanas. Estos son resultados reales de personas con tu mismo punto de partida."</textarea>
+            </div>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(244,63,94,0.4)">5</span>
+                <span class="text-[10px] font-bold text-rose-300">LAS DOS OPCIONES — solo vs. acompañado</span>
+              </div>
+              <textarea class="edit-field" rows="3">"Tienes dos caminos: Puedes seguir intentándolo solo — buscar en YouTube, probar rutinas random, esperar que algo funcione. O puedes tener un sistema probado, con acompañamiento, y saber exactamente qué hacer cada semana para llegar a tu resultado en 90 días."</textarea>
+            </div>
+
+            <div class="script-step">
+              <div class="flex items-center gap-2 mb-1.5">
+                <span class="w-4 h-4 rounded flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0" style="background:rgba(52,211,153,0.4)">6</span>
+                <span class="text-[10px] font-bold text-emerald-300">CTA — acción específica, sin fricción</span>
+              </div>
+              <textarea class="edit-field" rows="2">"Si quieres saber si este programa es para ti, agenda una sesión gratuita de 20 minutos. Sin compromiso. Solo hacemos click abajo y eliges el horario que mejor te quede."</textarea>
+            </div>
+          </div>
+
+          <!-- Alternativa si VSL está OFF -->
+          <div id="novsl-body" class="section-body hidden">
+            <div class="rounded-xl p-3 space-y-2" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)">
+              <p class="text-[10px] font-semibold text-amber-300">Sin VSL — RIMA genera sección de Proceso en su lugar</p>
+              <p class="text-[9px] text-slate-400 leading-relaxed">Cuando el VSL está desactivado, la landing muestra una sección visual de 3 pasos que explica cómo funciona el programa, usando los pilares de tu oferta como estructura.</p>
+            </div>
+            <div class="mt-3 space-y-2">
+              <div class="rounded-lg p-3 flex items-start gap-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 mt-0.5" style="background:#7C3AED">1</span>
+                <div><p class="text-[10px] font-semibold text-white">Diagnóstico personalizado</p><p class="text-[9px] text-slate-400">Analizamos tu punto de partida, tus metas y tu estilo de vida para diseñar el plan correcto.</p></div>
+              </div>
+              <div class="rounded-lg p-3 flex items-start gap-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 mt-0.5" style="background:#06B6D4">2</span>
+                <div><p class="text-[10px] font-semibold text-white">Rutinas de 15 min + plan de alimentación</p><p class="text-[9px] text-slate-400">Sin dietas extremas. Sin horas de gym. Diseñado para que funcione con tu horario real.</p></div>
+              </div>
+              <div class="rounded-lg p-3 flex items-start gap-3" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
+                <span class="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 mt-0.5" style="background:#10B981">3</span>
+                <div><p class="text-[10px] font-semibold text-white">Seguimiento y ajuste semanal</p><p class="text-[9px] text-slate-400">Monitoreamos tu progreso cada semana y ajustamos en tiempo real hasta llegar a tu meta.</p></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. BENEFICIOS -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#10B981">3</span>
+              <span class="text-[11px] font-semibold text-white">Beneficios — qué van a TENER, HACER y SENTIR</span>
+            </div>
+          </div>
+          <div class="section-body space-y-2">
+            <div>
+              <div class="field-label">Van a TENER</div>
+              <textarea class="edit-field" rows="2">Un cuerpo que refleja el trabajo que pones en él · Rutinas diseñadas para tu nivel y horario · Un plan de alimentación flexible, sin privarte de nada</textarea>
+            </div>
+            <div>
+              <div class="field-label">Van a HACER diferente</div>
+              <textarea class="edit-field" rows="2">Entrenar 15 minutos con más eficiencia que 2 horas sin sistema · Comer bien sin contar calorías obsesivamente · Ajustar el plan según tu cuerpo, no seguir una rutina genérica</textarea>
+            </div>
+            <div>
+              <div class="field-label">Van a SENTIR</div>
+              <textarea class="edit-field" rows="2">Energía real desde la primera semana · Confianza al verse en el espejo · La tranquilidad de saber que están haciendo lo correcto</textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. PILARES DE LA OFERTA -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#8B5CF6">4</span>
+              <span class="text-[11px] font-semibold text-white">Pilares de la oferta — qué incluye el programa</span>
+            </div>
+            <span class="text-[9px] text-slate-500">No listar entregables — listar resultados por pilar</span>
+          </div>
+          <div class="section-body">
+            <div class="flex gap-3">
+              <div class="pilar">
+                <div class="field-label">Pilar 1</div>
+                <input class="edit-field" value="Método de entrenamiento" style="resize:none;height:auto;padding:6px 10px" />
+                <textarea class="edit-field mt-2" rows="2" style="font-size:10px">Rutinas de 15 min diseñadas para tu cuerpo y nivel. En 30 días ves los primeros resultados físicos visibles.</textarea>
+              </div>
+              <div class="pilar">
+                <div class="field-label">Pilar 2</div>
+                <input class="edit-field" value="Plan de alimentación" style="resize:none;height:auto;padding:6px 10px" />
+                <textarea class="edit-field mt-2" rows="2" style="font-size:10px">Comer bien sin privarte de nada. Estructura simple que puedes mantener de por vida, no solo 90 días.</textarea>
+              </div>
+              <div class="pilar">
+                <div class="field-label">Pilar 3</div>
+                <input class="edit-field" value="Seguimiento semanal" style="resize:none;height:auto;padding:6px 10px" />
+                <textarea class="edit-field mt-2" rows="2" style="font-size:10px">Ajuste en tiempo real según tu progreso. No estás solo — tienes acompañamiento directo hasta la meta.</textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. GARANTÍA -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#EC4899">5</span>
+              <span class="text-[11px] font-semibold text-white">Garantía — minimizar el riesgo percibido</span>
+            </div>
+            <span class="text-[9px] text-slate-500">Fórmula: "Si no logras X en Y días → devolución"</span>
+          </div>
+          <div class="section-body">
+            <textarea class="edit-field" rows="2">"Si sigues el programa al pie de la letra y no ves resultados en los primeros 30 días, te devolvemos cada centavo. Sin preguntas."</textarea>
+            <div class="mt-2 rounded-lg px-3 py-2 flex items-start gap-2" style="background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.2)">
+              <svg class="w-3 h-3 text-pink-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+              <p class="text-[9px] text-slate-400">La garantía no es un gasto — es la variable que más sube la tasa de conversión. La oferta irresistible requiere tener 10+ casos de éxito documentados para respaldarse.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. CTA + UTM -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#10B981">6</span>
+              <span class="text-[11px] font-semibold text-white">CTA + UTMs de seguimiento</span>
+            </div>
+            <span class="text-[9px] text-slate-500">Un solo destino — sin distracciones</span>
+          </div>
+          <div class="section-body space-y-3">
+            <div>
+              <div class="field-label">Texto del botón CTA</div>
+              <input class="edit-field" value="Agenda tu sesión gratuita →" style="resize:none" />
+            </div>
+            <div>
+              <div class="field-label">Link del calendario (Calendly)</div>
+              <input class="edit-field" value="calendly.com/fitlifestudio" style="resize:none" />
+            </div>
+            <div>
+              <div class="field-label">URL con UTM completa — por fuente</div>
+              <div class="space-y-1.5">
+                <div class="flex items-center gap-2">
+                  <span class="text-[9px] text-slate-500 w-12 flex-shrink-0">Bio IG</span>
+                  <code class="flex-1 text-[9px] text-violet-300 bg-violet-500/10 px-2 py-1 rounded truncate">fitlife.mx/agenda?utm_source=instagram&utm_medium=bio&utm_campaign=jun2026</code>
+                  <button class="glass gh px-2 py-1 rounded text-[9px] text-slate-400 cursor-pointer flex-shrink-0">Copiar</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[9px] text-slate-500 w-12 flex-shrink-0">Reel</span>
+                  <code class="flex-1 text-[9px] text-violet-300 bg-violet-500/10 px-2 py-1 rounded truncate">fitlife.mx/agenda?utm_source=instagram&utm_medium=reel&utm_content=antes-despues</code>
+                  <button class="glass gh px-2 py-1 rounded text-[9px] text-slate-400 cursor-pointer flex-shrink-0">Copiar</button>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="text-[9px] text-slate-500 w-12 flex-shrink-0">META</span>
+                  <code class="flex-1 text-[9px] text-violet-300 bg-violet-500/10 px-2 py-1 rounded truncate">fitlife.mx/agenda?utm_source=meta&utm_medium=ad&utm_campaign=tofu-jun2026</code>
+                  <button class="glass gh px-2 py-1 rounded text-[9px] text-slate-400 cursor-pointer flex-shrink-0">Copiar</button>
+                </div>
+              </div>
+            </div>
+            <div class="rounded-lg px-3 py-2" style="background:rgba(244,63,94,0.06);border:1px solid rgba(244,63,94,0.2)">
+              <p class="text-[9px] text-slate-400"><span class="text-rose-400 font-semibold">Evitar:</span> Linktree en el bio · Landing con múltiples productos · CTA vago ("contáctame") · Promesa genérica sin número concreto</p>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content-A -->
+
+      <!-- PROPUESTA B -->
+      <div id="content-B" class="prop-content hidden">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#06B6D4">1</span>
+              <span class="text-[11px] font-semibold text-white">Oferta — Ángulo Resultado</span>
+              <span class="badge badge-gen">RIMA</span>
+            </div>
+          </div>
+          <div class="section-body space-y-3">
+            <div>
+              <div class="field-label">Headline</div>
+              <textarea class="edit-field" rows="2">El método que usaron +200 personas para bajar entre 8 y 15kg en exactamente 90 días</textarea>
+            </div>
+            <div>
+              <div class="field-label">Subheadline</div>
+              <textarea class="edit-field" rows="2">No es una dieta. No es una rutina genérica. Es un sistema probado que se adapta a tu cuerpo, tu horario y tu vida real — disponible solo en CDMX.</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-xl p-4 flex items-center gap-3" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.2)">
+          <svg class="w-4 h-4 text-cyan-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+          <p class="text-[10px] text-slate-300">Esta propuesta comparte el mismo VSL, beneficios, pilares y garantía que la Propuesta A. Solo cambia el ángulo del headline. Edita las secciones en la Propuesta A para que apliquen a las 3.</p>
+        </div>
+        <div class="mt-4 space-y-2">
+          <p class="text-[10px] font-semibold text-white">Variaciones de headline para testear (A/B)</p>
+          <div class="space-y-2">
+            <div class="rounded-lg p-2.5 flex items-center gap-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><span class="text-[10px] text-slate-300 flex-1">"Cómo [nombre del cliente] bajó 12kg en 90 días sin dejar de comer lo que le gusta"</span><button class="glass gh px-2 py-1 rounded text-[9px] text-slate-400 cursor-pointer">Usar</button></div>
+            <div class="rounded-lg p-2.5 flex items-center gap-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><span class="text-[10px] text-slate-300 flex-1">"De 0 a tu mejor versión en 90 días — el mismo método que usaron +200 personas en CDMX"</span><button class="glass gh px-2 py-1 rounded text-[9px] text-slate-400 cursor-pointer">Usar</button></div>
+          </div>
+          <p class="text-[9px] text-slate-500 mt-2">El headline es el elemento que más impacta la tasa de conversión. Testear distintos encabezados y personalizar según el creativo que trajo al visitante.</p>
+        </div>
+      </div>
+
+      <!-- PROPUESTA C -->
+      <div id="content-C" class="prop-content hidden">
+        <div class="section-card">
+          <div class="section-header">
+            <div class="flex items-center gap-2">
+              <span class="w-5 h-5 rounded-md flex items-center justify-center text-[9px] font-bold text-white" style="background:#F59E0B">1</span>
+              <span class="text-[11px] font-semibold text-white">Oferta — Ángulo Autoridad</span>
+              <span class="badge badge-gen">RIMA</span>
+            </div>
+          </div>
+          <div class="section-body space-y-3">
+            <div>
+              <div class="field-label">Headline</div>
+              <textarea class="edit-field" rows="2">FitLife Studio: el sistema de transformación con más de 200 casos de éxito documentados en CDMX</textarea>
+            </div>
+            <div>
+              <div class="field-label">Subheadline</div>
+              <textarea class="edit-field" rows="2">No prometemos magia. Prometemos un proceso probado, seguimiento real, y resultados que puedes ver en 30 días o te devolvemos el dinero.</textarea>
+            </div>
+          </div>
+        </div>
+        <div class="rounded-xl p-4 flex items-center gap-3" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.2)">
+          <svg class="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/></svg>
+          <p class="text-[10px] text-slate-300">El ángulo de autoridad funciona mejor cuando el tráfico viene de Follow Me Ads o referidos — personas que ya te conocen un poco. Para tráfico frío, el ángulo Problema (A) convierte más.</p>
+        </div>
+      </div>
+
+    </div><!-- /editor -->
+
+    <!-- PREVIEW (derecha) -->
+    <div class="overflow-y-auto px-5 py-5" style="width:45%;background:rgba(0,0,0,0.3)">
+
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[10px] font-semibold text-slate-400">Preview de la landing</p>
+        <div class="flex gap-1.5">
+          <button onclick="setDevice('mobile')" id="btn-mobile" class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer glass" style="background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.4)"><svg class="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 18h.01"/></svg></button>
+          <button onclick="setDevice('desktop')" id="btn-desktop" class="w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer glass gh"><svg class="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M8 21h8M12 17v4"/></svg></button>
+        </div>
+      </div>
+
+      <!-- Landing mockup -->
+      <div id="landing-mockup" class="mx-auto rounded-2xl overflow-hidden" style="max-width:320px;border:1px solid rgba(255,255,255,0.1);background:#0a0a0f">
+
+        <!-- Browser bar (desktop hint) -->
+        <div class="flex items-center gap-1.5 px-3 py-2" style="background:rgba(255,255,255,0.04);border-bottom:1px solid rgba(255,255,255,0.06)">
+          <div class="w-2 h-2 rounded-full" style="background:#FF5F57"></div>
+          <div class="w-2 h-2 rounded-full" style="background:#FEBC2E"></div>
+          <div class="w-2 h-2 rounded-full" style="background:#28C840"></div>
+          <div class="flex-1 mx-2 rounded-md px-2 py-0.5 text-[8px] text-slate-500" style="background:rgba(255,255,255,0.06)">fitlifestudio.mx/agenda</div>
+        </div>
+
+        <!-- Hero section -->
+        <div class="preview-section preview-hero">
+          <div class="w-8 h-8 rounded-xl mx-auto mb-2 flex items-center justify-center" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><span class="text-[10px] font-bold text-white">FL</span></div>
+          <p id="preview-headline" class="text-xs font-bold text-white leading-snug mb-1">Transforma tu cuerpo en 90 días sin dietas extremas ni horas de gym</p>
+          <p id="preview-sub" class="text-[9px] text-slate-400 leading-relaxed">El sistema que ya usaron más de 200 personas en CDMX para bajar entre 8 y 15kg con solo 15 minutos al día</p>
+          <button class="mt-3 w-full py-2 rounded-xl text-[10px] font-bold text-white" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)">Agenda tu sesión gratuita →</button>
+        </div>
+
+        <!-- VSL placeholder -->
+        <div id="preview-vsl-section" class="px-3 py-3">
+          <div class="preview-vsl">
+            <div class="text-center">
+              <div class="w-8 h-8 rounded-full flex items-center justify-center mx-auto mb-1" style="background:rgba(124,58,237,0.3)"><svg class="w-4 h-4 text-violet-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+              <p class="text-[8px] text-slate-500">Video 10–15 min</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Beneficios -->
+        <div class="px-3 pb-3">
+          <div class="preview-section preview-testimonios rounded-xl">
+            <p class="text-[9px] font-bold text-white mb-2">¿Qué vas a lograr?</p>
+            <div class="space-y-1.5">
+              <div class="flex items-start gap-1.5"><span class="text-emerald-400 text-[10px] flex-shrink-0">✓</span><p class="text-[9px] text-slate-300">Un cuerpo que refleja el trabajo que pones</p></div>
+              <div class="flex items-start gap-1.5"><span class="text-emerald-400 text-[10px] flex-shrink-0">✓</span><p class="text-[9px] text-slate-300">Entrenar 15 min con más eficiencia que 2 horas</p></div>
+              <div class="flex items-start gap-1.5"><span class="text-emerald-400 text-[10px] flex-shrink-0">✓</span><p class="text-[9px] text-slate-300">Energía real desde la primera semana</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pilares -->
+        <div class="px-3 pb-3">
+          <p class="text-[9px] font-bold text-white mb-2">El programa incluye</p>
+          <div class="space-y-1.5">
+            <div class="rounded-lg p-2" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-[9px] font-semibold text-violet-300">Método de entrenamiento</p><p class="text-[8px] text-slate-400">Rutinas de 15 min para tu nivel</p></div>
+            <div class="rounded-lg p-2" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-[9px] font-semibold text-cyan-300">Plan de alimentación</p><p class="text-[8px] text-slate-400">Sin privarte de nada</p></div>
+            <div class="rounded-lg p-2" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p class="text-[9px] font-semibold text-emerald-300">Seguimiento semanal</p><p class="text-[8px] text-slate-400">Ajuste en tiempo real</p></div>
+          </div>
+        </div>
+
+        <!-- Testimonios -->
+        <div class="px-3 pb-3">
+          <p class="text-[9px] font-bold text-white mb-2">Casos reales</p>
+          <div class="flex gap-2">
+            <div class="flex-1 rounded-lg p-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><div class="w-5 h-5 rounded-full bg-gradient-to-br from-rose-400 to-orange-400 mb-1"></div><p class="text-[8px] font-semibold text-white">María · 12kg</p><p class="text-[8px] text-slate-500">90 días · CDMX</p></div>
+            <div class="flex-1 rounded-lg p-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><div class="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-violet-400 mb-1"></div><p class="text-[8px] font-semibold text-white">Carlos · +energía</p><p class="text-[8px] text-slate-500">6 semanas</p></div>
+          </div>
+        </div>
+
+        <!-- Garantía -->
+        <div class="px-3 pb-3">
+          <div class="rounded-xl p-3 text-center" style="background:rgba(236,72,153,0.08);border:1px solid rgba(236,72,153,0.2)">
+            <p class="text-[9px] font-bold text-pink-300 mb-1">🛡 Garantía 30 días</p>
+            <p class="text-[8px] text-slate-400">Si no ves resultados en 30 días, te devolvemos cada centavo. Sin preguntas.</p>
+          </div>
+        </div>
+
+        <!-- CTA final -->
+        <div class="px-3 pb-4">
+          <div class="preview-section preview-cta rounded-xl">
+            <p class="text-xs font-bold text-white mb-1">¿Listo para empezar?</p>
+            <p class="text-[9px] text-slate-300 mb-3">Sesión gratuita de 20 minutos · Sin compromiso</p>
+            <button class="w-full py-2.5 rounded-xl text-[11px] font-bold text-white" style="background:linear-gradient(135deg,#10B981,#059669)">Agenda tu sesión gratuita →</button>
+          </div>
+        </div>
+
+        <!-- FAQ -->
+        <div class="px-3 pb-4">
+          <p class="text-[9px] font-bold text-white mb-2">Preguntas frecuentes</p>
+          <div class="space-y-1.5">
+            <div class="rounded-lg px-3 py-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><p class="text-[9px] text-slate-300">¿Funciona si no tengo experiencia en el gym?</p></div>
+            <div class="rounded-lg px-3 py-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><p class="text-[9px] text-slate-300">¿Cuánto tiempo necesito cada día?</p></div>
+            <div class="rounded-lg px-3 py-2" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)"><p class="text-[9px] text-slate-300">¿Cómo funciona la garantía?</p></div>
+          </div>
+        </div>
+
+      </div><!-- /landing mockup -->
+
+      <!-- Métricas referencia -->
+      <div class="mt-4 rounded-xl p-3 space-y-1.5" style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07)">
+        <p class="text-[9px] font-semibold text-slate-400">Métricas de referencia (SYK)</p>
+        <div class="grid grid-cols-2 gap-2 text-[9px]">
+          <div><span class="text-slate-500">7,000 visitas →</span> <span class="text-white font-medium">85 agendas (1.1%)</span></div>
+          <div><span class="text-slate-500">85 agendas →</span> <span class="text-white font-medium">16 ventas (18.8%)</span></div>
+          <div><span class="text-slate-500">Cada 400 visitas =</span> <span class="text-emerald-400 font-medium">1 venta</span></div>
+          <div><span class="text-slate-500">La landing trabaja</span> <span class="text-white font-medium">24/7 sola</span></div>
+        </div>
+      </div>
+
+    </div><!-- /preview -->
+
+  </div>
+</main>
+
+<script>
+// Propuestas
+function selectProp(p){
+  document.querySelectorAll('.prop-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('prop-'+p).classList.add('active');
+  document.querySelectorAll('.prop-content').forEach(c=>c.classList.add('hidden'));
+  document.getElementById('content-'+p).classList.remove('hidden');
+}
+
+// VSL toggle
+function toggleVSL(){
+  const tog = document.getElementById('vsl-toggle');
+  const body = document.getElementById('vsl-body');
+  const nobody = document.getElementById('novsl-body');
+  const badge = document.getElementById('vsl-badge');
+  const previewVSL = document.getElementById('preview-vsl-section');
+  const isOn = tog.classList.contains('on');
+  if(isOn){
+    tog.classList.remove('on');
+    body.classList.add('hidden');
+    nobody.classList.remove('hidden');
+    badge.textContent='Sin VSL';
+    badge.className='badge badge-paused';
+    if(previewVSL) previewVSL.style.display='none';
+  } else {
+    tog.classList.add('on');
+    body.classList.remove('hidden');
+    nobody.classList.add('hidden');
+    badge.textContent='Incluido';
+    badge.className='badge badge-ok';
+    if(previewVSL) previewVSL.style.display='block';
+  }
+}
+
+// Device toggle
+function setDevice(d){
+  const m = document.getElementById('landing-mockup');
+  if(d==='mobile'){m.style.maxWidth='320px';}
+  else{m.style.maxWidth='100%';}
+}
+
+// Export copy
+function exportCopy(){
+  alert('En la versión real: exporta el copy completo en .docx listo para entregar al cliente. Incluye headline, subheadline, VSL script, beneficios, pilares, garantía, CTA y UTMs.');
+}
+function openPreview(){
+  alert('En la versión real: abre la landing en una nueva pestaña con el diseño completo de Framer o Webflow.');
+}
+
+// Badge paused polyfill
+document.head.insertAdjacentHTML('beforeend','<style>.badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}</style>');
+</script>
+</body>
+</html>
