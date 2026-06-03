@@ -1,15 +1,23 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+﻿from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pathlib import Path
-from typing import Any, List
+from typing import Any, List, Optional
 import uvicorn
 import json
 import os
 import shutil
 import time
+import hmac
+import hashlib
+import uuid
+import calendar as cal_module
+import re
+
+from dotenv import load_dotenv
+load_dotenv(override=True)
 
 from agents.landing.agent import landing_agent
 from agents.content.agent import content_agent
@@ -37,9 +45,9 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Persistencia local en JSON
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def load_data() -> dict:
     DATA_FILE.parent.mkdir(exist_ok=True)
@@ -56,13 +64,15 @@ def save_data(data: dict):
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # CSS compartido inyectado en <head>
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SHARED_CSS = """
 <style id="rima-shared">
-  /* Normalización tipográfica global */
+  /* Zoom global â€” equivale a 125% del navegador */
+  html { zoom: 1.25; }
+  /* NormalizaciÃ³n tipogrÃ¡fica global */
   body { font-size: 13px !important; }
   aside nav span { font-size: 11px !important; }
   aside p, aside .text-\\[9px\\], aside .text-\\[10px\\] { font-size: 9px !important; }
@@ -87,9 +97,9 @@ SHARED_CSS = """
 </style>
 """
 
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # JS universal inyectado al final del <body>
-# ───────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 SHARED_JS = """
 <div id="rima-toast"></div>
@@ -97,7 +107,7 @@ SHARED_JS = """
 (function() {
   var currentPath = window.location.pathname;
 
-  // ── Sidebar estandarizado (reemplaza el de cada página) ──
+  // â”€â”€ Sidebar estandarizado (reemplaza el de cada pÃ¡gina) â”€â”€
   var NAV_ITEMS = [
     { label:'Dashboard',             href:'/',             group:'COMENCEMOS', color:'violet',  icon:'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z' },
     { label:'Calendario',            href:'/calendario',   group:'COMENCEMOS', color:'violet',  icon:'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' },
@@ -106,9 +116,9 @@ SHARED_JS = """
     { label:'META Ads',              href:'/meta',         group:'COMENCEMOS', color:'blue',    icon:'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z', filled:true },
     { label:'Ventas',                href:'/ventas',       group:'COMENCEMOS', color:'emerald', icon:'M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941' },
     { label:'Landing',               href:'/landing',      group:'COMENCEMOS', color:'amber',   icon:'M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z' },
-    { label:'Información de la marca', href:'/marca',      group:'MI NEGOCIO', color:'violet',  icon:'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z' },
+    { label:'InformaciÃ³n de la marca', href:'/marca',      group:'MI NEGOCIO', color:'violet',  icon:'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z' },
     { label:'Referencias',           href:'/referencias',  group:'MI NEGOCIO', color:'rose',    icon:'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244' },
-    { label:'Imágenes',              href:'/imagenes',     group:'MI NEGOCIO', color:'cyan',    icon:'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
+    { label:'ImÃ¡genes',              href:'/imagenes',     group:'MI NEGOCIO', color:'cyan',    icon:'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
     { label:'Videos',                href:'/videos',       group:'MI NEGOCIO', color:'orange',  icon:'M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z' },
     { label:'Credenciales',          href:'/credenciales', group:'MI NEGOCIO', color:'slate',   icon:'M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z', badge:'amber' },
   ];
@@ -172,7 +182,7 @@ SHARED_JS = """
       + '<svg style="width:16px;height:16px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>'
       + '</div>'
       + '<div><p style="font-size:15px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;line-height:1.2;margin:0">RIMA</p>'
-      + '<p style="font-size:9px;color:#475569;margin:0">Marketing AI · LATAM</p></div>'
+      + '<p style="font-size:9px;color:#475569;margin:0">Marketing AI Â· LATAM</p></div>'
       + '</div>'
       // Profile
       + '<div style="padding:12px 14px;border-bottom:1px solid rgba(255,255,255,0.05);flex-shrink:0">'
@@ -243,16 +253,16 @@ SHARED_JS = """
     existingAside.parentNode.replaceChild(buildSidebar(), existingAside);
   }
 
-  // ── Toast helper ──
+  // â”€â”€ Toast helper â”€â”€
   window.rimaToast = function(msg, type) {
     var t = document.getElementById('rima-toast');
-    t.textContent = (type === 'error' ? '✗  ' : '✓  ') + msg;
+    t.textContent = (type === 'error' ? 'âœ—  ' : 'âœ“  ') + msg;
     t.className = type === 'error' ? 'error show' : 'show';
     setTimeout(function() { t.className = ''; }, 3000);
   };
 
-  // ── Guardar datos de marca ──
-  // Recoge TODOS los inputs de la página usando label+placeholder como clave
+  // â”€â”€ Guardar datos de marca â”€â”€
+  // Recoge TODOS los inputs de la pÃ¡gina usando label+placeholder como clave
   function collectAllInputs() {
     var data = {};
     // 1) Por id o name
@@ -265,11 +275,11 @@ SHARED_JS = """
       var lbl = fg.querySelector('.field-label');
       var inp = fg.querySelector('input,textarea,select');
       if (lbl && inp && inp.value) {
-        var key = (lbl.textContent || '').trim().replace(/[^a-zA-ZÀ-ɏ0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_').slice(0,40);
+        var key = (lbl.textContent || '').trim().replace(/[^a-zA-ZÃ€-É0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_').slice(0,40);
         if (key) data[key] = inp.value;
       }
     });
-    // 3) Fallback genérico: todos los inputs con value y placeholder como clave
+    // 3) Fallback genÃ©rico: todos los inputs con value y placeholder como clave
     document.querySelectorAll('input,textarea').forEach(function(el) {
       if (!el.value || el.type === 'hidden') return;
       var key = el.id || el.name;
@@ -286,19 +296,19 @@ SHARED_JS = """
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify(data)
       });
-      if (r.ok) { rimaToast('Información guardada'); }
+      if (r.ok) { rimaToast('InformaciÃ³n guardada'); }
       else { rimaToast('Error al guardar', 'error'); }
-    } catch(e) { rimaToast('Sin conexión', 'error'); }
+    } catch(e) { rimaToast('Sin conexiÃ³n', 'error'); }
   }
 
-  // Override saveForm() que usan las páginas HTML inline
+  // Override saveForm() que usan las pÃ¡ginas HTML inline
   window.saveForm = async function() {
     var ind = document.getElementById('save-indicator');
     if (ind) { ind.classList.remove('hidden'); setTimeout(function(){ind.classList.add('hidden');}, 2500); }
     await saveBrand();
   };
 
-  // ── Cargar datos de marca en formulario ──
+  // â”€â”€ Cargar datos de marca en formulario â”€â”€
   async function loadBrand() {
     try {
       var r = await fetch('/api/brand');
@@ -314,7 +324,7 @@ SHARED_JS = """
     } catch(e) {}
   }
 
-  // ── Credenciales ──
+  // â”€â”€ Credenciales â”€â”€
   async function saveCredentials() {
     var data = {};
     document.querySelectorAll('.cred-input, input[data-cred], input[id*="cred"], input[id*="token"], input[id*="bot"], input[id*="telegram"], input[id*="instagram"], input[id*="meta"], input[id*="api"]').forEach(function(el) {
@@ -334,7 +344,7 @@ SHARED_JS = """
       });
       if (r.ok) { rimaToast('Credenciales guardadas'); }
       else { rimaToast('Error al guardar', 'error'); }
-    } catch(e) { rimaToast('Sin conexión', 'error'); }
+    } catch(e) { rimaToast('Sin conexiÃ³n', 'error'); }
   }
 
   async function loadCredentials() {
@@ -349,7 +359,7 @@ SHARED_JS = """
     } catch(e) {}
   }
 
-  // ── Perfil de negocio (sidebar) ──
+  // â”€â”€ Perfil de negocio (sidebar) â”€â”€
   async function loadProfile() {
     try {
       var r = await fetch('/api/brand');
@@ -368,7 +378,7 @@ SHARED_JS = """
     } catch(e) {}
   }
 
-  // ── Wiring de botones "Guardar" ──
+  // â”€â”€ Wiring de botones "Guardar" â”€â”€
   document.querySelectorAll('button').forEach(function(btn) {
     var txt = btn.textContent.trim().toLowerCase();
 
@@ -391,20 +401,20 @@ SHARED_JS = """
     }
   });
 
-  // ── Cargar datos al iniciar ──
+  // â”€â”€ Cargar datos al iniciar â”€â”€
   window.addEventListener('DOMContentLoaded', function() {
     var path = window.location.pathname;
     if (path === '/credenciales') { loadCredentials(); }
     else { loadBrand(); loadProfile(); }
   });
-  // también si el DOM ya cargó
+  // tambiÃ©n si el DOM ya cargÃ³
   if (document.readyState !== 'loading') {
     var path = window.location.pathname;
     if (path === '/credenciales') { loadCredentials(); }
     else { loadBrand(); loadProfile(); }
   }
 
-  // ── Modal "Generar todo" ──
+  // â”€â”€ Modal "Generar todo" â”€â”€
   function generarTodo() {
     var modal = document.getElementById('rima-modal');
     if (modal) { modal.style.display = 'flex'; return; }
@@ -415,17 +425,17 @@ SHARED_JS = """
       <div style="background:#0F0F1A;border:1px solid rgba(124,58,237,0.4);border-radius:20px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
           <h2 style="font-size:15px;font-weight:700;color:#fff">Generar con RIMA</h2>
-          <button onclick="document.getElementById('rima-modal').style.display='none'" style="background:transparent;border:none;color:#94A3B8;cursor:pointer;font-size:18px">✕</button>
+          <button onclick="document.getElementById('rima-modal').style.display='none'" style="background:transparent;border:none;color:#94A3B8;cursor:pointer;font-size:18px">âœ•</button>
         </div>
         <div style="display:grid;gap:10px;margin-bottom:18px">
           ${[
             ['r-nombre','Nombre del negocio','Ej: FitLife Studio'],
-            ['r-servicio','Servicio / Oferta','Ej: Mentoría para coaches que quieren escalar'],
-            ['r-cliente','Cliente ideal','Ej: Coaches con 1-3 años, facturando menos de $3K/mes'],
+            ['r-servicio','Servicio / Oferta','Ej: MentorÃ­a para coaches que quieren escalar'],
+            ['r-cliente','Cliente ideal','Ej: Coaches con 1-3 aÃ±os, facturando menos de $3K/mes'],
             ['r-problema','Problema que resuelves','Ej: No tienen sistema predecible para conseguir clientes'],
-            ['r-resultado','Resultado principal prometido','Ej: Escalar a $10K/mes en 90 días con Instagram sin ads'],
+            ['r-resultado','Resultado principal prometido','Ej: Escalar a $10K/mes en 90 dÃ­as con Instagram sin ads'],
             ['r-precio','Precio','Ej: $2,500 USD'],
-            ['r-garantia','Garantía (opcional)','Ej: Si no llegas a $10K en 90 días, devolvemos el 100%'],
+            ['r-garantia','GarantÃ­a (opcional)','Ej: Si no llegas a $10K en 90 dÃ­as, devolvemos el 100%'],
           ].map(([id,lbl,ph]) =>
             '<label style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.05em">'+lbl+'</label>' +
             '<input id="'+id+'" placeholder="'+ph+'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#fff;font-size:12px;outline:none;width:100%"/>'
@@ -494,7 +504,7 @@ SHARED_JS = """
 def serve_html(filename: str) -> HTMLResponse:
     path = DASHBOARD / filename
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"Página no encontrada: {filename}")
+        raise HTTPException(status_code=404, detail=f"PÃ¡gina no encontrada: {filename}")
     content = path.read_text(encoding="utf-8")
     # Inyectar CSS normalizado en <head>
     content = content.replace("</head>", SHARED_CSS + "\n</head>")
@@ -503,7 +513,7 @@ def serve_html(filename: str) -> HTMLResponse:
     return HTMLResponse(content=content)
 
 
-# ── Rutas de páginas ──
+# â”€â”€ Rutas de pÃ¡ginas â”€â”€
 
 @app.get("/", response_class=HTMLResponse)
 def home():
@@ -554,7 +564,7 @@ def credenciales():
     return serve_html("rima-credenciales.html")
 
 
-# ── API: Datos de marca ──
+# â”€â”€ API: Datos de marca â”€â”€
 
 @app.get("/api/brand")
 def get_brand():
@@ -570,7 +580,7 @@ def post_brand(payload: dict):
     save_data(data)
     return {"status": "ok", "saved": len(existing)}
 
-# ── API: Credenciales ──
+# â”€â”€ API: Credenciales â”€â”€
 
 @app.get("/api/credentials")
 def get_credentials():
@@ -587,7 +597,7 @@ def post_credentials(payload: dict):
     return {"status": "ok"}
 
 
-# ── Modelos de request para agentes ──
+# â”€â”€ Modelos de request para agentes â”€â”€
 
 class BrandBrief(BaseModel):
     business_name: str = "Mi Negocio"
@@ -600,7 +610,7 @@ class BrandBrief(BaseModel):
     guarantee: str = ""
 
 
-# ── Endpoints de agentes ──
+# â”€â”€ Endpoints de agentes â”€â”€
 
 @app.post("/api/generate/landing")
 def generate_landing(brief: BrandBrief):
@@ -643,7 +653,7 @@ def generate_prospecting(brief: BrandBrief):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ── API: Imágenes ──
+# â”€â”€ API: ImÃ¡genes â”€â”€
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE_MB = 10
@@ -654,7 +664,7 @@ async def upload_images(
     category: str = Form("historias")
 ):
     if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="Categoría inválida")
+        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
 
     saved = []
     errors = []
@@ -671,7 +681,7 @@ async def upload_images(
             errors.append({"name": f.filename, "error": f"Supera {MAX_SIZE_MB} MB"})
             continue
 
-        # Nombre único para evitar colisiones
+        # Nombre Ãºnico para evitar colisiones
         stem = Path(f.filename).stem[:40].replace(" ", "_")
         ext  = Path(f.filename).suffix.lower() or ".jpg"
         unique_name = f"{stem}_{int(time.time() * 1000)}{ext}"
@@ -693,7 +703,7 @@ async def upload_images(
 @app.get("/api/images")
 def list_images(category: str = "historias"):
     if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="Categoría inválida")
+        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
 
     folder = UPLOADS_DIR / category
     images = []
@@ -713,10 +723,10 @@ def list_images(category: str = "historias"):
 @app.delete("/api/images/{category}/{filename}")
 def delete_image(category: str, filename: str):
     if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="Categoría inválida")
+        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
     # Seguridad: no path traversal
     if ".." in filename or "/" in filename:
-        raise HTTPException(status_code=400, detail="Nombre inválido")
+        raise HTTPException(status_code=400, detail="Nombre invÃ¡lido")
     path = UPLOADS_DIR / category / filename
     if not path.exists():
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
@@ -724,7 +734,7 @@ def delete_image(category: str, filename: str):
     return {"status": "deleted", "file": filename}
 
 
-# ── API: Clips de video por reel ──
+# â”€â”€ API: Clips de video por reel â”€â”€
 
 ALLOWED_VIDEO = {"video/mp4","video/quicktime","video/x-msvideo","video/webm","video/mpeg","video/mov"}
 MAX_CLIP_MB = 500
@@ -770,13 +780,13 @@ def list_clips(reel_id: str):
 @app.delete("/api/videos/{reel_id}/clips/{filename}")
 def delete_clip(reel_id: str, filename: str):
     if ".." in filename or "/" in filename:
-        raise HTTPException(400, "Nombre inválido")
+        raise HTTPException(400, "Nombre invÃ¡lido")
     p = UPLOADS_DIR / "clips" / reel_id / filename
     if not p.exists(): raise HTTPException(404, "No encontrado")
     p.unlink()
     return {"status": "deleted"}
 
-# ── API: Video final por reel ──
+# â”€â”€ API: Video final por reel â”€â”€
 
 @app.post("/api/videos/{reel_id}/final")
 async def upload_final(reel_id: str, file: UploadFile = File(...)):
@@ -808,7 +818,7 @@ def get_final(reel_id: str):
     if not path.exists(): return {"final": None}
     return {"final": final}
 
-# ── API: Estado de reel (aprobación guión, paso actual) ──
+# â”€â”€ API: Estado de reel (aprobaciÃ³n guiÃ³n, paso actual) â”€â”€
 
 @app.get("/api/videos/{reel_id}/state")
 def get_reel_state(reel_id: str):
@@ -825,7 +835,7 @@ def set_reel_state(reel_id: str, payload: dict):
 
 @app.post("/api/videos/{reel_id}/edit")
 def trigger_edit(reel_id: str):
-    """Stub: envía los clips al agente editor. Por ahora devuelve confirmación."""
+    """Stub: envÃ­a los clips al agente editor. Por ahora devuelve confirmaciÃ³n."""
     d = load_data()
     clips_dir = UPLOADS_DIR / "clips" / reel_id
     clip_files = []
@@ -833,13 +843,238 @@ def trigger_edit(reel_id: str):
         clip_files = [p.name for p in clips_dir.iterdir() if p.suffix.lower() in (".mp4",".mov",".avi",".webm")]
     if not clip_files:
         raise HTTPException(400, "No hay clips para editar")
-    # Registrar solicitud de edición en datos
+    # Registrar solicitud de ediciÃ³n en datos
     d.setdefault("reels", {}).setdefault(reel_id, {})["edit_requested"] = {
         "clips": clip_files,
         "requested_at": int(time.time())
     }
     save_data(d)
-    return {"status": "queued", "message": f"Edición iniciada — {len(clip_files)} clip(s) en cola", "clips": clip_files}
+    return {"status": "queued", "message": f"EdiciÃ³n iniciada â€” {len(clip_files)} clip(s) en cola", "clips": clip_files}
+
+
+# â”€â”€ API: Calendario â”€â”€
+
+@app.get("/api/calendar")
+def get_calendar(month: str = None):
+    data = load_data()
+    items = data.get("calendar_items", [])
+    if month:
+        items = [i for i in items if i.get("date", "").startswith(month)]
+    return {"items": items}
+
+@app.post("/api/calendar")
+def create_calendar_item(payload: dict):
+    data = load_data()
+    items = data.setdefault("calendar_items", [])
+    item = {
+        "id": str(uuid.uuid4()),
+        "date": payload.get("date", ""),
+        "type": payload.get("type", "reel"),
+        "title": payload.get("title", ""),
+        "caption": payload.get("caption", ""),
+        "hashtags": payload.get("hashtags", []),
+        "status": payload.get("status", "pendiente"),
+        "metrics": payload.get("metrics", {}),
+        "created_at": int(time.time()),
+    }
+    items.append(item)
+    save_data(data)
+    return item
+
+@app.put("/api/calendar/{item_id}")
+def update_calendar_item(item_id: str, payload: dict):
+    data = load_data()
+    items = data.get("calendar_items", [])
+    for i, item in enumerate(items):
+        if item["id"] == item_id:
+            items[i].update({k: v for k, v in payload.items() if k != "id"})
+            save_data(data)
+            return items[i]
+    raise HTTPException(404, "Item no encontrado")
+
+@app.delete("/api/calendar/{item_id}")
+def delete_calendar_item(item_id: str):
+    data = load_data()
+    items = data.get("calendar_items", [])
+    data["calendar_items"] = [i for i in items if i["id"] != item_id]
+    save_data(data)
+    return {"status": "deleted"}
+
+@app.post("/api/calendar/generate")
+def generate_calendar(payload: dict):
+    from core.gemini_client import gemini
+    month = payload.get("month")
+    if not month:
+        raise HTTPException(400, "month requerido (YYYY-MM)")
+
+    brand = load_data().get("brand", {})
+    brand_name = brand.get("brand_name", "Mi Negocio")
+    service = brand.get("brand_service", "servicios de alto valor")
+    ideal_client = brand.get("brand_ideal_client", "emprendedores LATAM")
+
+    year, mon = map(int, month.split("-"))
+    days_in_month = cal_module.monthrange(year, mon)[1]
+    month_name = cal_module.month_name[mon]
+    mon_str = str(mon).zfill(2)
+
+    prompt = f"""Eres experto en marketing de contenidos para Instagram en LATAM.
+Genera un plan de contenidos para {month_name} {year} ({days_in_month} dÃ­as).
+
+Negocio: {brand_name}
+Servicio: {service}
+Cliente ideal: {ideal_client}
+
+Genera exactamente 20 piezas distribuidas a lo largo del mes.
+DistribuciÃ³n: 8 Reels, 6 Carruseles, 6 Historias.
+MÃ¡ximo 1 pieza por dÃ­a. Prefer lunes/miercoles/viernes/sabado para reels.
+
+Responde SOLO con JSON array vÃ¡lido, sin markdown, sin texto extra:
+[
+  {{"date": "{year}-{mon_str}-DD", "type": "reel|carrusel|historia", "title": "TÃ­tulo", "caption": "Caption completo...", "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]}},
+  ...20 items...
+]
+Las fechas deben estar entre {year}-{mon_str}-01 y {year}-{mon_str}-{str(days_in_month).zfill(2)}."""
+
+    try:
+        raw = gemini.generate(prompt)
+        match = re.search(r'\[[\s\S]*\]', raw)
+        if not match:
+            raise HTTPException(500, "No se pudo parsear la respuesta de IA")
+        items_data = json.loads(match.group())
+    except json.JSONDecodeError as e:
+        raise HTTPException(500, f"JSON invÃ¡lido de IA: {e}")
+
+    data = load_data()
+    existing = [i for i in data.get("calendar_items", []) if not i.get("date", "").startswith(month)]
+
+    new_items = []
+    for d in items_data:
+        new_items.append({
+            "id": str(uuid.uuid4()),
+            "date": d.get("date", ""),
+            "type": d.get("type", "reel"),
+            "title": d.get("title", ""),
+            "caption": d.get("caption", ""),
+            "hashtags": d.get("hashtags", []),
+            "status": "pendiente",
+            "metrics": {},
+            "created_at": int(time.time()),
+        })
+
+    data["calendar_items"] = existing + new_items
+    save_data(data)
+    return {"items": new_items, "count": len(new_items)}
+
+
+# â”€â”€ API: Contenido â€” slides, regenerar, telegram â”€â”€
+
+@app.post("/api/calendar/{item_id}/generate-slides")
+def generate_slides(item_id: str):
+    from core.gemini_client import gemini
+    data = load_data()
+    items = data.get("calendar_items", [])
+    idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
+    if idx is None:
+        raise HTTPException(404, "Item no encontrado")
+    item = items[idx]
+    ctype = item.get("type", "reel")
+    brand = data.get("brand", {})
+    brand_name = brand.get("brand_name", "Mi Negocio")
+    if ctype == "reel":
+        structure = "Hook (0-3s), Desarrollo (3-20s), ClÃ­max/Giro (20-25s), CTA (25-30s)"
+        n = 4
+    elif ctype == "carrusel":
+        structure = "Cover (gancho), Slide 2, Slide 3, Slide 4, Slide 5, Slide 6, CTA final"
+        n = 7
+    else:
+        structure = "Hook/Portada, Desarrollo 1, Desarrollo 2, Desarrollo 3, Desarrollo 4, CTA con sticker"
+        n = 6
+
+    prompt = f"""Eres experto en contenido Instagram para LATAM.
+Genera el copy especÃ­fico para cada slide de esta publicaciÃ³n.
+
+Negocio: {brand_name}
+Tipo: {ctype}
+Concepto: {item.get('title','')}
+DescripciÃ³n: {item.get('caption','')}
+Estructura recomendada: {structure}
+
+Genera exactamente {n} slides. Responde SOLO con JSON array (sin markdown):
+[
+  {{"num": 1, "label": "Hook", "copy": "Texto exacto corto y potente para este slide..."}},
+  ...{n} items total...
+]"""
+    try:
+        raw = gemini.generate(prompt)
+        match = re.search(r'\[[\s\S]*\]', raw)
+        if not match: raise HTTPException(500, "Sin JSON en respuesta")
+        slides = json.loads(match.group())
+    except json.JSONDecodeError as e:
+        raise HTTPException(500, f"JSON invÃ¡lido: {e}")
+    items[idx]["slides"] = slides
+    save_data(data)
+    return {"slides": slides}
+
+
+@app.post("/api/calendar/{item_id}/regenerate")
+def regenerate_item(item_id: str):
+    from core.gemini_client import gemini
+    data = load_data()
+    items = data.get("calendar_items", [])
+    idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
+    if idx is None: raise HTTPException(404, "Item no encontrado")
+    item = items[idx]
+    regen = item.get("regen_count", 0)
+    if regen >= 3: raise HTTPException(400, "MÃ¡ximo 3 regeneraciones alcanzado")
+    brand = data.get("brand", {})
+    prompt = f"""Eres experto en contenido Instagram para LATAM.
+Genera UNA nueva propuesta DIFERENTE para Instagram.
+
+Negocio: {brand.get('brand_name','Mi Negocio')}
+Servicio: {brand.get('brand_service','servicio de alto valor')}
+Cliente: {brand.get('brand_ideal_client','emprendedores LATAM')}
+Tipo: {item.get('type','reel')}
+Fecha: {item.get('date','')}
+PROPUESTA ANTERIOR (NO repetir): {item.get('title','')}
+
+Crea Ã¡ngulo/hook completamente diferente. Responde SOLO con JSON (sin markdown):
+{{"title": "Nuevo hook/tÃ­tulo", "caption": "Caption completo con gancho...", "hashtags": ["#tag1","#tag2","#tag3","#tag4","#tag5"]}}"""
+    try:
+        raw = gemini.generate(prompt)
+        match = re.search(r'\{{[\s\S]*\}}', raw)
+        if not match: raise HTTPException(500, "Sin JSON en respuesta")
+        nd = json.loads(match.group())
+    except json.JSONDecodeError as e:
+        raise HTTPException(500, f"JSON invÃ¡lido: {e}")
+    items[idx].update({"title": nd.get("title", item["title"]), "caption": nd.get("caption",""),
+                       "hashtags": nd.get("hashtags",[]), "regen_count": regen + 1, "slides": []})
+    save_data(data)
+    return items[idx]
+
+
+@app.post("/api/calendar/{item_id}/telegram")
+def telegram_validate(item_id: str):
+    data = load_data()
+    items = data.get("calendar_items", [])
+    idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
+    if idx is None: raise HTTPException(404, "Item no encontrado")
+    items[idx]["status"] = "validacion"
+    items[idx]["telegram_sent"] = True
+    items[idx]["telegram_sent_at"] = int(time.time())
+    save_data(data)
+    return {"status": "ok", "item": items[idx]}
+
+
+@app.post("/api/calendar/{item_id}/approve")
+def approve_item(item_id: str):
+    data = load_data()
+    items = data.get("calendar_items", [])
+    idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
+    if idx is None: raise HTTPException(404, "Item no encontrado")
+    items[idx]["status"] = "programado"
+    items[idx]["telegram_approved"] = True
+    save_data(data)
+    return {"status": "ok", "item": items[idx]}
 
 
 @app.get("/api/health")
@@ -847,5 +1082,78 @@ def health():
     return {"status": "ok", "app": "RIMA AI"}
 
 
+# â”€â”€ Webhook Lemon Squeezy â”€â”€
+
+LEMON_WEBHOOK_SECRET = os.getenv("LEMON_WEBHOOK_SECRET", "")
+
+def _verify_lemon_signature(payload: bytes, signature: str) -> bool:
+    if not LEMON_WEBHOOK_SECRET:
+        return False
+    expected = hmac.new(
+        LEMON_WEBHOOK_SECRET.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+
+def _create_user_from_payment(email: str, name: str, plan: str):
+    """Registra al cliente en el JSON local y podrias agregar envio de email aqui."""
+    d = load_data()
+    users = d.setdefault("users", {})
+    if email not in users:
+        users[email] = {
+            "name": name,
+            "plan": plan,
+            "status": "active",
+            "created_at": int(time.time()),
+        }
+        save_data(d)
+        print(f"[RIMA] Usuario creado: {email} | Plan: {plan}")
+    else:
+        users[email]["plan"] = plan
+        users[email]["status"] = "active"
+        save_data(d)
+        print(f"[RIMA] Usuario actualizado: {email} | Plan: {plan}")
+
+@app.post("/api/webhooks/lemon")
+async def lemon_webhook(
+    request: Request,
+    x_signature: Optional[str] = Header(None),
+):
+    payload = await request.body()
+
+    if not x_signature or not _verify_lemon_signature(payload, x_signature):
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        data = json.loads(payload)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    event_name = data.get("meta", {}).get("event_name", "")
+    print(f"[RIMA] Webhook recibido: {event_name}")
+
+    if event_name in ("order_created", "subscription_created"):
+        attrs = data.get("data", {}).get("attributes", {})
+        email = attrs.get("user_email", "")
+        name  = attrs.get("user_name", "")
+        plan  = attrs.get("product_name", "")
+        if email:
+            _create_user_from_payment(email=email, name=name, plan=plan)
+
+    elif event_name == "subscription_cancelled":
+        attrs = data.get("data", {}).get("attributes", {})
+        email = attrs.get("user_email", "")
+        if email:
+            d = load_data()
+            if email in d.get("users", {}):
+                d["users"][email]["status"] = "cancelled"
+                save_data(d)
+                print(f"[RIMA] Suscripcion cancelada: {email}")
+
+    return {"status": "ok"}
+
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+

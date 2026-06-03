@@ -7,8 +7,14 @@ Bot de Telegram de RIMA AI
 
 import os
 import json
-import asyncio
+import time
+import logging
 from pathlib import Path
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    level=logging.INFO
+)
 from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -16,7 +22,7 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes
 )
 
-load_dotenv()
+load_dotenv(override=True)  # override=True fuerza los valores del .env sobre el sistema
 
 TOKEN      = os.getenv("TELEGRAM_BOT_TOKEN")
 DATA_FILE  = Path(__file__).parent.parent / "data" / "rima_data.json"
@@ -46,7 +52,7 @@ def vincular_cliente(chat_id: int, username: str = None):
         "chat_id": chat_id,
         "username": username or "",
         "activo": True,
-        "vinculado_en": str(asyncio.get_event_loop().time())
+        "vinculado_en": int(time.time())
     }
     save_data(d)
 
@@ -168,7 +174,9 @@ async def mensaje_libre(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def callback_aprobacion(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Maneja los botones de Aprobar / Rechazar / Ajustar."""
     query  = update.callback_query
-    data   = query.data  # formato: "aprobar:r1", "rechazar:r1", "ajustar:r1"
+    data   = query.data
+    logging.info(f"CALLBACK recibido: {data}")
+    print(f">>> CALLBACK: {data}")
     await query.answer()
 
     accion, reel_id = data.split(":")
@@ -249,9 +257,17 @@ async def enviar_contenido_para_aprobar(
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+async def debug_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Captura TODOS los updates para debug."""
+    print(f">>> UPDATE: {update}")
+    logging.info(f"UPDATE recibido: {update.update_id}")
+
 def crear_app() -> Application:
     app = Application.builder().token(TOKEN).build()
-    # Un solo handler para todo el texto (comandos + mensajes libres)
+    # Handler debug — captura todo
+    app.add_handler(MessageHandler(filters.ALL, debug_handler), group=-1)
+    app.add_handler(CallbackQueryHandler(debug_handler), group=-1)
+    # Handlers reales
     app.add_handler(MessageHandler(filters.TEXT, mensaje_libre))
     app.add_handler(CallbackQueryHandler(callback_aprobacion))
     return app
@@ -260,5 +276,5 @@ def crear_app() -> Application:
 if __name__ == "__main__":
     print("🤖 Bot RIMA iniciando...")
     app = crear_app()
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
-    print("Bot detenido.")
+    print("✅ Bot activo — esperando mensajes. Ctrl+C para detener.")
+    app.run_polling(allowed_updates=["message", "callback_query"])

@@ -1,13 +1,13 @@
-from google import genai
+﻿from google import genai
 from dotenv import load_dotenv
 import os
 import json
 from datetime import datetime
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Vertex AI con Application Default Credentials (gcloud auth application-default login)
-# Usa scope cloud-platform — compatible con proyectos de organización Google Cloud
+# Usa scope cloud-platform â€” compatible con proyectos de organizaciÃ³n Google Cloud
 _project = os.getenv("GOOGLE_CLOUD_PROJECT", "rima-ai-498117")
 client = genai.Client(
     vertexai=True,
@@ -48,3 +48,4 @@ class GeminiClient:
 
 
 gemini = GeminiClient()
+
