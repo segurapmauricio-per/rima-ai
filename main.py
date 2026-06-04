@@ -15,6 +15,7 @@ import hashlib
 import uuid
 import calendar as cal_module
 import re
+from datetime import datetime
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -24,6 +25,18 @@ from agents.content.agent import content_agent
 from agents.meta.agent import meta_agent
 from agents.sales.agent import sales_agent
 from agents.prospecting.agent import prospecting_agent
+from agents.market_research.agent import market_research_agent
+from agents.script.agent import script_agent
+from agents.weekly.agent import weekly_agent
+from agents.image_analysis.agent import image_analysis_agent
+from agents.story_copy.agent import story_copy_agent
+from agents.carousel_copy.agent import carousel_copy_agent
+from agents.reel_copy.agent import reel_copy_agent
+from agents.weekly.agent import weekly_agent
+from core.client_store import (
+    save_brief, load_brief, load_memory, update_memory,
+    ensure_client_dirs, load_weekly_state, save_weekly_state,
+)
 
 app = FastAPI(title="RIMA AI", description="Marketing AI para LATAM")
 
@@ -1082,6 +1095,77 @@ def health():
     return {"status": "ok", "app": "RIMA AI"}
 
 
+# ── API: Flujo semanal + Telegram ──
+
+@app.post("/api/weekly/start")
+async def weekly_start(payload: dict):
+    """
+    Inicia el flujo semanal para un cliente.
+    Corre el scraping y manda la primera historia a Telegram.
+
+    Body: { "brand": "fitlife", "week": "W23_2026", "chat_id": 5149024498 }
+    """
+    brand    = payload.get("brand", "")
+    week     = payload.get("week", "")
+    chat_id  = payload.get("chat_id")
+    profiles = payload.get("competitor_profiles", [])
+
+    if not brand or not chat_id:
+        raise HTTPException(400, "brand y chat_id son requeridos")
+
+    # 1. Arrancar el orquestador (scraping + inicializar estado)
+    try:
+        result = weekly_agent.start_week(brand, week_label=week,
+                                          competitor_profiles=profiles)
+    except Exception as e:
+        raise HTTPException(500, f"Error iniciando semana: {e}")
+
+    # 2. Obtener la primera historia y mandarla por Telegram
+    try:
+        from bot.weekly_flow import enviar_historia
+        from telegram import Bot
+        bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
+
+        next_story = weekly_agent.next_story(brand, result["week"])
+        if not next_story.get("done"):
+            # Crear app temporal solo para enviar
+            from telegram.ext import Application as TGApp
+            tg_app = TGApp.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+            await tg_app.initialize()
+
+            await bot.send_message(
+                chat_id=chat_id,
+                text=(
+                    f"🚀 *¡Tu semana de contenido está lista!*\n\n"
+                    f"Vamos a revisar el copy pieza por pieza.\n"
+                    f"Son {next_story['total_stories']} historias, "
+                    f"unos minutos de tu tiempo y RIMA se encarga del resto."
+                ),
+                parse_mode="Markdown"
+            )
+
+            await enviar_historia(
+                tg_app, chat_id, brand, result["week"],
+                next_story["story_index"],
+                next_story["total_stories"],
+                next_story["slot"],
+                next_story.get("proposals", [])
+            )
+            await tg_app.shutdown()
+
+    except Exception as e:
+        # No fallar si Telegram falla — el estado ya fue guardado
+        print(f"Warning Telegram: {e}")
+
+    return {
+        "status": "started",
+        "brand": brand,
+        "week": result["week"],
+        "stage": result["stage"],
+        "message": "Flujo semanal iniciado. Primera historia enviada por Telegram."
+    }
+
+
 # â”€â”€ Webhook Lemon Squeezy â”€â”€
 
 LEMON_WEBHOOK_SECRET = os.getenv("LEMON_WEBHOOK_SECRET", "")
@@ -1152,6 +1236,336 @@ async def lemon_webhook(
                 print(f"[RIMA] Suscripcion cancelada: {email}")
 
     return {"status": "ok"}
+
+
+# ── Endpoint: análisis de imagen al subir ──
+
+@app.post("/api/images/analyze/{brand}/{category}/{filename}")
+def analyze_image(brand: str, category: str, filename: str):
+    """Analyze an already-uploaded image with Gemini Vision."""
+    image_path = str(UPLOADS_DIR / category / filename)
+    try:
+        result = image_analysis_agent.analyze(image_path, brand, category)
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/images/analyze-batch/{brand}/{category}")
+def analyze_image_batch(brand: str, category: str):
+    """Analyze all non-analyzed images in a category."""
+    try:
+        results = image_analysis_agent.analyze_batch(brand, category)
+        return JSONResponse(content={"analyzed": len(results), "results": results})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Modelos para nuevos agentes ──
+
+class MarketResearchRequest(BaseModel):
+    brand_brief: dict = {}
+    competitor_profiles: List[str] = []
+    hashtags: List[str] = []
+
+
+class ContentMonthlyRequest(BaseModel):
+    brand_brief: dict = {}
+    market_research: str = ""
+    month: str = ""
+
+
+class ScriptRequest(BaseModel):
+    idea: dict = {}
+    brand_brief: dict = {}
+    tone_notes: str = ""
+
+
+class SalesDMRequest(BaseModel):
+    conversation_text: str = ""
+    brand_brief: dict = {}
+
+
+# ── Endpoint: Estudio de Mercado ──
+
+@app.post("/api/agent/market-research")
+def run_market_research(req: MarketResearchRequest):
+    try:
+        result = market_research_agent.run(
+            brand_brief=req.brand_brief,
+            competitor_profiles=req.competitor_profiles,
+            hashtags=req.hashtags,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Endpoint: Calendario mensual de contenido ──
+
+@app.post("/api/agent/content-monthly")
+def run_content_monthly(req: ContentMonthlyRequest):
+    try:
+        result = content_agent.run(
+            brand_brief=req.brand_brief,
+            market_research=req.market_research or None,
+            month=req.month or None,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Endpoint: Generación de guion ──
+
+@app.post("/api/agent/script")
+def run_script(req: ScriptRequest):
+    try:
+        result = script_agent.run(
+            idea=req.idea,
+            brand_brief=req.brand_brief,
+            tone_notes=req.tone_notes,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Endpoint: Ventas DMs ──
+
+SALES_DM_SYSTEM = """Eres el Agente de Ventas de RIMA especializado en análisis de DMs de Instagram.
+Evaluás conversaciones de prospectos y generás respuestas usando metodología de ventas consultiva.
+
+Reglas:
+- Calificás al prospecto antes de proponer una llamada
+- Las respuestas suenan humanas, no robóticas
+- Nunca revelás el precio sin establecer valor primero
+- Identificás la etapa del prospecto: frío / tibio / caliente / listo para agendar
+- Escribís en español LATAM"""
+
+@app.post("/api/agent/sales-dm")
+def run_sales_dm(req: SalesDMRequest):
+    try:
+        brief = req.brand_brief
+        prompt = f"""
+Analiza esta conversación de DM de Instagram y genera una respuesta estratégica:
+
+NEGOCIO: {brief.get('business_name', '')}
+SERVICIO: {brief.get('service', '')}
+PRECIO: {brief.get('price', '')}
+RESULTADO PRINCIPAL: {brief.get('main_result', '')}
+
+CONVERSACIÓN:
+{req.conversation_text}
+
+Entrega en este formato:
+
+## CLASIFICACIÓN DEL PROSPECTO
+- Temperatura: Frío / Tibio / Caliente / Listo para agendar
+- Score de calificación (1-10):
+- Señales detectadas (BANT — Budget/Authority/Need/Timeline):
+
+## ANÁLISIS
+Qué está pasando en esta conversación y qué quiere el prospecto realmente
+
+## RESPUESTA SUGERIDA
+El mensaje exacto para enviar por DM (sonando humano y conversacional)
+
+## SIGUIENTE ACCIÓN
+Qué hacer después de enviar esta respuesta:
+- [ ] Esperar respuesta
+- [ ] Proponer llamada
+- [ ] Enviar más información
+- [ ] Cerrar / no calificado
+
+## RESPUESTA ALTERNATIVA (si rechaza)
+Mensaje de seguimiento si no responde en 48h
+"""
+        response = gemini.generate(prompt, SALES_DM_SYSTEM)
+        result = {
+            "agent": "sales_dm",
+            "timestamp": datetime.now().isoformat(),
+            "brand": brief.get("business_name", ""),
+            "analysis": response,
+        }
+        os.makedirs("logs/sales_dm", exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        with open(f"logs/sales_dm/{brief.get('business_name', 'unknown')}_{ts}.json", "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Weekly Workflow Models ──
+
+class WeeklyStartRequest(BaseModel):
+    brand: str
+    week_label: str = ""
+    month: str = ""
+    competitor_profiles: List[str] = []
+
+
+class WeeklyApprovalRequest(BaseModel):
+    brand: str
+    week: str
+    index: int = 0
+    chosen_proposal: dict = {}
+    chosen_referent: dict = {}
+    feedback: str = ""
+    changes_requested: str = ""
+    topic_override: str = ""
+
+
+class MemoryUpdateRequest(BaseModel):
+    brand: str
+    updates: dict = {}
+
+
+# ── Weekly Workflow Endpoints ──
+
+@app.post("/api/agent/weekly/start")
+def weekly_start(req: WeeklyStartRequest):
+    try:
+        result = weekly_agent.start_week(
+            brand=req.brand,
+            week_label=req.week_label or None,
+            month=req.month or None,
+            competitor_profiles=req.competitor_profiles,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/agent/weekly/status/{brand}/{week}")
+def weekly_status(brand: str, week: str):
+    try:
+        return JSONResponse(content=weekly_agent.get_weekly_status(brand, week))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/next-story")
+def weekly_next_story(req: WeeklyApprovalRequest):
+    try:
+        return JSONResponse(content=weekly_agent.next_story(req.brand, req.week))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/approve-story")
+def weekly_approve_story(req: WeeklyApprovalRequest):
+    try:
+        result = weekly_agent.approve_story(
+            brand=req.brand, week=req.week,
+            story_index=req.index,
+            chosen_proposal=req.chosen_proposal,
+            feedback=req.feedback,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/next-carousel")
+def weekly_next_carousel(req: WeeklyApprovalRequest):
+    try:
+        return JSONResponse(content=weekly_agent.next_carousel(req.brand, req.week))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/approve-carousel-referent")
+def weekly_approve_carousel_referent(req: WeeklyApprovalRequest):
+    try:
+        result = weekly_agent.approve_carousel_referent(
+            brand=req.brand, week=req.week,
+            carousel_index=req.index,
+            chosen_referent=req.chosen_referent,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/approve-carousel-copy")
+def weekly_approve_carousel_copy(req: WeeklyApprovalRequest):
+    try:
+        result = weekly_agent.approve_carousel_copy(
+            brand=req.brand, week=req.week,
+            carousel_index=req.index,
+            feedback=req.feedback,
+            changes_requested=req.changes_requested,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/next-reel")
+def weekly_next_reel(req: WeeklyApprovalRequest):
+    try:
+        return JSONResponse(content=weekly_agent.next_reel(req.brand, req.week))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/approve-reel-referent")
+def weekly_approve_reel_referent(req: WeeklyApprovalRequest):
+    try:
+        result = weekly_agent.approve_reel_referent(
+            brand=req.brand, week=req.week,
+            reel_index=req.index,
+            chosen_referent=req.chosen_referent,
+            topic_override=req.topic_override or None,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/approve-reel-copy")
+def weekly_approve_reel_copy(req: WeeklyApprovalRequest):
+    try:
+        result = weekly_agent.approve_reel_copy(
+            brand=req.brand, week=req.week,
+            reel_index=req.index,
+            feedback=req.feedback,
+            changes_requested=req.changes_requested,
+        )
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Client Memory Endpoints ──
+
+@app.get("/api/client/{brand}/memory")
+def get_client_memory(brand: str):
+    return JSONResponse(content=load_memory(brand))
+
+
+@app.post("/api/client/{brand}/memory")
+def patch_client_memory(brand: str, req: MemoryUpdateRequest):
+    result = update_memory(brand, req.updates)
+    return JSONResponse(content=result)
+
+
+@app.get("/api/client/{brand}/brief")
+def get_client_brief(brand: str):
+    brief = load_brief(brand)
+    if not brief:
+        raise HTTPException(status_code=404, detail="Brief no encontrado")
+    return JSONResponse(content=brief)
+
+
+@app.post("/api/client/{brand}/setup")
+def setup_client(brand: str, brief: BrandBrief):
+    """Initialize client folder structure and save brief."""
+    ensure_client_dirs(brand)
+    save_brief(brand, brief.model_dump())
+    return JSONResponse(content={"status": "ok", "brand": brand})
 
 
 if __name__ == "__main__":

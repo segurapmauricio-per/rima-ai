@@ -6,10 +6,12 @@ Bot de Telegram de RIMA AI
 """
 
 import os
+import sys
 import json
 import time
 import logging
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -22,9 +24,11 @@ from telegram.ext import (
     MessageHandler, filters, ContextTypes
 )
 
-load_dotenv(override=True)  # override=True fuerza los valores del .env sobre el sistema
+load_dotenv(override=True)
 
-TOKEN      = os.getenv("TELEGRAM_BOT_TOKEN")
+from bot.weekly_flow import parse_weekly_callback, handle_weekly_callback
+
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 DATA_FILE  = Path(__file__).parent.parent / "data" / "rima_data.json"
 
 
@@ -172,14 +176,24 @@ async def mensaje_libre(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def callback_aprobacion(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Maneja los botones de Aprobar / Rechazar / Ajustar."""
-    query  = update.callback_query
-    data   = query.data
+    """Maneja todos los botones — flujo semanal y reels individuales."""
+    query = update.callback_query
+    data  = query.data
     logging.info(f"CALLBACK recibido: {data}")
     print(f">>> CALLBACK: {data}")
-    await query.answer()
 
-    accion, reel_id = data.split(":")
+    # ── Flujo semanal (wf:...) ─────────────────────────────────────────────────
+    parsed = parse_weekly_callback(data)
+    if parsed:
+        await handle_weekly_callback(query, parsed, context.application)
+        return
+
+    # ── Flujo reel individual (aprobar:r1, rechazar:r1, ajustar:r1) ────────────
+    await query.answer()
+    partes = data.split(":", 1)
+    if len(partes) < 2:
+        return
+    accion, reel_id = partes
     chat_id = query.message.chat_id
 
     d = load_data()
