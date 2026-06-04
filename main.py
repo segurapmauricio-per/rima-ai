@@ -685,47 +685,69 @@ def home_dashboard(request: Request):
     return serve_html("rima-home.html")
 
 @app.get("/calendario", response_class=HTMLResponse)
-def calendario():
+def calendario(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-calenadrio.html")
 
 @app.get("/contenido", response_class=HTMLResponse)
-def contenido():
+def contenido(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-contenido.html")
 
 @app.get("/mercado", response_class=HTMLResponse)
-def mercado():
+def mercado(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-mercado.html")
 
 @app.get("/meta", response_class=HTMLResponse)
-def meta():
+def meta(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-meta.html")
 
 @app.get("/ventas", response_class=HTMLResponse)
-def ventas():
+def ventas(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-ventas.html")
 
 @app.get("/landing", response_class=HTMLResponse)
-def landing():
+def landing(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-landing.html")
 
 @app.get("/marca", response_class=HTMLResponse)
-def marca():
+def marca(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-marca.html")
 
 @app.get("/referencias", response_class=HTMLResponse)
-def referencias():
+def referencias(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-referencias.html")
 
 @app.get("/imagenes", response_class=HTMLResponse)
-def imagenes():
+def imagenes(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-imagenes.html")
 
 @app.get("/videos", response_class=HTMLResponse)
-def videos():
+def videos(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-videos.html")
 
 @app.get("/credenciales", response_class=HTMLResponse)
-def credenciales():
+def credenciales(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
     return serve_html("rima-credenciales.html")
 
 
