@@ -81,12 +81,51 @@ def save_data(data: dict):
 # CSS compartido inyectado en <head>
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
+SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;height:100vh;background:rgba(15,15,25,0.97);border-right:1px solid rgba(255,255,255,0.07);overflow:hidden">
+  <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px">
+    <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#6D28D9);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg style="width:16px;height:16px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+    </div>
+    <div><p style="font-size:15px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0">RIMA</p>
+    <p style="font-size:9px;color:#475569;margin:0">Marketing AI · LATAM</p></div>
+  </div>
+  <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <div style="width:34px;height:34px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#7C3AED,#06B6D4);flex-shrink:0">
+        <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb923c,#fbbf24);display:flex;align-items:center;justify-content:center">
+          <span id="rima-initials" style="font-size:11px;font-weight:700;color:#fff">FL</span>
+        </div>
+      </div>
+      <div><p id="rima-brand-name" style="font-size:12px;font-weight:600;color:#fff;margin:0">FitLife Studio</p>
+      <p id="rima-brand-handle" style="font-size:10px;color:#475569;margin:0">@fitlifestudio_mx</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)"><p style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">12.4K</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2)"><p style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">48</p><p style="font-size:8px;color:#475569;margin:0">Msg.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p style="font-size:11px;font-weight:700;color:#34D399;margin:0">$18K</p><p style="font-size:8px;color:#475569;margin:0">Ventas</p></div>
+    </div>
+  </div>
+  <nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>
+  <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px">
+    <div style="width:26px;height:26px;border-radius:50%;padding:1.5px;background:linear-gradient(135deg,#7C3AED,#06B6D4);flex-shrink:0">
+      <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb923c,#fbbf24);display:flex;align-items:center;justify-content:center">
+        <span style="font-size:9px;font-weight:700;color:#fff">FL</span>
+      </div>
+    </div>
+    <div style="flex:1;min-width:0">
+      <p id="rima-brand-footer" style="font-size:11px;font-weight:600;color:#CBD5E1;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">FitLife Studio</p>
+      <div style="display:flex;align-items:center;gap:4px"><div style="width:5px;height:5px;border-radius:50%;background:#34D399"></div><p style="font-size:9px;color:#475569;margin:0">Plan Pro</p></div>
+    </div>
+  </div>
+</aside>"""
+
 SHARED_CSS = """
 <style id="rima-shared">
-  /* Zoom global â€” equivale a 125% del navegador */
-  html { zoom: 1.25; }
-  /* NormalizaciÃ³n tipogrÃ¡fica global */
-  body { font-size: 13px !important; }
+  /* Layout base */
+  html { zoom: 1.1; }
+  body { display:flex !important; height:100vh !important; overflow:hidden !important; font-size: 13px !important; }
+  #rima-sidebar { flex-shrink:0 !important; width:240px !important; min-width:240px !important; }
+  body > main, body > .flex-1 { flex:1 !important; min-width:0 !important; overflow:hidden !important; }
   aside nav span { font-size: 11px !important; }
   aside p, aside .text-\\[9px\\], aside .text-\\[10px\\] { font-size: 9px !important; }
   input, textarea, select { font-size: 12px !important; font-family: 'Inter', sans-serif !important; }
@@ -260,10 +299,34 @@ SHARED_JS = """
     return sidebar;
   }
 
-  // Reemplazar el aside existente con el sidebar estandarizado
-  var existingAside = document.querySelector('aside');
-  if (existingAside) {
-    existingAside.parentNode.replaceChild(buildSidebar(), existingAside);
+  // Poblar el nav del sidebar (ya inyectado en HTML por Python)
+  function initSidebar() {
+    var nav = document.getElementById('rima-nav');
+    if (!nav) return;
+
+    var groups = {}, groupOrder = [];
+    NAV_ITEMS.forEach(function(item) {
+      if (!groups[item.group]) { groups[item.group] = []; groupOrder.push(item.group); }
+      groups[item.group].push(item);
+    });
+    groupOrder.forEach(function(g) {
+      var section = document.createElement('div');
+      section.style.cssText = 'margin-bottom:12px';
+      var label = document.createElement('p');
+      label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0';
+      label.textContent = g;
+      section.appendChild(label);
+      var list = document.createElement('div');
+      list.style.cssText = 'display:flex;flex-direction:column;gap:2px';
+      groups[g].forEach(function(item) { list.appendChild(buildNavItem(item)); });
+      section.appendChild(list);
+      nav.appendChild(section);
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSidebar);
+  } else {
+    initSidebar();
   }
 
   // â”€â”€ Toast helper â”€â”€
@@ -514,12 +577,93 @@ SHARED_JS = """
 """
 
 
+NAV_ITEMS_PY = [
+    ("Dashboard",            "/",             "COMENCEMOS", "violet",  "M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"),
+    ("Calendario",           "/calendario",   "COMENCEMOS", "violet",  "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"),
+    ("Contenido",            "/contenido",    "COMENCEMOS", "pink",    "M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"),
+    ("Estudio de mercado",   "/mercado",      "COMENCEMOS", "sky",     "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"),
+    ("META Ads",             "/meta",         "COMENCEMOS", "blue",    "M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"),
+    ("Ventas",               "/ventas",       "COMENCEMOS", "emerald", "M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"),
+    ("Landing",              "/landing",      "COMENCEMOS", "amber",   "M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"),
+    ("Informacion de la marca", "/marca",     "MI NEGOCIO", "violet",  "M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"),
+    ("Referencias",          "/referencias",  "MI NEGOCIO", "rose",    "M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"),
+    ("Imagenes",             "/imagenes",     "MI NEGOCIO", "cyan",    "M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"),
+    ("Videos",               "/videos",       "MI NEGOCIO", "orange",  "M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"),
+    ("Credenciales",         "/credenciales", "MI NEGOCIO", "slate",   "M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"),
+]
+
+COLOR_HEX = {
+    "violet": "#A78BFA", "pink": "#F472B6", "sky": "#38BDF8", "blue": "#60A5FA",
+    "emerald": "#34D399", "amber": "#FBBF24", "rose": "#FB7185", "cyan": "#22D3EE",
+    "orange": "#FB923C", "slate": "#94A3B8",
+}
+COLOR_BG = {
+    "violet": "rgba(124,58,237,0.15)", "pink": "rgba(236,72,153,0.15)",
+    "sky": "rgba(14,165,233,0.15)", "blue": "rgba(59,130,246,0.15)",
+    "emerald": "rgba(52,211,153,0.15)", "amber": "rgba(245,158,11,0.15)",
+    "rose": "rgba(244,63,94,0.15)", "cyan": "rgba(6,182,212,0.15)",
+    "orange": "rgba(249,115,22,0.15)", "slate": "rgba(100,116,139,0.15)",
+}
+
+def _build_nav_html(current_path: str) -> str:
+    groups: dict = {}
+    order: list = []
+    for label, href, group, color, icon in NAV_ITEMS_PY:
+        if group not in groups:
+            groups[group] = []
+            order.append(group)
+        groups[group].append((label, href, color, icon))
+
+    html = ""
+    for g in order:
+        html += f'<div style="margin-bottom:12px"><p style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0">{g}</p><div style="display:flex;flex-direction:column;gap:2px">'
+        for label, href, color, icon in groups[g]:
+            is_active = (href == current_path) or (href != "/" and current_path.startswith(href))
+            if is_active:
+                bg = "background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)"
+                tc = "color:#fff;font-weight:600"
+            else:
+                bg = "background:transparent;border-color:transparent"
+                tc = "color:#94A3B8;font-weight:400"
+            ic = COLOR_HEX.get(color, "#A78BFA")
+            ib = COLOR_BG.get(color, "rgba(124,58,237,0.15)")
+            html += (
+                f'<a href="{href}" style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;border:1px solid;text-decoration:none;transition:all .18s;{bg}">'
+                f'<div style="width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{ib}">'
+                f'<svg style="width:10px;height:10px;color:{ic}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{icon}"/></svg>'
+                f'</div><span style="font-size:11px;{tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{label}</span></a>'
+            )
+        html += "</div></div>"
+    return html
+
+
 def serve_html(filename: str) -> HTMLResponse:
+    import re as _re
     path = DASHBOARD / filename
     if not path.exists():
-        raise HTTPException(status_code=404, detail=f"PÃ¡gina no encontrada: {filename}")
+        raise HTTPException(status_code=404, detail=f"Pagina no encontrada: {filename}")
     content = path.read_text(encoding="utf-8")
-    # Inyectar CSS normalizado en <head>
+
+    # Determinar path activo para resaltar nav item
+    route_map = {
+        "rima-home.html": "/", "rima-calenadrio.html": "/calendario",
+        "rima-contenido.html": "/contenido", "rima-mercado.html": "/mercado",
+        "rima-meta.html": "/meta", "rima-ventas.html": "/ventas",
+        "rima-landing.html": "/landing", "rima-marca.html": "/marca",
+        "rima-referencias.html": "/referencias", "rima-imagenes.html": "/imagenes",
+        "rima-videos.html": "/videos", "rima-credenciales.html": "/credenciales",
+    }
+    current_path = route_map.get(filename, "/")
+
+    # Construir sidebar con nav activo
+    nav_html = _build_nav_html(current_path)
+    sidebar = SIDEBAR_HTML.replace('<nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>',
+                                   f'<nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none">{nav_html}</nav>')
+
+    # Reemplazar cualquier aside (vacío o lleno) con el sidebar generado
+    content = _re.sub(r'<aside[^>]*>.*?</aside>', sidebar, content, count=1, flags=_re.DOTALL)
+
+    # Inyectar CSS en <head>
     content = content.replace("</head>", SHARED_CSS + "\n</head>")
     # Inyectar JS universal antes del cierre de body
     content = content.replace("</body>", SHARED_JS + "\n</body>")

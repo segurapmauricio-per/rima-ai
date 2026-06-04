@@ -1,811 +1,913 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RIMA — Dashboard</title>
+  <title>RIMA — Calendario</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background: #0A0A0F; color: #F1F5F9; }
-
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
-    .glass {
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.07);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-    }
-
-    .glass-hover:hover {
-      background: rgba(255,255,255,0.07);
-      border-color: rgba(124,58,237,0.3);
-      transition: all 0.2s ease;
-    }
-
-    .gradient-text {
-      background: linear-gradient(135deg, #7C3AED, #06B6D4);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .gradient-border {
-      background: linear-gradient(135deg, #7C3AED22, #06B6D422);
-      border: 1px solid;
-      border-image: linear-gradient(135deg, #7C3AED55, #06B6D455) 1;
-    }
-
-    .agent-active {
-      background: linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.1));
-      border-color: rgba(124,58,237,0.5) !important;
-    }
-
-    .status-dot-processing {
-      animation: pulse-violet 1.5s ease-in-out infinite;
-    }
-    @keyframes pulse-violet {
-      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(124,58,237,0.4); }
-      50% { opacity: 0.8; box-shadow: 0 0 0 4px rgba(124,58,237,0); }
-    }
-
+    .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(12px); }
+    .glass-hover:hover { background: rgba(255,255,255,0.07); border-color: rgba(124,58,237,0.3); transition: all .2s ease; }
+    .gradient-text { background: linear-gradient(135deg, #7C3AED, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .btn-primary { background: linear-gradient(135deg, #7C3AED, #6D28D9); transition: all .2s ease; border: none; cursor: pointer; }
+    .btn-primary:hover { background: linear-gradient(135deg, #8B5CF6, #7C3AED); box-shadow: 0 4px 20px rgba(124,58,237,0.4); transform: translateY(-1px); }
     .glow-violet { box-shadow: 0 0 20px rgba(124,58,237,0.25); }
     .glow-cyan   { box-shadow: 0 0 20px rgba(6,182,212,0.2); }
 
-    .sidebar-item {
-      transition: all 0.18s ease;
+    .cal-cell { transition: all .15s ease; cursor: pointer; border-radius: 10px; padding: 8px; min-height: 72px; position: relative; }
+    .cal-cell:hover { background: rgba(124,58,237,0.12) !important; border-color: rgba(124,58,237,0.35) !important; }
+    .cal-cell.selected { background: rgba(124,58,237,0.15) !important; border-color: rgba(124,58,237,0.5) !important; }
+
+    @keyframes pulse-violet { 0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(124,58,237,0.4)} 50%{opacity:.8;box-shadow:0 0 0 4px rgba(124,58,237,0)} }
+    .status-dot-processing { animation: pulse-violet 1.5s ease-in-out infinite; }
+
+    /* ── Dark selects ── */
+    select {
+      background: #111827 !important;
+      color: #F1F5F9 !important;
+      border: 1px solid rgba(255,255,255,0.12) !important;
+      border-radius: 12px !important;
+      padding: 8px 12px !important;
+      font-size: 13px !important;
+      font-family: 'Inter', sans-serif !important;
+      outline: none !important;
+      width: 100%;
+      cursor: pointer;
+      -webkit-appearance: auto;
     }
-    .sidebar-item:hover {
-      background: rgba(255,255,255,0.05);
-      border-color: rgba(124,58,237,0.25);
+    select option {
+      background: #111827 !important;
+      color: #F1F5F9 !important;
+      font-size: 13px !important;
+      padding: 6px 12px;
+    }
+    select option:hover, select option:focus, select option:checked {
+      background: #1E1B4B !important;
+      color: #A78BFA !important;
+    }
+    /* ── Modal inputs ── */
+    .modal-input {
+      background: #111827;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 8px 12px;
+      color: #F1F5F9;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      width: 100%;
+    }
+    .modal-input::placeholder { color: #475569; }
+    .modal-input:focus { border-color: rgba(124,58,237,0.5); }
+    .modal-label {
+      display: block;
+      font-size: 10px;
+      color: #64748B;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 5px;
     }
 
-    .cal-cell {
-      transition: all 0.15s ease;
-    }
-    .cal-cell:hover {
-      background: rgba(124,58,237,0.15);
-      border-color: rgba(124,58,237,0.4);
-    }
+    /* ── Modal overlay ── */
+    .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9998;padding:20px; }
 
-    .btn-primary {
-      background: linear-gradient(135deg, #7C3AED, #6D28D9);
-      transition: all 0.2s ease;
-    }
-    .btn-primary:hover {
-      background: linear-gradient(135deg, #8B5CF6, #7C3AED);
-      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
-      transform: translateY(-1px);
-    }
+    /* ── Spinner ── */
+    .spinner { border:2px solid rgba(255,255,255,0.1); border-top-color:#7C3AED; border-radius:50%; width:18px; height:18px; animation:spin .7s linear infinite; display:inline-block; }
+    @keyframes spin { to { transform:rotate(360deg); } }
 
-    .btn-telegram {
-      background: linear-gradient(135deg, #0EA5E9, #06B6D4);
-      transition: all 0.2s ease;
-    }
-    .btn-telegram:hover {
-      box-shadow: 0 4px 20px rgba(6,182,212,0.4);
-      transform: translateY(-1px);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * { animation: none !important; transition: none !important; }
-    }
+    /* ── Stacked bar ── */
+    .bar-track { height: 5px; border-radius: 4px; background: rgba(255,255,255,0.05); overflow:hidden; display:flex; }
+    .bar-pub  { background: linear-gradient(90deg,#34D399,#10B981); }
+    .bar-prog { background: linear-gradient(90deg,#38BDF8,#0EA5E9); }
+    .bar-pend { background: rgba(100,116,139,0.35); }
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
 
-<!-- ============ SIDEBAR ============ -->
-<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5 z-20">
+<!-- SIDEBAR placeholder (replaced by SHARED_JS) -->
+<aside class="w-64 flex-shrink-0 flex flex-col h-full glass border-r border-white/5"></aside>
 
-  <!-- 1. Logo RIMA -->
-  <div class="px-5 py-5 border-b border-white/5">
-    <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded-lg btn-primary flex items-center justify-center glow-violet">
-        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-        </svg>
-      </div>
-      <div>
-        <span class="font-bold text-base gradient-text tracking-wide">RIMA</span>
-        <p class="text-[10px] text-slate-500 -mt-0.5">Marketing AI · LATAM</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. Perfil Instagram del cliente -->
-  <div class="px-4 py-4 border-b border-white/5">
-    <!-- Foto + username -->
-    <div class="flex items-center gap-3 mb-3">
-      <!-- IG avatar con ring gradiente -->
-      <div class="relative flex-shrink-0">
-        <div class="w-11 h-11 rounded-full p-[2px]" style="background: linear-gradient(135deg, #7C3AED, #06B6D4);">
-          <div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center overflow-hidden">
-            <span class="text-sm font-bold text-white">FL</span>
-          </div>
-        </div>
-        <!-- IG verified dot -->
-        <div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-[#0A0A0F] flex items-center justify-center">
-          <div class="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center">
-            <svg class="w-1.5 h-1.5 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="flex-1 min-w-0">
-        <p class="text-xs font-semibold text-white truncate">FitLife Studio</p>
-        <p class="text-[10px] text-slate-500 truncate">@fitlifestudio_mx</p>
-      </div>
-      <!-- IG icon -->
-      <div class="w-6 h-6 rounded-md bg-gradient-to-br from-rose-500/20 to-amber-500/20 flex items-center justify-center flex-shrink-0 cursor-pointer">
-        <svg class="w-3 h-3 text-rose-400" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-        </svg>
-      </div>
-    </div>
-
-    <!-- Métricas IG -->
-    <div class="grid grid-cols-3 gap-1.5">
-      <div class="rounded-lg p-2 text-center cursor-pointer" style="background:rgba(124,58,237,0.08); border:1px solid rgba(124,58,237,0.15)">
-        <p class="text-xs font-bold text-violet-300">12.4K</p>
-        <p class="text-[8px] text-slate-500 mt-0.5">Seguidores</p>
-      </div>
-      <div class="rounded-lg p-2 text-center cursor-pointer" style="background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.15)">
-        <p class="text-xs font-bold text-cyan-300">48</p>
-        <p class="text-[8px] text-slate-500 mt-0.5">Mensajes</p>
-      </div>
-      <div class="rounded-lg p-2 text-center cursor-pointer" style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.15)">
-        <p class="text-xs font-bold text-emerald-300">$18K</p>
-        <p class="text-[8px] text-slate-500 mt-0.5">Ventas</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. Navegación -->
-  <nav class="flex-1 px-3 py-3 overflow-y-auto space-y-4">
-
-    <!-- Sección: Comencemos -->
-    <div>
-      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1.5">Comencemos</p>
-      <div class="space-y-0.5">
-
-        <!-- Dashboard -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Dashboard</span>
-        </div>
-
-        <!-- Calendario -->
-        <div class="sidebar-item agent-active rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5 glow-violet">
-          <div class="w-6 h-6 rounded-md bg-violet-500/20 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-semibold text-white">Calendario</span>
-          <span class="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400 status-dot-processing"></span>
-        </div>
-
-        <!-- Contenido -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-pink-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Contenido</span>
-        </div>
-
-        <!-- Estudio de mercado -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-sky-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Estudio de mercado</span>
-        </div>
-
-        <!-- META Ads -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-blue-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 008.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.413.811 1.035.811 1.73 0 .695-.316 1.317-.811 1.73m0-3.46a24.347 24.347 0 010 3.46"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">META Ads</span>
-        </div>
-
-        <!-- Ventas -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Ventas</span>
-        </div>
-
-        <!-- Landing -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-amber-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Landing</span>
-        </div>
-
-      </div>
-    </div>
-
-    <!-- Sección: Mi Negocio -->
-    <div>
-      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold px-2 mb-1.5">Mi Negocio</p>
-      <div class="space-y-0.5">
-
-        <!-- Información de la marca -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-violet-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Información de la marca</span>
-        </div>
-
-        <!-- Referencias -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-rose-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Referencias</span>
-        </div>
-
-        <!-- Imágenes -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-cyan-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Imágenes</span>
-        </div>
-
-        <!-- Videos -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-orange-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Videos</span>
-        </div>
-
-        <!-- Credenciales -->
-        <div class="sidebar-item glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5">
-          <div class="w-6 h-6 rounded-md bg-slate-500/15 flex items-center justify-center flex-shrink-0">
-            <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
-            </svg>
-          </div>
-          <span class="text-[11px] font-medium text-slate-300">Credenciales</span>
-          <span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
-        </div>
-
-      </div>
-    </div>
-
-  </nav>
-
-  <!-- 4. Footer cliente -->
-  <div class="px-4 py-3.5 border-t border-white/5">
-    <div class="flex items-center gap-2.5">
-      <!-- Avatar -->
-      <div class="w-8 h-8 rounded-full p-[1.5px] flex-shrink-0" style="background: linear-gradient(135deg, #7C3AED, #06B6D4);">
-        <div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center">
-          <span class="text-[9px] font-bold text-white">FL</span>
-        </div>
-      </div>
-      <div class="flex-1 min-w-0">
-        <p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p>
-        <div class="flex items-center gap-1 mt-0.5">
-          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-          <p class="text-[9px] text-slate-500">Plan Pro · Activo</p>
-        </div>
-      </div>
-      <!-- Settings gear -->
-      <button class="w-7 h-7 rounded-lg glass glass-hover flex items-center justify-center cursor-pointer flex-shrink-0" title="Configuración">
-        <svg class="w-3.5 h-3.5 text-slate-500 hover:text-slate-300 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-        </svg>
-      </button>
-    </div>
-  </div>
-</aside>
-
-<!-- ============ MAIN CONTENT ============ -->
+<!-- ═══════════════════ MAIN ═══════════════════ -->
 <main class="flex-1 flex flex-col h-full overflow-hidden">
 
   <!-- Top bar -->
-  <header class="flex items-center justify-between px-6 py-4 border-b border-white/5 flex-shrink-0">
+  <header class="flex items-center justify-between px-6 py-3.5 border-b border-white/5 flex-shrink-0">
     <div>
       <div class="flex items-center gap-2 mb-0.5">
         <svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/>
         </svg>
-        <h1 class="text-sm font-semibold text-white">Calendario</h1>
-        <span class="text-[9px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 font-medium border border-violet-500/30">Activo</span>
+        <h1 class="text-sm font-semibold text-white">Calendario Editorial</h1>
+        <!-- Badge dinámico: vacío = generar / con piezas = plan activo -->
+        <span id="plan-badge" class="hidden text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">Plan activo</span>
       </div>
-      <p class="text-[11px] text-slate-500">Contenido Instagram · planificación mensual</p>
+      <p id="hdr-subtitle" class="text-[11px] text-slate-500">Cargando...</p>
     </div>
-    <div class="flex items-center gap-3">
-      <!-- Telegram validate button -->
-      <button class="btn-telegram flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-semibold cursor-pointer glow-cyan">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.7 8.02c-.13.58-.47.72-.95.45l-2.6-1.92-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.65 4.81-4.35c.21-.19-.04-.29-.32-.1L8.41 14.8l-2.55-.8c-.55-.17-.56-.55.12-.82l9.97-3.84c.46-.17.86.11.69.66z"/>
+    <div class="flex items-center gap-2">
+      <!-- Botón generar: se muestra diferente según si hay plan -->
+      <button id="btn-gen-main" type="button" onclick="openGenerateModal()"
+        class="btn-primary flex items-center gap-2 px-4 py-2 rounded-lg text-white text-xs font-semibold glow-violet">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
         </svg>
-        Validar en Telegram
+        <span id="btn-gen-label">Generar plan del mes</span>
       </button>
-      <!-- Notifications -->
-      <button class="glass glass-hover w-9 h-9 rounded-lg flex items-center justify-center cursor-pointer relative">
-        <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"/>
-        </svg>
-        <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-violet-400 rounded-full"></span>
+      <button type="button" onclick="openAddModal(null)"
+        class="glass glass-hover px-3 py-2 rounded-lg text-slate-300 text-xs font-semibold cursor-pointer">
+        + Agregar pieza
       </button>
     </div>
   </header>
 
-<!-- ============ MAIN CONTENT ============ -->
-<main class="flex-1 flex flex-col h-full overflow-hidden">
+  <!-- Scrollable content -->
+  <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+    <div class="grid grid-cols-3 gap-4 h-full">
 
-  <!-- Scrollable content area -->
-  <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-    <!-- Main two-column layout -->
-    <div class="grid grid-cols-3 gap-5">
-
-      <!-- LEFT: Calendar + Detail — 2/3 -->
+      <!-- ── LEFT: Calendar + Detail — 2/3 ── -->
       <div class="col-span-2 space-y-4">
 
         <!-- Calendar card -->
         <div class="glass rounded-2xl border border-white/5 overflow-hidden">
-
-          <!-- Calendar header with month nav -->
-          <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
-            <div class="flex items-center gap-4">
-              <!-- Month nav -->
-              <div class="flex items-center gap-2">
-                <button class="glass glass-hover w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer">
-                  <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-                  </svg>
-                </button>
-                <div class="text-center min-w-[110px]">
-                  <p class="text-sm font-semibold text-white">Junio 2026</p>
-                </div>
-                <button class="glass glass-hover w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer">
-                  <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                  </svg>
-                </button>
-              </div>
-              <p class="text-[10px] text-slate-500">20 piezas · Instagram</p>
-            </div>
-            <!-- Legend + add -->
+          <!-- Calendar header -->
+          <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
             <div class="flex items-center gap-3">
-              <div class="flex gap-2.5 text-[9px] text-slate-500">
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-violet-500"></span>Reel</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span>Carrusel</span>
-                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-rose-500"></span>Historia</span>
+              <div class="flex items-center gap-1.5">
+                <button type="button" onclick="prevMonth()" class="glass glass-hover w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer">
+                  <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
+                </button>
+                <div class="text-center min-w-[130px]">
+                  <p id="month-label" class="text-sm font-bold text-white">–</p>
+                </div>
+                <button type="button" onclick="nextMonth()" class="glass glass-hover w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer">
+                  <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>
+                </button>
               </div>
-              <button class="btn-primary px-3 py-1.5 rounded-lg text-white text-[10px] font-medium cursor-pointer">+ Agregar</button>
+              <span id="cal-count" class="text-[10px] text-slate-500">–</span>
+            </div>
+            <!-- Leyenda -->
+            <div class="flex gap-3 text-[9px] text-slate-500">
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-violet-500"></span>Reel</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span>Carrusel</span>
+              <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-rose-500"></span>Historia</span>
             </div>
           </div>
 
-          <!-- Calendar grid -->
-          <div class="p-4">
-            <div class="grid grid-cols-7 gap-1.5 mb-1.5">
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">LUN</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">MAR</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">MIE</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">JUE</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">VIE</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">SAB</div>
-              <div class="text-center text-[9px] font-semibold text-slate-600 py-1">DOM</div>
+          <!-- Grid -->
+          <div class="p-3.5">
+            <div class="grid grid-cols-7 gap-1 mb-1">
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">LUN</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">MAR</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">MIÉ</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">JUE</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">VIE</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">SÁB</div>
+              <div class="text-center text-[9px] font-bold text-slate-600 py-1">DOM</div>
             </div>
-
-            <!-- Row 1 — días publicados con métricas -->
-            <div class="grid grid-cols-7 gap-1.5 mb-1.5">
-              <!-- Día 1 — Publicado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">1</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-violet-500/20 border border-violet-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-violet-300">Reel</p>
-                  <p class="text-[7px] text-violet-400/70 truncate">Rutina mañana</p>
-                </div>
-                <!-- Metrics -->
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 4.2K</span>
-                  <span>💬 38</span>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <span class="text-[9px] text-slate-600">2</span>
-              </div>
-              <!-- Día 3 — Publicado con métricas -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">3</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-cyan-300">Carrusel</p>
-                  <p class="text-[7px] text-cyan-400/70 truncate">5 errores gym</p>
-                </div>
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 6.8K</span>
-                  <span>💬 91</span>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <span class="text-[9px] text-slate-600">4</span>
-              </div>
-              <!-- Día 5 — Publicado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">5</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-rose-500/20 border border-rose-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-rose-300">Historia</p>
-                  <p class="text-[7px] text-rose-400/70 truncate">Oferta fin sem.</p>
-                </div>
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 2.1K</span>
-                  <span>💬 12</span>
-                </div>
-              </div>
-              <!-- Día 6 — Publicado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">6</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-violet-500/20 border border-violet-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-violet-300">Reel</p>
-                  <p class="text-[7px] text-violet-400/70 truncate">Transformación</p>
-                </div>
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 9.3K</span>
-                  <span>💬 147</span>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <span class="text-[9px] text-slate-600">7</span>
-              </div>
-            </div>
-
-            <!-- Row 2 — mix de estados -->
-            <div class="grid grid-cols-7 gap-1.5 mb-1.5">
-              <!-- Día 8 — Publicado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">8</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-cyan-300">Carrusel</p>
-                  <p class="text-[7px] text-cyan-400/70 truncate">Nutrición post</p>
-                </div>
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 3.5K</span>
-                  <span>💬 44</span>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <span class="text-[9px] text-slate-600">9</span>
-              </div>
-              <!-- Día 10 — Publicado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">10</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-medium">Pub.</span>
-                </div>
-                <div class="rounded bg-violet-500/20 border border-violet-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-violet-300">Reel</p>
-                  <p class="text-[7px] text-violet-400/70 truncate">HIIT 15 min</p>
-                </div>
-                <div class="flex gap-1.5 text-[7px] text-slate-500">
-                  <span>👁 5.1K</span>
-                  <span>💬 67</span>
-                </div>
-              </div>
-              <!-- Día 11 — HOY → Validación -->
-              <div class="cal-cell rounded-lg border border-violet-500/30 p-2 min-h-[72px] cursor-pointer" style="background:rgba(124,58,237,0.08)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-violet-300 font-semibold">11</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-violet-500/25 text-violet-300 font-medium">HOY</span>
-                </div>
-                <div class="rounded bg-rose-500/20 border border-rose-500/30 px-1.5 py-1 mb-1">
-                  <p class="text-[8px] font-medium text-rose-300">Historia</p>
-                  <p class="text-[7px] text-rose-400/70 truncate">Quiz membresía</p>
-                </div>
-                <span class="text-[7px] px-1 py-0.5 rounded bg-amber-500/20 text-amber-400 font-medium">Validación</span>
-              </div>
-              <!-- Día 12 — Programado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">12</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-sky-500/20 text-sky-400 font-medium">Prog.</span>
-                </div>
-                <div class="rounded bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-1">
-                  <p class="text-[8px] font-medium text-cyan-300">Carrusel</p>
-                  <p class="text-[7px] text-cyan-400/70 truncate">Mitos fitness</p>
-                </div>
-              </div>
-              <!-- Día 13 — Programado -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">13</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-sky-500/20 text-sky-400 font-medium">Prog.</span>
-                </div>
-                <div class="rounded bg-violet-500/20 border border-violet-500/30 px-1.5 py-1">
-                  <p class="text-[8px] font-medium text-violet-300">Reel</p>
-                  <p class="text-[7px] text-violet-400/70 truncate">Antes/Después</p>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <span class="text-[9px] text-slate-600">14</span>
-              </div>
-            </div>
-
-            <!-- Row 3 — pendientes -->
-            <div class="grid grid-cols-7 gap-1.5">
-              <!-- Día 15 — Pendiente -->
-              <div class="cal-cell rounded-lg border border-white/5 p-2 min-h-[72px] cursor-pointer" style="background:rgba(255,255,255,0.02)">
-                <div class="flex items-center justify-between mb-1">
-                  <span class="text-[9px] text-slate-600">15</span>
-                  <span class="text-[7px] px-1 py-0.5 rounded bg-slate-700/60 text-slate-500 font-medium">Pend.</span>
-                </div>
-                <div class="rounded bg-cyan-500/20 border border-cyan-500/30 px-1.5 py-1">
-                  <p class="text-[8px] font-medium text-cyan-300">Carrusel</p>
-                  <p class="text-[7px] text-cyan-400/70 truncate">Suplementos OK</p>
-                </div>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">16</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">17</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">18</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">19</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">20</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-              <div class="cal-cell rounded-lg border border-dashed border-white/8 p-2 min-h-[72px] cursor-pointer flex flex-col items-center justify-center opacity-30">
-                <span class="text-[9px] text-slate-600 self-start mb-auto">21</span>
-                <svg class="w-3.5 h-3.5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-              </div>
-            </div>
+            <div id="cal-grid" class="space-y-1"></div>
           </div>
         </div>
 
-        <!-- Plan de publicación — al hacer click en un item del calendario -->
-        <div class="glass rounded-2xl border border-white/5 p-5">
-          <!-- Header pieza seleccionada -->
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="flex items-center flex-wrap gap-1.5 mb-1.5">
-                <!-- Tipo -->
-                <span class="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 font-medium border border-cyan-500/30">Carrusel · 5 slides</span>
-                <!-- Estado -->
-                <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-medium border border-emerald-500/30">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block mr-1"></span>Publicado
-                </span>
-                <!-- Modo -->
-                <span class="text-[9px] px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 font-medium border border-violet-500/25">Automático</span>
-                <span class="text-[9px] text-slate-600">Mar 3 jun · 09:00 AM</span>
-              </div>
-              <h3 class="text-sm font-semibold text-white">5 errores que te impiden bajar de peso en el gym</h3>
-              <!-- Métricas del publicado -->
-              <div class="flex gap-4 mt-2">
-                <div class="flex items-center gap-1.5">
-                  <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                  <span class="text-[10px] text-slate-400"><span class="text-white font-semibold">6,842</span> views</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"/></svg>
-                  <span class="text-[10px] text-slate-400"><span class="text-white font-semibold">91</span> conversaciones</span>
-                </div>
-                <div class="flex items-center gap-1.5">
-                  <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
-                  <span class="text-[10px] text-slate-400"><span class="text-white font-semibold">312</span> likes</span>
-                </div>
-              </div>
-            </div>
-            <div class="flex gap-2 flex-shrink-0">
-              <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer">Editar</button>
-              <button class="btn-primary px-3 py-1.5 rounded-lg text-[10px] text-white cursor-pointer">Ver en IG</button>
-            </div>
-          </div>
-
-          <!-- Slide previews -->
-          <div class="flex gap-3 overflow-x-auto pb-1">
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-cyan-500/30 bg-gradient-to-b from-cyan-900/30 to-slate-900/60 flex flex-col items-center justify-center p-2 cursor-pointer">
-              <div class="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center mb-2">
-                <span class="text-xs text-cyan-400 font-bold">1</span>
-              </div>
-              <p class="text-[8px] text-center text-slate-400 leading-tight">Slide gancho<br/>Hook principal</p>
-              <span class="mt-2 text-[7px] text-cyan-400/60 border border-cyan-500/20 px-1.5 py-0.5 rounded">Cover</span>
-            </div>
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer glass-hover" style="background:rgba(255,255,255,0.02)">
-              <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-2"><span class="text-xs text-slate-400 font-bold">2</span></div>
-              <p class="text-[8px] text-center text-slate-500 leading-tight">Error #1<br/>Cardio en exceso</p>
-            </div>
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer glass-hover" style="background:rgba(255,255,255,0.02)">
-              <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-2"><span class="text-xs text-slate-400 font-bold">3</span></div>
-              <p class="text-[8px] text-center text-slate-500 leading-tight">Error #2<br/>No medir comida</p>
-            </div>
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer glass-hover" style="background:rgba(255,255,255,0.02)">
-              <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-2"><span class="text-xs text-slate-400 font-bold">4</span></div>
-              <p class="text-[8px] text-center text-slate-500 leading-tight">Errores<br/>3, 4 y 5</p>
-            </div>
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-white/5 flex flex-col items-center justify-center p-2 cursor-pointer glass-hover" style="background:rgba(255,255,255,0.02)">
-              <div class="w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center mb-2"><span class="text-xs text-slate-400 font-bold">5</span></div>
-              <p class="text-[8px] text-center text-slate-500 leading-tight">CTA<br/>Membresía FitLife</p>
-            </div>
-            <div class="flex-shrink-0 w-28 h-36 rounded-xl border border-dashed border-white/10 flex items-center justify-center cursor-pointer opacity-40">
-              <svg class="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
-            </div>
-          </div>
-
-          <!-- Caption + hashtags -->
-          <div class="mt-4 p-3 rounded-xl" style="background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.06)">
-            <p class="text-[9px] text-slate-500 mb-1 font-medium uppercase tracking-wider">Caption generado · <span class="text-violet-400">Automático</span></p>
-            <p class="text-[11px] text-slate-300 leading-relaxed">¿Llevas meses en el gym y no ves resultados? El problema no es tu disciplina, es la estrategia. Desliza y descubre los 5 errores que están bloqueando tu progreso...</p>
-            <div class="mt-2 flex flex-wrap gap-1">
-              <span class="text-[9px] text-cyan-400/70">#fitness</span>
-              <span class="text-[9px] text-cyan-400/70">#gym</span>
-              <span class="text-[9px] text-cyan-400/70">#fitlifestudio</span>
-              <span class="text-[9px] text-cyan-400/70">#cdmx</span>
-              <span class="text-[9px] text-cyan-400/70">#bajardepeso</span>
-            </div>
-          </div>
+        <!-- Detail / empty state -->
+        <div id="cal-empty" class="glass rounded-2xl p-8 flex flex-col items-center justify-center text-center" style="border:1px dashed rgba(255,255,255,0.06)">
+          <svg class="w-8 h-8 text-slate-700 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"/></svg>
+          <p class="text-[12px] font-medium text-slate-500">Selecciona una pieza para ver el detalle</p>
+          <p class="text-[10px] text-slate-600 mt-1">O haz click en un día vacío para agregar contenido</p>
         </div>
+        <div id="cal-detail" class="glass rounded-2xl border border-white/5 p-5 hidden"></div>
+
       </div>
 
-      <!-- RIGHT panel — 1/3 -->
-      <div class="space-y-4">
+      <!-- ── RIGHT panel — 1/3 ── -->
+      <div class="space-y-3">
 
-        <!-- Generation progress -->
+        <!-- Stats card con 3 sub-estados por tipo -->
         <div class="glass rounded-2xl border border-violet-500/20 p-4 glow-violet">
-          <div class="flex items-center gap-2 mb-3">
+          <div class="flex items-center gap-2 mb-4">
             <div class="w-5 h-5 rounded-full bg-violet-500/20 flex items-center justify-center">
               <div class="w-2 h-2 rounded-full bg-violet-400 status-dot-processing"></div>
             </div>
-            <span class="text-xs font-semibold text-white">Generando contenido</span>
+            <span class="text-xs font-bold text-white">Progreso del mes</span>
           </div>
-          <div class="space-y-2">
-            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Reels</span><span class="text-violet-400">4 / 8</span></div>
-            <div class="h-1.5 rounded-full bg-white/5"><div class="h-full rounded-full bg-gradient-to-r from-violet-500 to-violet-600" style="width:50%"></div></div>
-            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Carruseles</span><span class="text-cyan-400">3 / 6</span></div>
-            <div class="h-1.5 rounded-full bg-white/5"><div class="h-full rounded-full bg-gradient-to-r from-cyan-500 to-cyan-600" style="width:50%"></div></div>
-            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Historias</span><span class="text-rose-400">2 / 6</span></div>
-            <div class="h-1.5 rounded-full bg-white/5"><div class="h-full rounded-full bg-gradient-to-r from-rose-500 to-rose-600" style="width:33%"></div></div>
+
+          <!-- Leyenda de colores -->
+          <div class="flex gap-3 text-[9px] mb-4 pl-0.5">
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-400"></span><span class="text-slate-500">Publicados</span></span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-sky-400"></span><span class="text-slate-500">Programados</span></span>
+            <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm" style="background:rgba(100,116,139,0.5)"></span><span class="text-slate-500">Pendientes</span></span>
           </div>
-          <div class="mt-3 pt-3 border-t border-white/5 flex justify-between items-center">
-            <span class="text-[10px] text-slate-500">Progreso total</span>
-            <span class="text-xs font-bold gradient-text">45%</span>
+
+          <!-- Reels -->
+          <div class="mb-3.5">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm bg-violet-500"></span>
+                <span class="text-[11px] font-semibold text-slate-300">Reels</span>
+              </div>
+              <div class="flex gap-2 text-[10px]">
+                <span class="text-emerald-400" id="sr-pub">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-sky-400" id="sr-prog">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-slate-500" id="sr-pend">0</span>
+              </div>
+            </div>
+            <div class="bar-track">
+              <div id="br-pub"  class="bar-pub"  style="width:0%"></div>
+              <div id="br-prog" class="bar-prog" style="width:0%"></div>
+              <div id="br-pend" class="bar-pend" style="width:0%"></div>
+            </div>
+          </div>
+
+          <!-- Carruseles -->
+          <div class="mb-3.5">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm bg-cyan-500"></span>
+                <span class="text-[11px] font-semibold text-slate-300">Carruseles</span>
+              </div>
+              <div class="flex gap-2 text-[10px]">
+                <span class="text-emerald-400" id="sc-pub">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-sky-400" id="sc-prog">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-slate-500" id="sc-pend">0</span>
+              </div>
+            </div>
+            <div class="bar-track">
+              <div id="bc-pub"  class="bar-pub"  style="width:0%"></div>
+              <div id="bc-prog" class="bar-prog" style="width:0%"></div>
+              <div id="bc-pend" class="bar-pend" style="width:0%"></div>
+            </div>
+          </div>
+
+          <!-- Historias -->
+          <div class="mb-1">
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-sm bg-rose-500"></span>
+                <span class="text-[11px] font-semibold text-slate-300">Historias</span>
+              </div>
+              <div class="flex gap-2 text-[10px]">
+                <span class="text-emerald-400" id="sh-pub">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-sky-400" id="sh-prog">0</span>
+                <span class="text-slate-600">/</span>
+                <span class="text-slate-500" id="sh-pend">0</span>
+              </div>
+            </div>
+            <div class="bar-track">
+              <div id="bh-pub"  class="bar-pub"  style="width:0%"></div>
+              <div id="bh-prog" class="bar-prog" style="width:0%"></div>
+              <div id="bh-pend" class="bar-pend" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-3.5 border-t border-white/5 flex justify-between items-center">
+            <span class="text-[10px] text-slate-500">Total en el calendario</span>
+            <span id="s-total" class="text-xs font-bold gradient-text">0 piezas</span>
           </div>
         </div>
 
-        <!-- Historial de entregas -->
+        <!-- Pendientes / validación -->
         <div class="glass rounded-2xl border border-white/5 p-4">
-          <h3 class="text-xs font-semibold text-white mb-3">Historial de Entregas</h3>
-          <div class="space-y-2">
-
-            <div class="flex items-start gap-2 p-2 rounded-xl glass-hover cursor-pointer" style="background:rgba(255,255,255,0.02)">
-              <div class="w-6 h-6 rounded-lg bg-violet-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/></svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300">Calendario Mayo</p>
-                <p class="text-[9px] text-slate-600">Aprobado · hace 5 días</p>
-              </div>
-              <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 flex-shrink-0">OK</span>
-            </div>
-
-            <div class="flex items-start gap-2 p-2 rounded-xl glass-hover cursor-pointer" style="background:rgba(255,255,255,0.02)">
-              <div class="w-6 h-6 rounded-lg bg-amber-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg class="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/></svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300">Landing Page · FitLife</p>
-                <p class="text-[9px] text-slate-600">Aprobado · hace 2 días</p>
-              </div>
-              <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 flex-shrink-0">OK</span>
-            </div>
-
-            <div class="flex items-start gap-2 p-2 rounded-xl glass-hover cursor-pointer" style="background:rgba(255,255,255,0.02)">
-              <div class="w-6 h-6 rounded-lg bg-sky-500/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg class="w-3 h-3 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300">Flujo DM Prospectos</p>
-                <p class="text-[9px] text-orange-400/70">Revisión pendiente</p>
-              </div>
-              <span class="text-[8px] px-1.5 py-0.5 rounded-full bg-orange-500/15 text-orange-400 flex-shrink-0">Rev.</span>
-            </div>
-
-          </div>
-          <button class="mt-3 w-full text-[10px] text-slate-500 hover:text-slate-400 transition-colors cursor-pointer text-center">Ver todo el historial</button>
-        </div>
-
-        <!-- Cola de Validación Telegram -->
-        <div class="glass rounded-2xl border border-cyan-500/15 p-4 glow-cyan">
           <div class="flex items-center gap-2 mb-3">
-            <svg class="w-4 h-4 text-cyan-400" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.7 8.02c-.13.58-.47.72-.95.45l-2.6-1.92-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.65 4.81-4.35c.21-.19-.04-.29-.32-.1L8.41 14.8l-2.55-.8c-.55-.17-.56-.55.12-.82l9.97-3.84c.46-.17.86.11.69.66z"/>
-            </svg>
-            <span class="text-xs font-semibold text-white">Cola de Validación</span>
-            <span class="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">3</span>
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/></svg>
+            <span class="text-[11px] font-bold text-white">Requieren atención</span>
+            <span id="pending-count" class="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">0</span>
           </div>
-          <div class="space-y-2">
-            <div class="flex items-center gap-2 text-[10px]">
-              <div class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></div>
-              <span class="text-slate-400 flex-1 truncate">Historia "Quiz membresía"</span>
-              <button class="btn-telegram px-2 py-0.5 rounded text-[9px] text-white cursor-pointer flex-shrink-0">Enviar</button>
-            </div>
-            <div class="flex items-center gap-2 text-[10px]">
-              <div class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></div>
-              <span class="text-slate-400 flex-1 truncate">Carrusel "Mitos fitness"</span>
-              <button class="btn-telegram px-2 py-0.5 rounded text-[9px] text-white cursor-pointer flex-shrink-0">Enviar</button>
-            </div>
-            <div class="flex items-center gap-2 text-[10px]">
-              <div class="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0"></div>
-              <span class="text-slate-400 flex-1 truncate">Reel "Antes/Después"</span>
-              <button class="btn-telegram px-2 py-0.5 rounded text-[9px] text-white cursor-pointer flex-shrink-0">Enviar</button>
-            </div>
+          <div id="pending-list" class="space-y-1.5">
+            <span class="text-[10px] text-slate-600 italic">Sin pendientes este mes</span>
           </div>
-          <button class="btn-telegram mt-3 w-full py-2 rounded-xl text-[10px] text-white font-semibold cursor-pointer flex items-center justify-center gap-2">
-            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.7 8.02c-.13.58-.47.72-.95.45l-2.6-1.92-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.65 4.81-4.35c.21-.19-.04-.29-.32-.1L8.41 14.8l-2.55-.8c-.55-.17-.56-.55.12-.82l9.97-3.84c.46-.17.86.11.69.66z"/></svg>
-            Enviar todo a Telegram
-          </button>
         </div>
 
       </div>
     </div>
   </div>
 </main>
+
+<!-- ══════════ Modal: Agregar / Editar ══════════ -->
+<div id="modal-add" class="modal-overlay hidden" onclick="if(event.target===this)closeAddModal()">
+  <div class="glass rounded-2xl p-6 w-full max-w-md" style="border:1px solid rgba(124,58,237,0.35)">
+    <div class="flex items-center justify-between mb-5">
+      <h2 id="modal-add-title" class="text-sm font-bold text-white">Nueva pieza</h2>
+      <button type="button" onclick="closeAddModal()" class="text-slate-500 hover:text-white text-lg leading-none cursor-pointer" style="background:none;border:none">✕</button>
+    </div>
+    <div class="space-y-3.5">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="modal-label">Fecha</label>
+          <input id="f-date" type="date" class="modal-input"/>
+        </div>
+        <div>
+          <label class="modal-label">Tipo</label>
+          <select id="f-type">
+            <option value="reel">Reel</option>
+            <option value="carrusel">Carrusel</option>
+            <option value="historia">Historia</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="modal-label">Título / idea de contenido</label>
+        <input id="f-title" type="text" placeholder="Ej: 5 errores que frenan tu progreso en el gym" class="modal-input"/>
+      </div>
+
+      <div>
+        <label class="modal-label">Caption para Instagram (opcional)</label>
+        <textarea id="f-caption" rows="3" placeholder="¿Llevas meses en el gym sin ver resultados?..." class="modal-input" style="resize:none"></textarea>
+      </div>
+
+      <div>
+        <label class="modal-label">Estado</label>
+        <select id="f-status">
+          <option value="pendiente">Pendiente</option>
+          <option value="validacion">En validación</option>
+          <option value="programado">Programado</option>
+          <option value="publicado">Publicado</option>
+        </select>
+      </div>
+
+    </div>
+    <input type="hidden" id="f-id"/>
+    <div class="flex gap-2.5 mt-5">
+      <button type="button" onclick="closeAddModal()"
+        class="flex-1 py-2.5 rounded-xl text-[12px] text-slate-400 font-semibold cursor-pointer"
+        style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+        Cancelar
+      </button>
+      <button type="button" id="btn-confirm-save" onclick="saveItem()"
+        class="flex-1 btn-primary py-2.5 rounded-xl text-[12px] text-white font-bold">
+        Confirmar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ Modal: Generar con IA ══════════ -->
+<div id="modal-gen" class="modal-overlay hidden" onclick="if(event.target===this&&!isGenerating)closeGenerateModal()">
+  <div class="glass rounded-2xl p-6 w-full max-w-sm" style="border:1px solid rgba(124,58,237,0.35)">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
+        <svg class="w-4.5 h-4.5" style="width:18px;height:18px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+      </div>
+      <div>
+        <h2 class="text-sm font-bold text-white">Generar plan del mes</h2>
+        <p class="text-[10px] text-slate-500">Se ejecuta una vez por mes</p>
+      </div>
+    </div>
+
+    <div id="gen-normal-state">
+      <p class="text-[12px] text-slate-300 mb-3 leading-relaxed">
+        RIMA creará <strong class="text-white">20 piezas de contenido</strong> optimizadas para
+        <strong class="text-violet-400" id="gen-month-label">este mes</strong>,
+        distribuidas estratégicamente a lo largo del mes.
+      </p>
+      <div class="p-3 rounded-xl mb-4 text-[11px]" style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15)">
+        <p class="text-cyan-300 font-semibold mb-1">Distribución automática</p>
+        <div class="flex gap-4 text-slate-400">
+          <span>🎬 8 Reels</span>
+          <span>📸 6 Carruseles</span>
+          <span>📖 6 Historias</span>
+        </div>
+      </div>
+      <div id="gen-warning" class="p-3 rounded-xl mb-4 text-[11px] hidden" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2)">
+        <p class="text-amber-400 font-semibold mb-1">Ya existe un plan para este mes</p>
+        <p class="text-slate-400">Se reemplazarán las <span id="gen-existing-count">–</span> piezas existentes con un nuevo plan.</p>
+      </div>
+      <div class="flex gap-2">
+        <button type="button" onclick="closeGenerateModal()"
+          class="flex-1 py-2.5 rounded-xl text-[12px] text-slate-400 font-semibold cursor-pointer"
+          style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08)">
+          Cancelar
+        </button>
+        <button type="button" onclick="runGenerate()" id="gen-run-btn"
+          class="flex-1 btn-primary py-2.5 rounded-xl text-[12px] text-white font-bold flex items-center justify-center gap-2">
+          <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
+          Generar plan
+        </button>
+      </div>
+    </div>
+
+    <div id="gen-loading-state" class="hidden py-6 text-center">
+      <div class="spinner mx-auto mb-4"></div>
+      <p class="text-[13px] font-semibold text-white mb-1">Generando plan del mes...</p>
+      <p class="text-[11px] text-slate-500">Gemini está creando 20 piezas optimizadas.<br/>Esto tarda entre 20 y 40 segundos.</p>
+      <div class="mt-5 space-y-1.5 text-left">
+        <div id="gen-step-1" class="flex items-center gap-2 text-[10px] text-slate-500">
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Analizando tu marca y cliente ideal
+        </div>
+        <div id="gen-step-2" class="flex items-center gap-2 text-[10px] text-slate-500">
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Generando ideas y guiones
+        </div>
+        <div id="gen-step-3" class="flex items-center gap-2 text-[10px] text-slate-500">
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Distribuyendo fechas estratégicas
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function() {
+
+// ── Estado global ──
+var today     = new Date();
+var curYear   = today.getFullYear();
+var curMonth  = today.getMonth(); // 0-indexed
+var items     = [];
+var selectedId = null;
+var isGenerating = false;
+window.isGenerating = false;
+
+var MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+var TYPE_CFG = {
+  reel:     { bg:'rgba(124,58,237,0.18)', border:'rgba(124,58,237,0.4)',  text:'#A78BFA', label:'Reel'     },
+  carrusel: { bg:'rgba(6,182,212,0.18)',  border:'rgba(6,182,212,0.4)',   text:'#22D3EE', label:'Carrusel' },
+  historia: { bg:'rgba(244,63,94,0.18)',  border:'rgba(244,63,94,0.4)',   text:'#FB7185', label:'Historia' },
+};
+var STATUS_CFG = {
+  publicado:  { label:'Publicado',    bg:'rgba(52,211,153,0.18)',  text:'#34D399' },
+  programado: { label:'Programado',   bg:'rgba(14,165,233,0.18)',  text:'#38BDF8' },
+  validacion: { label:'Validación',   bg:'rgba(245,158,11,0.18)',  text:'#FBBF24' },
+  pendiente:  { label:'Pendiente',    bg:'rgba(100,116,139,0.18)', text:'#94A3B8' },
+};
+
+// ── Helpers ──
+function monthStr(y, m) { return y + '-' + pad(m + 1); }
+function dateStr(y, m, d) { return y + '-' + pad(m + 1) + '-' + pad(d); }
+function pad(n) { return String(n).padStart(2, '0'); }
+function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
+function firstWeekdayMon(y, m) {
+  var d = new Date(y, m, 1).getDay();
+  return (d + 6) % 7; // Mon=0 … Sun=6
+}
+function byDate(key) { return items.filter(function(i){ return i.date === key; }); }
+function fmtNum(n) { return n >= 1000 ? (n/1000).toFixed(1)+'K' : String(n); }
+function esc(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── API calls ──
+async function apiGet(url) {
+  var r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+async function apiPost(url, body) {
+  var r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) { var e = await r.json(); throw new Error(e.detail || 'Error ' + r.status); }
+  return await r.json();
+}
+async function apiPut(url, body) {
+  var r = await fetch(url, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+  if (!r.ok) { var e = await r.json(); throw new Error(e.detail || 'Error ' + r.status); }
+  return await r.json();
+}
+async function apiDelete(url) {
+  var r = await fetch(url, { method:'DELETE' });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return await r.json();
+}
+
+// ── Load & render ──
+async function loadItems() {
+  try {
+    var ms = monthStr(curYear, curMonth);
+    var d = await apiGet('/api/calendar?month=' + ms);
+    items = d.items || [];
+  } catch(e) { items = []; }
+  renderAll();
+}
+
+function renderAll() {
+  renderHeader();
+  renderGrid();
+  renderStats();
+  renderPending();
+  renderDetail(selectedId);
+}
+
+function renderHeader() {
+  var ms = monthStr(curYear, curMonth);
+  document.getElementById('month-label').textContent = MONTH_NAMES[curMonth] + ' ' + curYear;
+  document.getElementById('hdr-subtitle').textContent = items.length + ' piezas · Instagram';
+  document.getElementById('cal-count').textContent = items.length + ' piezas';
+  document.getElementById('gen-month-label').textContent = MONTH_NAMES[curMonth] + ' ' + curYear;
+
+  // Badge y botón generar
+  var badge = document.getElementById('plan-badge');
+  var btnLabel = document.getElementById('btn-gen-label');
+  if (items.length > 0) {
+    badge.classList.remove('hidden');
+    btnLabel.textContent = 'Regenerar plan';
+    document.getElementById('btn-gen-main').style.background = 'rgba(124,58,237,0.25)';
+    document.getElementById('btn-gen-main').style.boxShadow = 'none';
+  } else {
+    badge.classList.add('hidden');
+    btnLabel.textContent = 'Generar plan del mes';
+    document.getElementById('btn-gen-main').style.background = '';
+    document.getElementById('btn-gen-main').style.boxShadow = '';
+  }
+
+  // Warning en modal generar
+  var warn = document.getElementById('gen-warning');
+  if (items.length > 0) {
+    document.getElementById('gen-existing-count').textContent = items.length;
+    warn.classList.remove('hidden');
+  } else {
+    warn.classList.add('hidden');
+  }
+}
+
+function renderGrid() {
+  var grid = document.getElementById('cal-grid');
+  grid.innerHTML = '';
+
+  var total = daysInMonth(curYear, curMonth);
+  var offset = firstWeekdayMon(curYear, curMonth);
+  var todayKey = dateStr(today.getFullYear(), today.getMonth(), today.getDate());
+
+  var cells = [];
+  for (var i = 0; i < offset; i++) cells.push(null);
+  for (var d = 1; d <= total; d++) cells.push(d);
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  for (var row = 0; row < cells.length / 7; row++) {
+    var rowDiv = document.createElement('div');
+    rowDiv.className = 'grid grid-cols-7 gap-1';
+    for (var col = 0; col < 7; col++) {
+      rowDiv.appendChild(buildCell(cells[row * 7 + col], todayKey));
+    }
+    grid.appendChild(rowDiv);
+  }
+}
+
+function buildCell(day, todayKey) {
+  var el = document.createElement('div');
+  if (!day) {
+    el.style.cssText = 'min-height:68px;border-radius:10px;';
+    return el;
+  }
+
+  var key = dateStr(curYear, curMonth, day);
+  var dayItems = byDate(key);
+  var isToday = key === todayKey;
+  var isSelected = dayItems.some(function(i){ return i.id === selectedId; });
+
+  el.className = 'cal-cell' + (isSelected ? ' selected' : '');
+  el.style.background  = isToday ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)';
+  el.style.border      = '1px solid ' + (isToday ? 'rgba(124,58,237,0.35)' : 'rgba(255,255,255,0.05)');
+
+  // Número del día
+  var head = document.createElement('div');
+  head.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;';
+
+  var num = document.createElement('span');
+  num.style.cssText = 'font-size:10px;' + (isToday ? 'color:#A78BFA;font-weight:700' : 'color:#475569;font-weight:500');
+  num.textContent = day;
+  head.appendChild(num);
+
+  if (isToday) {
+    var tb = document.createElement('span');
+    tb.style.cssText = 'font-size:7px;padding:1px 5px;border-radius:4px;background:rgba(124,58,237,0.3);color:#A78BFA;font-weight:700';
+    tb.textContent = 'HOY';
+    head.appendChild(tb);
+  }
+  el.appendChild(head);
+
+  if (dayItems.length > 0) {
+    var item = dayItems[0];
+    var tc = TYPE_CFG[item.type] || TYPE_CFG.reel;
+    var sc = STATUS_CFG[item.status] || STATUS_CFG.pendiente;
+
+    // Chip tipo + título
+    var chip = document.createElement('div');
+    chip.style.cssText = 'border-radius:6px;padding:3px 6px;margin-bottom:3px;background:'+tc.bg+';border:1px solid '+tc.border;
+    chip.innerHTML = '<p style="font-size:8px;font-weight:700;color:'+tc.text+'">'+tc.label+'</p>'
+      + '<p style="font-size:7px;color:'+tc.text+';opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+esc(item.title)+'</p>';
+    el.appendChild(chip);
+
+    // Badge estado
+    var sb = document.createElement('span');
+    sb.style.cssText = 'font-size:7px;padding:1px 5px;border-radius:4px;font-weight:600;background:'+sc.bg+';color:'+sc.text;
+    sb.textContent = sc.label;
+    el.appendChild(sb);
+
+    // +N si hay más
+    if (dayItems.length > 1) {
+      var more = document.createElement('span');
+      more.style.cssText = 'font-size:7px;color:#475569;margin-left:3px';
+      more.textContent = '+' + (dayItems.length - 1);
+      el.appendChild(more);
+    }
+
+    // Métricas rápidas si está publicado
+    if (item.status === 'publicado' && item.metrics && item.metrics.views) {
+      var met = document.createElement('div');
+      met.style.cssText = 'font-size:7px;color:#475569;margin-top:2px';
+      met.textContent = '👁 ' + fmtNum(item.metrics.views);
+      el.appendChild(met);
+    }
+
+    (function(iid){ el.addEventListener('click', function(){ selectItem(iid); }); })(item.id);
+
+  } else {
+    // Día vacío — hint de agregar
+    var plus = document.createElement('div');
+    plus.style.cssText = 'display:flex;align-items:center;justify-content:center;height:34px;opacity:0;transition:opacity .15s';
+    plus.innerHTML = '<svg style="width:13px;height:13px;color:#334155" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>';
+    el.appendChild(plus);
+    el.addEventListener('mouseover', function(){ plus.style.opacity='1'; });
+    el.addEventListener('mouseout',  function(){ plus.style.opacity='0'; });
+    (function(k){ el.addEventListener('click', function(){ openAddModal(k); }); })(key);
+  }
+
+  return el;
+}
+
+function renderStats() {
+  function statsFor(type) {
+    var t = items.filter(function(i){ return i.type === type; });
+    return {
+      pub:  t.filter(function(i){ return i.status === 'publicado'; }).length,
+      prog: t.filter(function(i){ return i.status === 'programado'; }).length,
+      pend: t.filter(function(i){ return i.status === 'pendiente' || i.status === 'validacion'; }).length,
+      total: t.length,
+    };
+  }
+  function setBar(prefix, s, max) {
+    var total = Math.max(s.total, 1);
+    var scale = Math.min(1, s.total / max);
+    document.getElementById('s' + prefix + '-pub').textContent  = s.pub;
+    document.getElementById('s' + prefix + '-prog').textContent = s.prog;
+    document.getElementById('s' + prefix + '-pend').textContent = s.pend;
+    document.getElementById('b' + prefix + '-pub').style.width  = (s.pub  / total * 100 * scale).toFixed(1) + '%';
+    document.getElementById('b' + prefix + '-prog').style.width = (s.prog / total * 100 * scale).toFixed(1) + '%';
+    document.getElementById('b' + prefix + '-pend').style.width = (s.pend / total * 100 * scale).toFixed(1) + '%';
+  }
+
+  setBar('r', statsFor('reel'),     8);
+  setBar('c', statsFor('carrusel'), 6);
+  setBar('h', statsFor('historia'), 6);
+  document.getElementById('s-total').textContent = items.length + ' piezas';
+}
+
+function renderPending() {
+  var pending = items.filter(function(i){ return i.status === 'pendiente' || i.status === 'validacion'; });
+  document.getElementById('pending-count').textContent = pending.length;
+  var list = document.getElementById('pending-list');
+  if (pending.length === 0) {
+    list.innerHTML = '<span style="font-size:10px;color:#334155;font-style:italic">Sin pendientes este mes</span>';
+    return;
+  }
+  list.innerHTML = '';
+  pending.slice(0, 6).forEach(function(item) {
+    var tc = TYPE_CFG[item.type] || TYPE_CFG.reel;
+    var sc = STATUS_CFG[item.status] || STATUS_CFG.pendiente;
+    var div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:8px;cursor:pointer;transition:background .15s';
+    div.onmouseover = function(){ this.style.background='rgba(255,255,255,0.04)'; };
+    div.onmouseout  = function(){ this.style.background='transparent'; };
+    div.innerHTML =
+      '<div style="width:5px;height:5px;border-radius:50%;background:'+tc.text+';flex-shrink:0"></div>'
+      + '<span style="font-size:10px;color:#94A3B8;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(item.title)+'</span>'
+      + '<span style="font-size:9px;color:#64748B;flex-shrink:0">'+item.date.slice(8)+' '+MONTH_NAMES[curMonth].slice(0,3)+'</span>'
+      + '<span style="font-size:8px;padding:1px 5px;border-radius:4px;font-weight:600;background:'+sc.bg+';color:'+sc.text+';flex-shrink:0">'+sc.label+'</span>';
+    (function(id){ div.addEventListener('click', function(){ selectItem(id); }); })(item.id);
+    list.appendChild(div);
+  });
+  if (pending.length > 6) {
+    var more = document.createElement('p');
+    more.style.cssText = 'font-size:9px;color:#334155;text-align:center;margin-top:4px';
+    more.textContent = '+ ' + (pending.length - 6) + ' más';
+    list.appendChild(more);
+  }
+}
+
+function selectItem(id) {
+  selectedId = id;
+  renderGrid();
+  renderDetail(id);
+}
+
+function renderDetail(id) {
+  var detail = document.getElementById('cal-detail');
+  var empty  = document.getElementById('cal-empty');
+
+  if (!id) { detail.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+  var item = items.find(function(i){ return i.id === id; });
+  if (!item) { detail.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+
+  detail.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  var tc = TYPE_CFG[item.type] || TYPE_CFG.reel;
+  var sc = STATUS_CFG[item.status] || STATUS_CFG.pendiente;
+
+  var metricsHTML = '';
+  if (item.metrics && Object.keys(item.metrics).length) {
+    var m = item.metrics;
+    metricsHTML = '<div style="display:flex;gap:16px;margin-top:8px">';
+    if (m.views)    metricsHTML += '<span style="font-size:10px;color:#94A3B8">👁 <strong style="color:#fff">'+fmtNum(m.views)+'</strong> views</span>';
+    if (m.comments) metricsHTML += '<span style="font-size:10px;color:#94A3B8">💬 <strong style="color:#fff">'+fmtNum(m.comments)+'</strong></span>';
+    if (m.likes)    metricsHTML += '<span style="font-size:10px;color:#94A3B8">❤️ <strong style="color:#fff">'+fmtNum(m.likes)+'</strong></span>';
+    metricsHTML += '</div>';
+  }
+
+  var captionHTML = '';
+  if (item.caption) {
+    var hashHTML = (item.hashtags && item.hashtags.length)
+      ? '<div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:4px">'
+        + item.hashtags.map(function(h){ return '<span style="font-size:9px;color:'+tc.text+';opacity:.8">'+esc(h)+'</span>'; }).join('')
+        + '</div>'
+      : '';
+    captionHTML = '<div style="margin-top:14px;padding:12px;border-radius:12px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.06)">'
+      + '<p style="font-size:9px;color:#475569;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Caption · Instagram</p>'
+      + '<p style="font-size:12px;color:#CBD5E1;line-height:1.7">'+esc(item.caption)+'</p>'
+      + hashHTML
+      + '</div>';
+  }
+
+  detail.innerHTML =
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">'
+    + '<div style="flex:1;min-width:0">'
+    + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-bottom:8px">'
+    + '<span style="font-size:10px;padding:2px 10px;border-radius:20px;background:'+tc.bg+';color:'+tc.text+';border:1px solid '+tc.border+'">'+tc.label+'</span>'
+    + '<span style="font-size:10px;padding:2px 10px;border-radius:20px;background:'+sc.bg+';color:'+sc.text+'">'+sc.label+'</span>'
+    + '<span style="font-size:10px;color:#334155">'+item.date+'</span>'
+    + '</div>'
+    + '<h3 style="font-size:15px;font-weight:700;color:#fff;line-height:1.4">'+esc(item.title)+'</h3>'
+    + metricsHTML
+    + '</div>'
+    + '<div style="display:flex;gap:6px;flex-shrink:0">'
+    + '<button type="button" onclick="openEditModal(\''+item.id+'\')" style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;font-size:11px;cursor:pointer">Editar</button>'
+    + '<button type="button" onclick="confirmDelete(\''+item.id+'\')" style="padding:6px 12px;border-radius:8px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);color:#F87171;font-size:11px;cursor:pointer">Eliminar</button>'
+    + '</div>'
+    + '</div>'
+    + captionHTML;
+}
+
+// ── Navegación de mes ──
+function prevMonth() { curMonth--; if(curMonth<0){curMonth=11;curYear--;} selectedId=null; loadItems(); }
+function nextMonth() { curMonth++; if(curMonth>11){curMonth=0;curYear++;} selectedId=null; loadItems(); }
+window.prevMonth = prevMonth;
+window.nextMonth = nextMonth;
+
+// ── Modal Agregar / Editar ──
+function openAddModal(dateKey) {
+  document.getElementById('modal-add-title').textContent = 'Nueva pieza';
+  document.getElementById('f-id').value = '';
+  document.getElementById('f-date').value = dateKey || dateStr(curYear, curMonth, 1);
+  document.getElementById('f-type').value = 'reel';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-caption').value = '';
+  document.getElementById('f-status').value = 'pendiente';
+  document.getElementById('modal-add').classList.remove('hidden');
+  setTimeout(function(){ document.getElementById('f-title').focus(); }, 100);
+}
+function openEditModal(id) {
+  var item = items.find(function(i){ return i.id === id; });
+  if (!item) return;
+  document.getElementById('modal-add-title').textContent = 'Editar pieza';
+  document.getElementById('f-id').value = id;
+  document.getElementById('f-date').value = item.date;
+  document.getElementById('f-type').value = item.type;
+  document.getElementById('f-title').value = item.title;
+  document.getElementById('f-caption').value = item.caption || '';
+  document.getElementById('f-status').value = item.status;
+  document.getElementById('modal-add').classList.remove('hidden');
+}
+function closeAddModal() {
+  document.getElementById('modal-add').classList.add('hidden');
+}
+async function saveItem() {
+  var id = document.getElementById('f-id').value;
+  var title = document.getElementById('f-title').value.trim();
+  if (!title) { window.rimaToast && rimaToast('Ingresa un título para la pieza', 'error'); return; }
+
+  var btn = document.getElementById('btn-confirm-save');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  var payload = {
+    date:    document.getElementById('f-date').value,
+    type:    document.getElementById('f-type').value,
+    title:   title,
+    caption: document.getElementById('f-caption').value.trim(),
+    status:  document.getElementById('f-status').value,
+  };
+
+  try {
+    var saved;
+    if (id) {
+      saved = await apiPut('/api/calendar/' + id, payload);
+      var idx = items.findIndex(function(i){ return i.id === id; });
+      if (idx >= 0) items[idx] = saved; else items.push(saved);
+    } else {
+      saved = await apiPost('/api/calendar', payload);
+      items.push(saved);
+    }
+    closeAddModal();
+    selectedId = saved.id;
+    renderAll();
+    window.rimaToast && rimaToast(id ? 'Pieza actualizada' : 'Pieza agregada al calendario');
+  } catch(e) {
+    window.rimaToast && rimaToast('Error al guardar: ' + e.message, 'error');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Confirmar';
+}
+async function confirmDelete(id) {
+  if (!confirm('¿Eliminar esta pieza del calendario?')) return;
+  try {
+    await apiDelete('/api/calendar/' + id);
+    items = items.filter(function(i){ return i.id !== id; });
+    selectedId = null;
+    renderAll();
+    window.rimaToast && rimaToast('Pieza eliminada');
+  } catch(e) { window.rimaToast && rimaToast('Error al eliminar', 'error'); }
+}
+
+window.openAddModal = openAddModal;
+window.openEditModal = openEditModal;
+window.closeAddModal = closeAddModal;
+window.saveItem = saveItem;
+window.confirmDelete = confirmDelete;
+
+// ── Modal Generar ──
+function openGenerateModal() {
+  document.getElementById('gen-normal-state').classList.remove('hidden');
+  document.getElementById('gen-loading-state').classList.add('hidden');
+  document.getElementById('modal-gen').classList.remove('hidden');
+}
+function closeGenerateModal() {
+  if (isGenerating) return;
+  document.getElementById('modal-gen').classList.add('hidden');
+}
+async function runGenerate() {
+  isGenerating = true;
+  window.isGenerating = true;
+  document.getElementById('gen-normal-state').classList.add('hidden');
+  document.getElementById('gen-loading-state').classList.remove('hidden');
+
+  // Simular pasos visuales
+  var steps = ['gen-step-1','gen-step-2','gen-step-3'];
+  steps.forEach(function(s, i){
+    setTimeout(function(){
+      var el = document.getElementById(s);
+      el.style.color = '#A78BFA';
+      el.querySelector('div').style.background = '#7C3AED';
+    }, i * 8000);
+  });
+
+  try {
+    var ms = monthStr(curYear, curMonth);
+    var d = await apiPost('/api/calendar/generate', { month: ms });
+    items = d.items || [];
+    selectedId = null;
+    closeGenerateModal();
+    renderAll();
+    window.rimaToast && rimaToast(d.count + ' piezas generadas para ' + MONTH_NAMES[curMonth] + ' ' + curYear);
+  } catch(e) {
+    closeGenerateModal();
+    window.rimaToast && rimaToast('Error al generar: ' + e.message, 'error');
+  }
+  isGenerating = false;
+  window.isGenerating = false;
+}
+
+window.openGenerateModal = openGenerateModal;
+window.closeGenerateModal = closeGenerateModal;
+window.runGenerate = runGenerate;
+
+// ── Tecla Escape para cerrar modales ──
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeAddModal();
+    closeGenerateModal();
+  }
+});
+
+// ── Init ──
+loadItems();
+
+})();
+</script>
 
 </body>
 </html>
