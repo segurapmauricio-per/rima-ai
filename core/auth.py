@@ -6,6 +6,7 @@ Autenticacion JWT simple para RIMA AI.
 """
 import os
 import time
+import secrets as _secrets
 from typing import Optional
 
 from jose import JWTError, jwt
@@ -110,6 +111,28 @@ def get_current_user(request: Request) -> dict:
             detail="Token invalido o expirado",
         )
     return payload
+
+
+def get_or_create_google_user(email: str, name: str, users_db: dict) -> tuple[dict, bool]:
+    """
+    Busca usuario por email en users_db o lo crea si no existe.
+    Retorna (user_dict, created). Si created=True, users_db fue mutado en-place
+    y el caller debe persistir el store.
+    """
+    existing = users_db.get(email)
+    if existing and existing.get("status") == "active":
+        return {"email": email, "role": existing.get("role", "user"), "name": existing.get("name", name)}, False
+
+    users_db[email] = {
+        "email": email,
+        "name": name,
+        "password_hash": _hash_password(_secrets.token_urlsafe(32)),
+        "status": "active",
+        "role": "user",
+        "auth_provider": "google",
+        "created_at": int(time.time()),
+    }
+    return {"email": email, "role": "user", "name": name}, True
 
 
 def require_auth(request: Request) -> Optional[RedirectResponse]:

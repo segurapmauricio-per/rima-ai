@@ -18,11 +18,15 @@ import re
 from datetime import datetime
 
 from core.auth import (
-    verify_login, create_token, require_auth, get_current_user, COOKIE_NAME
+    verify_login, create_token, require_auth, get_current_user, COOKIE_NAME,
+    get_or_create_google_user,
 )
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
+
+from starlette.middleware.sessions import SessionMiddleware
+from authlib.integrations.starlette_client import OAuth
 
 from agents.landing.agent import landing_agent
 from agents.content.agent import content_agent
@@ -49,6 +53,19 @@ app.add_middleware(
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
+)
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=os.environ.get("SESSION_SECRET", "rima-session-dev-secret"),
+)
+
+_oauth = OAuth()
+_oauth.register(
+    name="google",
+    client_id=os.environ.get("GOOGLE_CLIENT_ID", ""),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET", ""),
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
 )
 
 DASHBOARD   = Path(__file__).parent / "dashboard"
@@ -753,35 +770,35 @@ def credenciales(request: Request):
 
 # â”€â”€ API: Datos de marca â”€â”€
 
-@app.get("/api/brand")
-def get_brand():
+@app.get(“/api/brand”)
+def get_brand(user: dict = Depends(get_current_user)):
     data = load_data()
-    return JSONResponse(content=data.get("brand", {}))
+    return JSONResponse(content=data.get(“brand”, {}))
 
-@app.post("/api/brand")
-def post_brand(payload: dict):
+@app.post(“/api/brand”)
+def post_brand(payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
-    existing = data.get("brand", {})
+    existing = data.get(“brand”, {})
     existing.update(payload)
-    data["brand"] = existing
+    data[“brand”] = existing
     save_data(data)
-    return {"status": "ok", "saved": len(existing)}
+    return {“status”: “ok”, “saved”: len(existing)}
 
 # â”€â”€ API: Credenciales â”€â”€
 
-@app.get("/api/credentials")
-def get_credentials():
+@app.get(“/api/credentials”)
+def get_credentials(user: dict = Depends(get_current_user)):
     data = load_data()
-    return JSONResponse(content=data.get("credentials", {}))
+    return JSONResponse(content=data.get(“credentials”, {}))
 
-@app.post("/api/credentials")
-def post_credentials(payload: dict):
+@app.post(“/api/credentials”)
+def post_credentials(payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
-    existing = data.get("credentials", {})
+    existing = data.get(“credentials”, {})
     existing.update(payload)
-    data["credentials"] = existing
+    data[“credentials”] = existing
     save_data(data)
-    return {"status": "ok"}
+    return {“status”: “ok”}
 
 
 # â”€â”€ Modelos de request para agentes â”€â”€
@@ -800,7 +817,7 @@ class BrandBrief(BaseModel):
 # â”€â”€ Endpoints de agentes â”€â”€
 
 @app.post("/api/generate/landing")
-def generate_landing(brief: BrandBrief):
+def generate_landing(brief: BrandBrief, user: dict = Depends(get_current_user)):
     try:
         result = landing_agent.run(brief.model_dump())
         return JSONResponse(content=result)
@@ -808,7 +825,7 @@ def generate_landing(brief: BrandBrief):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate/contenido")
-def generate_content(brief: BrandBrief):
+def generate_content(brief: BrandBrief, user: dict = Depends(get_current_user)):
     try:
         result = content_agent.run(brief.model_dump())
         return JSONResponse(content=result)
@@ -816,7 +833,7 @@ def generate_content(brief: BrandBrief):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate/meta")
-def generate_meta(brief: BrandBrief):
+def generate_meta(brief: BrandBrief, user: dict = Depends(get_current_user)):
     try:
         result = meta_agent.run(brief.model_dump())
         return JSONResponse(content=result)
@@ -824,7 +841,7 @@ def generate_meta(brief: BrandBrief):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate/ventas")
-def generate_sales(brief: BrandBrief):
+def generate_sales(brief: BrandBrief, user: dict = Depends(get_current_user)):
     try:
         result = sales_agent.run(brief.model_dump())
         return JSONResponse(content=result)
@@ -832,7 +849,7 @@ def generate_sales(brief: BrandBrief):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/generate/prospecting")
-def generate_prospecting(brief: BrandBrief):
+def generate_prospecting(brief: BrandBrief, user: dict = Depends(get_current_user)):
     try:
         result = prospecting_agent.run(brief.model_dump())
         return JSONResponse(content=result)
@@ -848,7 +865,8 @@ MAX_SIZE_MB = 10
 @app.post("/api/images/upload")
 async def upload_images(
     files: List[UploadFile] = File(...),
-    category: str = Form("historias")
+    category: str = Form("historias"),
+    user: dict = Depends(get_current_user),
 ):
     if category not in ("historias", "carruseles"):
         raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
@@ -888,7 +906,7 @@ async def upload_images(
 
 
 @app.get("/api/images")
-def list_images(category: str = "historias"):
+def list_images(category: str = "historias", user: dict = Depends(get_current_user)):
     if category not in ("historias", "carruseles"):
         raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
 
@@ -908,7 +926,7 @@ def list_images(category: str = "historias"):
 
 
 @app.delete("/api/images/{category}/{filename}")
-def delete_image(category: str, filename: str):
+def delete_image(category: str, filename: str, user: dict = Depends(get_current_user)):
     if category not in ("historias", "carruseles"):
         raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
     # Seguridad: no path traversal
@@ -927,7 +945,7 @@ ALLOWED_VIDEO = {"video/mp4","video/quicktime","video/x-msvideo","video/webm","v
 MAX_CLIP_MB = 500
 
 @app.post("/api/videos/{reel_id}/clips")
-async def upload_clip(reel_id: str, files: List[UploadFile] = File(...)):
+async def upload_clip(reel_id: str, files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
     reel_dir = UPLOADS_DIR / "clips" / reel_id
     reel_dir.mkdir(parents=True, exist_ok=True)
     saved, errors = [], []
@@ -950,7 +968,7 @@ async def upload_clip(reel_id: str, files: List[UploadFile] = File(...)):
     return {"saved": saved, "errors": errors}
 
 @app.get("/api/videos/{reel_id}/clips")
-def list_clips(reel_id: str):
+def list_clips(reel_id: str, user: dict = Depends(get_current_user)):
     folder = UPLOADS_DIR / "clips" / reel_id
     folder.mkdir(parents=True, exist_ok=True)
     clips = []
@@ -965,7 +983,7 @@ def list_clips(reel_id: str):
     return {"clips": clips, "reel_id": reel_id}
 
 @app.delete("/api/videos/{reel_id}/clips/{filename}")
-def delete_clip(reel_id: str, filename: str):
+def delete_clip(reel_id: str, filename: str, user: dict = Depends(get_current_user)):
     if ".." in filename or "/" in filename:
         raise HTTPException(400, "Nombre invÃ¡lido")
     p = UPLOADS_DIR / "clips" / reel_id / filename
@@ -976,7 +994,7 @@ def delete_clip(reel_id: str, filename: str):
 # â”€â”€ API: Video final por reel â”€â”€
 
 @app.post("/api/videos/{reel_id}/final")
-async def upload_final(reel_id: str, file: UploadFile = File(...)):
+async def upload_final(reel_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
     finals_dir = UPLOADS_DIR / "finals"
     finals_dir.mkdir(exist_ok=True)
     content = await file.read()
@@ -996,7 +1014,7 @@ async def upload_final(reel_id: str, file: UploadFile = File(...)):
     return {"url": f"/uploads/finals/{fname}", "name": fname}
 
 @app.get("/api/videos/{reel_id}/final")
-def get_final(reel_id: str):
+def get_final(reel_id: str, user: dict = Depends(get_current_user)):
     d = load_data()
     final = d.get("reels", {}).get(reel_id, {}).get("final")
     if not final: return {"final": None}
@@ -1008,12 +1026,12 @@ def get_final(reel_id: str):
 # â”€â”€ API: Estado de reel (aprobaciÃ³n guiÃ³n, paso actual) â”€â”€
 
 @app.get("/api/videos/{reel_id}/state")
-def get_reel_state(reel_id: str):
+def get_reel_state(reel_id: str, user: dict = Depends(get_current_user)):
     d = load_data()
     return d.get("reels", {}).get(reel_id, {}).get("state", {"script_approved": False, "step": 1})
 
 @app.post("/api/videos/{reel_id}/state")
-def set_reel_state(reel_id: str, payload: dict):
+def set_reel_state(reel_id: str, payload: dict, user: dict = Depends(get_current_user)):
     d = load_data()
     d.setdefault("reels", {}).setdefault(reel_id, {})["state"] = payload
     save_data(d)
@@ -1021,7 +1039,7 @@ def set_reel_state(reel_id: str, payload: dict):
 
 
 @app.post("/api/videos/{reel_id}/edit")
-def trigger_edit(reel_id: str):
+def trigger_edit(reel_id: str, user: dict = Depends(get_current_user)):
     """Stub: envÃ­a los clips al agente editor. Por ahora devuelve confirmaciÃ³n."""
     d = load_data()
     clips_dir = UPLOADS_DIR / "clips" / reel_id
@@ -1042,7 +1060,7 @@ def trigger_edit(reel_id: str):
 # â”€â”€ API: Calendario â”€â”€
 
 @app.get("/api/calendar")
-def get_calendar(month: str = None):
+def get_calendar(month: str = None, user: dict = Depends(get_current_user)):
     data = load_data()
     items = data.get("calendar_items", [])
     if month:
@@ -1050,7 +1068,7 @@ def get_calendar(month: str = None):
     return {"items": items}
 
 @app.post("/api/calendar")
-def create_calendar_item(payload: dict):
+def create_calendar_item(payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
     items = data.setdefault("calendar_items", [])
     item = {
@@ -1069,7 +1087,7 @@ def create_calendar_item(payload: dict):
     return item
 
 @app.put("/api/calendar/{item_id}")
-def update_calendar_item(item_id: str, payload: dict):
+def update_calendar_item(item_id: str, payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
     items = data.get("calendar_items", [])
     for i, item in enumerate(items):
@@ -1080,7 +1098,7 @@ def update_calendar_item(item_id: str, payload: dict):
     raise HTTPException(404, "Item no encontrado")
 
 @app.delete("/api/calendar/{item_id}")
-def delete_calendar_item(item_id: str):
+def delete_calendar_item(item_id: str, user: dict = Depends(get_current_user)):
     data = load_data()
     items = data.get("calendar_items", [])
     data["calendar_items"] = [i for i in items if i["id"] != item_id]
@@ -1088,7 +1106,7 @@ def delete_calendar_item(item_id: str):
     return {"status": "deleted"}
 
 @app.post("/api/calendar/generate")
-def generate_calendar(payload: dict):
+def generate_calendar(payload: dict, user: dict = Depends(get_current_user)):
     from core.gemini_client import gemini
     month = payload.get("month")
     if not month:
@@ -1156,7 +1174,7 @@ Las fechas deben estar entre {year}-{mon_str}-01 y {year}-{mon_str}-{str(days_in
 # â”€â”€ API: Contenido â€” slides, regenerar, telegram â”€â”€
 
 @app.post("/api/calendar/{item_id}/generate-slides")
-def generate_slides(item_id: str):
+def generate_slides(item_id: str, user: dict = Depends(get_current_user)):
     from core.gemini_client import gemini
     data = load_data()
     items = data.get("calendar_items", [])
@@ -1204,7 +1222,7 @@ Genera exactamente {n} slides. Responde SOLO con JSON array (sin markdown):
 
 
 @app.post("/api/calendar/{item_id}/regenerate")
-def regenerate_item(item_id: str):
+def regenerate_item(item_id: str, user: dict = Depends(get_current_user)):
     from core.gemini_client import gemini
     data = load_data()
     items = data.get("calendar_items", [])
@@ -1283,7 +1301,7 @@ async def telegram_validate(item_id: str, payload: dict = {}):
 
 
 @app.post("/api/calendar/{item_id}/approve")
-def approve_item(item_id: str):
+def approve_item(item_id: str, user: dict = Depends(get_current_user)):
     data = load_data()
     items = data.get("calendar_items", [])
     idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
@@ -1302,7 +1320,7 @@ def health():
 # ── API: Flujo semanal + Telegram ──
 
 @app.post("/api/weekly/start")
-async def weekly_start(payload: dict):
+async def weekly_start(payload: dict, user: dict = Depends(get_current_user)):
     """
     Inicia el flujo semanal para un cliente.
     Corre el scraping y manda la primera historia a Telegram.
@@ -1445,7 +1463,7 @@ async def lemon_webhook(
 # ── Endpoint: análisis de imagen al subir ──
 
 @app.post("/api/images/analyze/{brand}/{category}/{filename}")
-def analyze_image(brand: str, category: str, filename: str):
+def analyze_image(brand: str, category: str, filename: str, user: dict = Depends(get_current_user)):
     """Analyze an already-uploaded image with Gemini Vision."""
     image_path = str(UPLOADS_DIR / category / filename)
     try:
@@ -1456,7 +1474,7 @@ def analyze_image(brand: str, category: str, filename: str):
 
 
 @app.post("/api/images/analyze-batch/{brand}/{category}")
-def analyze_image_batch(brand: str, category: str):
+def analyze_image_batch(brand: str, category: str, user: dict = Depends(get_current_user)):
     """Analyze all non-analyzed images in a category."""
     try:
         results = image_analysis_agent.analyze_batch(brand, category)
@@ -1493,7 +1511,7 @@ class SalesDMRequest(BaseModel):
 # ── Endpoint: Estudio de Mercado ──
 
 @app.post("/api/agent/market-research")
-def run_market_research(req: MarketResearchRequest):
+def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_current_user)):
     try:
         result = market_research_agent.run(
             brand_brief=req.brand_brief,
@@ -1508,7 +1526,7 @@ def run_market_research(req: MarketResearchRequest):
 # ── Endpoint: Calendario mensual de contenido ──
 
 @app.post("/api/agent/content-monthly")
-def run_content_monthly(req: ContentMonthlyRequest):
+def run_content_monthly(req: ContentMonthlyRequest, user: dict = Depends(get_current_user)):
     try:
         result = content_agent.run(
             brand_brief=req.brand_brief,
@@ -1523,7 +1541,7 @@ def run_content_monthly(req: ContentMonthlyRequest):
 # ── Endpoint: Generación de guion ──
 
 @app.post("/api/agent/script")
-def run_script(req: ScriptRequest):
+def run_script(req: ScriptRequest, user: dict = Depends(get_current_user)):
     try:
         result = script_agent.run(
             idea=req.idea,
@@ -1548,7 +1566,7 @@ Reglas:
 - Escribís en español LATAM"""
 
 @app.post("/api/agent/sales-dm")
-def run_sales_dm(req: SalesDMRequest):
+def run_sales_dm(req: SalesDMRequest, user: dict = Depends(get_current_user)):
     try:
         brief = req.brand_brief
         prompt = f"""
@@ -1629,7 +1647,7 @@ class MemoryUpdateRequest(BaseModel):
 # ── Weekly Workflow Endpoints ──
 
 @app.post("/api/agent/weekly/start")
-def weekly_start(req: WeeklyStartRequest):
+def weekly_start(req: WeeklyStartRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.start_week(
             brand=req.brand,
@@ -1643,7 +1661,7 @@ def weekly_start(req: WeeklyStartRequest):
 
 
 @app.get("/api/agent/weekly/status/{brand}/{week}")
-def weekly_status(brand: str, week: str):
+def weekly_status(brand: str, week: str, user: dict = Depends(get_current_user)):
     try:
         return JSONResponse(content=weekly_agent.get_weekly_status(brand, week))
     except Exception as e:
@@ -1651,7 +1669,7 @@ def weekly_status(brand: str, week: str):
 
 
 @app.post("/api/agent/weekly/next-story")
-def weekly_next_story(req: WeeklyApprovalRequest):
+def weekly_next_story(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         return JSONResponse(content=weekly_agent.next_story(req.brand, req.week))
     except Exception as e:
@@ -1659,7 +1677,7 @@ def weekly_next_story(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/approve-story")
-def weekly_approve_story(req: WeeklyApprovalRequest):
+def weekly_approve_story(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.approve_story(
             brand=req.brand, week=req.week,
@@ -1673,7 +1691,7 @@ def weekly_approve_story(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/next-carousel")
-def weekly_next_carousel(req: WeeklyApprovalRequest):
+def weekly_next_carousel(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         return JSONResponse(content=weekly_agent.next_carousel(req.brand, req.week))
     except Exception as e:
@@ -1681,7 +1699,7 @@ def weekly_next_carousel(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/approve-carousel-referent")
-def weekly_approve_carousel_referent(req: WeeklyApprovalRequest):
+def weekly_approve_carousel_referent(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.approve_carousel_referent(
             brand=req.brand, week=req.week,
@@ -1694,7 +1712,7 @@ def weekly_approve_carousel_referent(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/approve-carousel-copy")
-def weekly_approve_carousel_copy(req: WeeklyApprovalRequest):
+def weekly_approve_carousel_copy(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.approve_carousel_copy(
             brand=req.brand, week=req.week,
@@ -1708,7 +1726,7 @@ def weekly_approve_carousel_copy(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/next-reel")
-def weekly_next_reel(req: WeeklyApprovalRequest):
+def weekly_next_reel(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         return JSONResponse(content=weekly_agent.next_reel(req.brand, req.week))
     except Exception as e:
@@ -1716,7 +1734,7 @@ def weekly_next_reel(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/approve-reel-referent")
-def weekly_approve_reel_referent(req: WeeklyApprovalRequest):
+def weekly_approve_reel_referent(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.approve_reel_referent(
             brand=req.brand, week=req.week,
@@ -1730,7 +1748,7 @@ def weekly_approve_reel_referent(req: WeeklyApprovalRequest):
 
 
 @app.post("/api/agent/weekly/approve-reel-copy")
-def weekly_approve_reel_copy(req: WeeklyApprovalRequest):
+def weekly_approve_reel_copy(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
     try:
         result = weekly_agent.approve_reel_copy(
             brand=req.brand, week=req.week,
@@ -1746,18 +1764,18 @@ def weekly_approve_reel_copy(req: WeeklyApprovalRequest):
 # ── Client Memory Endpoints ──
 
 @app.get("/api/client/{brand}/memory")
-def get_client_memory(brand: str):
+def get_client_memory(brand: str, user: dict = Depends(get_current_user)):
     return JSONResponse(content=load_memory(brand))
 
 
 @app.post("/api/client/{brand}/memory")
-def patch_client_memory(brand: str, req: MemoryUpdateRequest):
+def patch_client_memory(brand: str, req: MemoryUpdateRequest, user: dict = Depends(get_current_user)):
     result = update_memory(brand, req.updates)
     return JSONResponse(content=result)
 
 
 @app.get("/api/client/{brand}/brief")
-def get_client_brief(brand: str):
+def get_client_brief(brand: str, user: dict = Depends(get_current_user)):
     brief = load_brief(brand)
     if not brief:
         raise HTTPException(status_code=404, detail="Brief no encontrado")
@@ -1782,6 +1800,38 @@ class LoginRequest(BaseModel):
 def login_page():
     path = DASHBOARD / "login.html"
     return HTMLResponse(content=path.read_text(encoding="utf-8"))
+
+@app.get("/auth/google")
+async def auth_google(request: Request):
+    redirect_uri = os.environ.get("BASE_URL", "https://rima.n8n-ghl.com") + "/auth/google/callback"
+    return await _oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@app.get("/auth/google/callback")
+async def auth_google_callback(request: Request):
+    token = await _oauth.google.authorize_access_token(request)
+    userinfo = token.get("userinfo") or await _oauth.google.userinfo(token=token)
+    email = userinfo["email"]
+    name = userinfo.get("name", email)
+
+    d = load_data()
+    users_db = d.setdefault("users", {})
+    user, created = get_or_create_google_user(email, name, users_db)
+    if created:
+        save_data(d)
+
+    jwt_token = create_token(user["email"], user["role"])
+    resp = RedirectResponse(url="/home", status_code=302)
+    resp.set_cookie(
+        key=COOKIE_NAME,
+        value=jwt_token,
+        httponly=True,
+        max_age=8 * 3600,
+        samesite="lax",
+        secure=False,
+    )
+    return resp
+
 
 @app.post("/auth/login")
 def auth_login(body: LoginRequest, response: JSONResponse.__class__ = None):
