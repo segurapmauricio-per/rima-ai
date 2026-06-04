@@ -1,5 +1,5 @@
-﻿from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header
-from fastapi.responses import HTMLResponse, JSONResponse
+﻿from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -16,6 +16,10 @@ import uuid
 import calendar as cal_module
 import re
 from datetime import datetime
+
+from core.auth import (
+    verify_login, create_token, require_auth, get_current_user, COOKIE_NAME
+)
 
 from dotenv import load_dotenv
 load_dotenv(override=True)
@@ -123,9 +127,10 @@ SHARED_CSS = """
 <style id="rima-shared">
   /* Layout base */
   html { zoom: 1.1; }
-  body { display:flex !important; height:100vh !important; overflow:hidden !important; font-size: 13px !important; }
+  body { display:flex !important; height:calc(100vh / 1.1) !important; overflow:hidden !important; font-size: 13px !important; }
   #rima-sidebar { flex-shrink:0 !important; width:240px !important; min-width:240px !important; }
-  body > main, body > .flex-1 { flex:1 !important; min-width:0 !important; overflow:hidden !important; }
+  body > main, body > .flex-1 { flex:1 !important; min-width:0 !important; min-height:0 !important; overflow:hidden !important; display:flex !important; flex-direction:column !important; }
+  main > div[class*="overflow-y-auto"], main > .flex-1 { flex:1 !important; min-height:0 !important; overflow-y:auto !important; }
   aside nav span { font-size: 11px !important; }
   aside p, aside .text-\\[9px\\], aside .text-\\[10px\\] { font-size: 9px !important; }
   input, textarea, select { font-size: 12px !important; font-family: 'Inter', sans-serif !important; }
@@ -672,8 +677,8 @@ def serve_html(filename: str) -> HTMLResponse:
 
 # â”€â”€ Rutas de pÃ¡ginas â”€â”€
 
-@app.get("/", response_class=HTMLResponse)
-def home():
+@app.get("/home-legacy", response_class=HTMLResponse)
+def home_legacy():
     return serve_html("rima-home.html")
 
 @app.get("/calendario", response_class=HTMLResponse)
@@ -1740,6 +1745,57 @@ def setup_client(brand: str, brief: BrandBrief):
     ensure_client_dirs(brand)
     save_brief(brand, brief.model_dump())
     return JSONResponse(content={"status": "ok", "brand": brand})
+
+
+# ── Auth routes ──────────────────────────────────────────────────────────────
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page():
+    path = DASHBOARD / "login.html"
+    return HTMLResponse(content=path.read_text(encoding="utf-8"))
+
+@app.post("/auth/login")
+def auth_login(body: LoginRequest, response: JSONResponse.__class__ = None):
+    from fastapi.responses import JSONResponse as JR
+    d = load_data()
+    users_db = d.get("users", {})
+    user = verify_login(body.email, body.password, users_db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    token = create_token(user["email"], user["role"])
+    resp = JR(content={"ok": True, "redirect": "/"})
+    resp.set_cookie(
+        key=COOKIE_NAME,
+        value=token,
+        httponly=True,
+        max_age=8 * 3600,
+        samesite="lax",
+        secure=False,  # cambiar a True con HTTPS
+    )
+    return resp
+
+@app.get("/auth/logout")
+def auth_logout():
+    resp = RedirectResponse(url="/login", status_code=302)
+    resp.delete_cookie(COOKIE_NAME)
+    return resp
+
+@app.get("/auth/me")
+def auth_me(user: dict = Depends(get_current_user)):
+    return user
+
+# ── Proteger home y dashboard ─────────────────────────────────────────────────
+
+@app.get("/", response_class=HTMLResponse)
+def home_protected(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    return serve_html("index.html")
 
 
 if __name__ == "__main__":
