@@ -677,8 +677,11 @@ def serve_html(filename: str) -> HTMLResponse:
 
 # â”€â”€ Rutas de pÃ¡ginas â”€â”€
 
-@app.get("/home-legacy", response_class=HTMLResponse)
-def home_legacy():
+@app.get("/home", response_class=HTMLResponse)
+def home_dashboard(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
     return serve_html("rima-home.html")
 
 @app.get("/calendario", response_class=HTMLResponse)
@@ -1767,7 +1770,7 @@ def auth_login(body: LoginRequest, response: JSONResponse.__class__ = None):
     if not user:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_token(user["email"], user["role"])
-    resp = JR(content={"ok": True, "redirect": "/"})
+    resp = JR(content={"ok": True, "redirect": "/home"})
     resp.set_cookie(
         key=COOKIE_NAME,
         value=token,
