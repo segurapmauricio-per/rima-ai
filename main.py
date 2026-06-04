@@ -1066,11 +1066,41 @@ Crea Ã¡ngulo/hook completamente diferente. Responde SOLO con JSON (sin markdow
 
 
 @app.post("/api/calendar/{item_id}/telegram")
-def telegram_validate(item_id: str):
-    data = load_data()
+async def telegram_validate(item_id: str, payload: dict = {}):
+    """
+    Envía un ítem del calendario a Telegram para validación del cliente.
+    Bypass del flujo secuencial — envío directo desde el dashboard.
+    """
+    data  = load_data()
     items = data.get("calendar_items", [])
-    idx = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
-    if idx is None: raise HTTPException(404, "Item no encontrado")
+    idx   = next((i for i, x in enumerate(items) if x["id"] == item_id), None)
+    if idx is None:
+        raise HTTPException(404, "Item no encontrado")
+
+    item = items[idx]
+
+    # Buscar chat_id del cliente (por brand o el primero vinculado)
+    brand   = payload.get("brand", data.get("brand", {}).get("brand_slug", ""))
+    users   = data.get("telegram_users", {})
+    chat_id = payload.get("chat_id")
+    if not chat_id and users:
+        chat_id = list(users.values())[0].get("chat_id")
+    if not chat_id:
+        raise HTTPException(400, "No hay cliente vinculado a Telegram")
+
+    # Enviar al bot
+    try:
+        from bot.weekly_flow import enviar_item_directo
+        from telegram.ext import Application as TGApp
+
+        tg_app = TGApp.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
+        await tg_app.initialize()
+        await enviar_item_directo(tg_app, int(chat_id), item, brand)
+        await tg_app.shutdown()
+    except Exception as e:
+        raise HTTPException(500, f"Error enviando a Telegram: {e}")
+
+    # Actualizar estado
     items[idx]["status"] = "validacion"
     items[idx]["telegram_sent"] = True
     items[idx]["telegram_sent_at"] = int(time.time())

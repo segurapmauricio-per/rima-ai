@@ -26,7 +26,9 @@ from telegram.ext import (
 
 load_dotenv(override=True)
 
-from bot.weekly_flow import parse_weekly_callback, handle_weekly_callback
+from bot.weekly_flow import (parse_weekly_callback, handle_weekly_callback,
+                             get_pending_adjustment, clear_pending_adjustment,
+                             procesar_ajuste)
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 DATA_FILE  = Path(__file__).parent.parent / "data" / "rima_data.json"
@@ -153,6 +155,12 @@ async def mensaje_libre(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await ayuda(update, context)
         return
 
+    # ── Verificar si hay un ajuste pendiente ─────────────────────────────────
+    pending = get_pending_adjustment(chat_id)
+    if pending:
+        await procesar_ajuste(context.application, chat_id, texto, pending)
+        return
+
     # Mensaje libre
     cliente = get_cliente_por_chat(chat_id)
     if not cliente:
@@ -170,8 +178,8 @@ async def mensaje_libre(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_data(d)
 
     await update.message.reply_text(
-        "Recibido ✅ Tu comentario fue guardado y el equipo RIMA lo revisará.\n\n"
-        "Comandos disponibles: /estado /ayuda"
+        "Recibido ✅ Tu comentario fue guardado.\n\n"
+        "Comandos: /estado /ayuda"
     )
 
 
