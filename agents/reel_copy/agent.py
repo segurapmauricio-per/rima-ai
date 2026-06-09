@@ -44,7 +44,11 @@ class ReelCopyAgent:
             if p.get("type", "").lower() in ("video", "reel", "xdt_graph_video")
             and p.get("metrics", {}).get("fuerza", 0) > 0
         ]
-        videos.sort(key=lambda p: p.get("metrics", {}).get("engagement_score", 0), reverse=True)
+        videos.sort(
+            key=lambda p: p.get("metrics", {}).get("score_ventas")
+            or p.get("metrics", {}).get("engagement_score", 0),
+            reverse=True,
+        )
 
         content_type = reel_slot.get("content_type", "Problema")
         topic = reel_slot.get("topic", "")

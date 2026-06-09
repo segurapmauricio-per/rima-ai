@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Configuración</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<aside id="rima-sidebar"></aside>
+
+<main class="flex-1 flex flex-col overflow-hidden">
+  <div class="px-6 py-5 border-b border-white/5">
+    <h1 class="text-sm font-semibold text-white">Configuración</h1>
+    <p class="text-[11px] text-slate-500 mt-0.5">Cuenta, plan y preferencias de RIMA</p>
+  </div>
+
+  <div class="flex-1 overflow-y-auto p-6 space-y-4 max-w-lg">
+    <div class="glass rounded-2xl p-5">
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-bold mb-3">Tu cuenta</p>
+      <div class="space-y-2 text-[12px]">
+        <div class="flex justify-between gap-4"><span class="text-slate-500">Nombre</span><span id="cfg-name" class="text-white font-medium">—</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-500">Email</span><span id="cfg-email" class="text-white font-medium truncate">—</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-500">Plan</span><span id="cfg-plan" class="text-violet-300 font-semibold">—</span></div>
+        <div class="flex justify-between gap-4"><span class="text-slate-500">Negocio</span><span id="cfg-brand" class="text-white font-medium">—</span></div>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-bold mb-2">Próximamente</p>
+      <p class="text-[11px] text-slate-500 leading-relaxed">Aquí irán preferencias de notificaciones, zona horaria, integraciones y cambio de plan.</p>
+    </div>
+
+    <a href="/auth/logout" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-semibold text-red-400 glass hover:bg-red-500/10 transition-colors no-underline">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+      Cerrar sesión
+    </a>
+  </div>
+</main>
+
+<script>
+fetch('/auth/me').then(r=>r.json()).then(u=>{
+  const plans={basico:'Plan Básico',pro:'Plan Pro',max:'Plan Max'};
+  document.getElementById('cfg-name').textContent=u.name||'—';
+  document.getElementById('cfg-email').textContent=u.email||u.sub||'—';
+  document.getElementById('cfg-plan').textContent=plans[u.plan]||u.plan||'—';
+  document.getElementById('cfg-brand').textContent=u.brand_name||'—';
+}).catch(()=>{});
+</script>
+</body>
+</html>

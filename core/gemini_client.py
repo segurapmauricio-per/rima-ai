@@ -35,6 +35,21 @@ class GeminiClient:
         self._log(prompt, text)
         return text
 
+    def generate_json(self, prompt: str, system_prompt: str = None) -> str:
+        """Respuesta forzada a JSON — para arrays/objetos estructurados."""
+        config = {"response_mime_type": "application/json"}
+        if system_prompt:
+            config["system_instruction"] = system_prompt
+
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=prompt,
+            config=config,
+        )
+        text = response.text
+        self._log(prompt, text)
+        return text
+
     def _log(self, prompt: str, response: str):
         log_entry = {
             "timestamp": datetime.now().isoformat(),

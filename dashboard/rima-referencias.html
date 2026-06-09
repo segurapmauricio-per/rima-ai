@@ -53,7 +53,9 @@
     .scrap-none{color:#475569}
 
     /* Avatar placeholder */
-    .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+    .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;overflow:hidden}
+    .avatar img{width:100%;height:100%;object-fit:cover}
+    a.avatar-link{text-decoration:none;color:inherit}
 
     /* Add row */
     .add-row td{padding:8px 12px}
@@ -107,7 +109,7 @@
         <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)">
           <div class="w-5 h-5 rounded bg-rose-500/20 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg></div>
           <span class="text-[11px] font-semibold text-white">Referencias</span>
-          <span class="ml-auto text-[9px] text-violet-300 font-medium">15 cuentas</span>
+          <span class="ml-auto text-[9px] text-violet-300 font-medium" id="sidebar-ref-count">—</span>
         </div>
         <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-cyan-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div><span class="text-[11px] text-slate-400">Imágenes</span></div>
         <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-orange-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38"/></svg></div><span class="text-[11px] text-slate-400">Videos</span></div>
@@ -117,7 +119,7 @@
   </nav>
   <div class="px-4 py-3 border-t border-white/5 flex items-center gap-2.5">
     <div class="w-7 h-7 rounded-full p-[1.5px] flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)"><div class="w-full h-full rounded-full bg-gradient-to-br from-rose-400 via-orange-300 to-amber-400 flex items-center justify-center"><span class="text-[9px] font-bold text-white">FL</span></div></div>
-    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate">FitLife Studio</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500">Plan Pro</p></div></div>
+    <div class="flex-1 min-w-0"><p class="text-[11px] font-semibold text-slate-200 truncate" id="sidebar-brand">—</p><div class="flex items-center gap-1"><div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div><p class="text-[9px] text-slate-500" id="sidebar-plan">Plan —</p></div></div>
     <button class="w-6 h-6 rounded-lg glass gh flex items-center justify-center cursor-pointer"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg></button>
   </div>
 </aside>
@@ -133,22 +135,12 @@
           <svg class="w-4 h-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"/></svg>
           <h1 class="text-sm font-semibold text-white">Referencias</h1>
         </div>
-        <p class="text-[11px] text-slate-500">Cuentas que RIMA scrapea semanalmente para identificar qué contenido modelar</p>
+        <p class="text-[11px] text-slate-500">Define a quién admiras y qué tipo de contenido quieres modelar</p>
       </div>
-      <div class="flex items-center gap-3">
-        <!-- Próximo scraping -->
-        <div class="glass rounded-xl px-4 py-2 flex items-center gap-2.5">
-          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulsing"></div>
-          <div>
-            <p class="text-[10px] text-slate-400">Próximo scraping</p>
-            <p class="text-[10px] font-semibold text-white">Lunes 16 Jun · 6:00 AM</p>
-          </div>
-        </div>
-        <button onclick="runScraping()" class="bp px-4 py-2 rounded-xl text-white text-[10px] font-semibold cursor-pointer flex items-center gap-1.5">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-          Scraping ahora
-        </button>
-      </div>
+      <a href="/mercado" class="glass gh px-4 py-2 rounded-xl text-[10px] font-semibold text-sky-300 no-underline flex items-center gap-1.5">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
+        Ver estudio de mercado
+      </a>
     </div>
 
     <!-- Platform tabs -->
@@ -173,8 +165,8 @@
     <div id="pp-ig" class="plat-panel active">
 
       <div class="flex items-center justify-between mb-3">
-        <p class="text-[10px] text-slate-500">Máximo 10 perfiles · Haz clic en cualquier campo para editar · Los tipos de contenido le dicen a RIMA qué buscar</p>
-        <button onclick="addIG()" id="btn-add-ig" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium text-rose-400 cursor-pointer glass gh" style="border-color:rgba(244,63,94,0.25)">
+        <p class="text-[10px] text-slate-500" id="ig-hint">Cargando límites del plan…</p>
+        <button onclick="addProfile('instagram')" id="btn-add-ig" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium text-rose-400 cursor-pointer glass gh" style="border-color:rgba(244,63,94,0.25)">
           <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
           Agregar perfil
         </button>
@@ -188,210 +180,25 @@
               <th style="width:140px">Nombre / Nicho</th>
               <th>Tipo de contenido que trabaja</th>
               <th style="width:110px">Seguidores</th>
-              <th style="width:130px">Último scraping</th>
-              <th style="width:80px">Estado</th>
               <th style="width:60px"></th>
             </tr>
           </thead>
-          <tbody id="ig-tbody">
-
-            <!-- Fila 1 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#F43F5E,#F97316)">AF</div>
-                  <div class="cell-editable"><input class="inline-input" value="@alexfit_mx" placeholder="@usuario" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Alex Fit · Fitness B2B" placeholder="ej: Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#A78BFA" onclick="toggleTipo(this)">Transformación</span>
-                  <span class="tipo-chip sel" style="background:rgba(6,182,212,0.15);border-color:rgba(6,182,212,0.3);color:#67E8F9" onclick="toggleTipo(this)">Educación</span>
-                  <span class="tipo-chip sel" style="background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:#34D399" onclick="toggleTipo(this)">Ventas</span>
-                  <span class="tipo-chip" style="color:#475569" onclick="toggleTipo(this)">+ Testimonio</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">284K</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Lun 9 Jun · 6AM</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td>
-                <button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)">
-                  <svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </td>
-            </tr>
-
-            <!-- Fila 2 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#8B5CF6,#6D28D9)">NF</div>
-                  <div class="cell-editable"><input class="inline-input" value="@nutrifit.pro" placeholder="@usuario" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Nutrifit · Nutrición" placeholder="ej: Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(6,182,212,0.15);border-color:rgba(6,182,212,0.3);color:#67E8F9" onclick="toggleTipo(this)">Educación</span>
-                  <span class="tipo-chip sel" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#FCD34D" onclick="toggleTipo(this)">Humor</span>
-                  <span class="tipo-chip" style="color:#475569" onclick="toggleTipo(this)">+ Transformación</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">521K</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Lun 9 Jun · 6AM</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Fila 3 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#10B981,#059669)">GP</div>
-                  <div class="cell-editable"><input class="inline-input" value="@gympepe_oficial" placeholder="@usuario" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Gym Pepe · Fitness" placeholder="ej: Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#A78BFA" onclick="toggleTipo(this)">Transformación</span>
-                  <span class="tipo-chip sel" style="background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:#34D399" onclick="toggleTipo(this)">Testimonio</span>
-                  <span class="tipo-chip" style="color:#475569" onclick="toggleTipo(this)">+ Ventas</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">98K</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Lun 9 Jun · 6AM</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Fila 4 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#F43F5E,#F97316)">MV</div>
-                  <div class="cell-editable"><input class="inline-input" value="@movimientovital" placeholder="@usuario" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Movimiento Vital · Wellness" placeholder="ej: Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(6,182,212,0.15);border-color:rgba(6,182,212,0.3);color:#67E8F9" onclick="toggleTipo(this)">Educación</span>
-                  <span class="tipo-chip sel" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#FCD34D" onclick="toggleTipo(this)">Behind the scenes</span>
-                  <span class="tipo-chip" style="color:#475569" onclick="toggleTipo(this)">+ Motivación</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">1.2M</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Scraping el lunes</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Filas 5–10 vacías para rellenar -->
-            <tr class="ref-row" id="ig-empty-5">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">5</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1" id="tipos-5"><span class="tipo-chip" style="color:#475569" onclick="addTipo(this,'Transformación','rgba(124,58,237,0.15)','rgba(124,58,237,0.3)','#A78BFA')">+ Transformación</span><span class="tipo-chip" style="color:#475569" onclick="addTipo(this,'Educación','rgba(6,182,212,0.15)','rgba(6,182,212,0.3)','#67E8F9')">+ Educación</span><span class="tipo-chip" style="color:#475569" onclick="addTipo(this,'Ventas','rgba(52,211,153,0.15)','rgba(52,211,153,0.3)','#34D399')">+ Ventas</span><span class="tipo-chip" style="color:#475569" onclick="addTipo(this,'Testimonio','rgba(245,158,11,0.15)','rgba(245,158,11,0.3)','#FCD34D')">+ Testimonio</span><span class="tipo-chip" style="color:#475569" onclick="addTipo(this,'Humor','rgba(244,63,94,0.15)','rgba(244,63,94,0.3)','#FDA4AF')">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Filas 6-10 igual al patrón -->
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">6</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Transformación</span><span class="tipo-chip" style="color:#475569">+ Educación</span><span class="tipo-chip" style="color:#475569">+ Ventas</span><span class="tipo-chip" style="color:#475569">+ Testimonio</span><span class="tipo-chip" style="color:#475569">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">7</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Transformación</span><span class="tipo-chip" style="color:#475569">+ Educación</span><span class="tipo-chip" style="color:#475569">+ Ventas</span><span class="tipo-chip" style="color:#475569">+ Testimonio</span><span class="tipo-chip" style="color:#475569">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">8</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Transformación</span><span class="tipo-chip" style="color:#475569">+ Educación</span><span class="tipo-chip" style="color:#475569">+ Ventas</span><span class="tipo-chip" style="color:#475569">+ Testimonio</span><span class="tipo-chip" style="color:#475569">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">9</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Transformación</span><span class="tipo-chip" style="color:#475569">+ Educación</span><span class="tipo-chip" style="color:#475569">+ Ventas</span><span class="tipo-chip" style="color:#475569">+ Testimonio</span><span class="tipo-chip" style="color:#475569">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">10</div><div class="cell-editable"><input class="inline-input" placeholder="@usuario de Instagram" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Transformación</span><span class="tipo-chip" style="color:#475569">+ Educación</span><span class="tipo-chip" style="color:#475569">+ Ventas</span><span class="tipo-chip" style="color:#475569">+ Testimonio</span><span class="tipo-chip" style="color:#475569">+ Humor</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 50K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-          </tbody>
+          <tbody id="ig-tbody"></tbody>
         </table>
       </div>
 
-      <!-- Info -->
-      <div class="mt-4 grid grid-cols-3 gap-3">
-        <div class="rounded-xl p-3 flex items-start gap-2.5" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)">
-          <svg class="w-3.5 h-3.5 text-violet-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
-          <div><p class="text-[10px] font-semibold text-violet-300">Scraping semanal</p><p class="text-[9px] text-slate-400 leading-relaxed mt-0.5">RIMA extrae los últimos 10 posts de cada perfil todos los lunes a las 6AM y actualiza el Estudio de mercado automáticamente.</p></div>
-        </div>
-        <div class="rounded-xl p-3 flex items-start gap-2.5" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18)">
-          <svg class="w-3.5 h-3.5 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813"/></svg>
-          <div><p class="text-[10px] font-semibold text-cyan-300">Tipos de contenido</p><p class="text-[9px] text-slate-400 leading-relaxed mt-0.5">Le dicen a RIMA qué estilo de post buscar en cada cuenta. Se usan para calcular la Fuerza y sugerir qué modelar.</p></div>
-        </div>
-        <div class="rounded-xl p-3 flex items-start gap-2.5" style="background:rgba(52,211,153,0.07);border:1px solid rgba(52,211,153,0.18)">
-          <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
-          <div><p class="text-[10px] font-semibold text-emerald-300">Impacto en el calendario</p><p class="text-[9px] text-slate-400 leading-relaxed mt-0.5">Los posts con mayor Fuerza de los referentes se usan como base para los hooks y ángulos del contenido semanal.</p></div>
-        </div>
-      </div>
+      <p class="mt-4 text-[10px] text-slate-500 leading-relaxed">Los tipos de contenido guían el análisis. El scraping y los resultados los ves en <a href="/mercado" class="text-sky-400 no-underline hover:underline">Estudio de mercado</a>.</p>
     </div>
 
     <!-- ===== YOUTUBE ===== -->
     <div id="pp-yt" class="plat-panel">
 
-      <div class="flex items-center justify-between mb-3">
-        <p class="text-[10px] text-slate-500">Máximo 5 canales · RIMA extrae los últimos 5 videos publicados por semana</p>
+      <div class="flex items-center justify-between mb-3" id="yt-header-row">
+        <p class="text-[10px] text-slate-500" id="yt-hint">Cargando límites del plan…</p>
+        <button onclick="addProfile('youtube')" id="btn-add-yt" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-medium text-red-400 cursor-pointer glass gh" style="border-color:rgba(239,68,68,0.25)">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+          Agregar canal
+        </button>
       </div>
 
       <div class="glass rounded-2xl overflow-hidden">
@@ -402,103 +209,11 @@
               <th style="width:160px">Nombre / Nicho</th>
               <th>Tipo de contenido</th>
               <th style="width:110px">Suscriptores</th>
-              <th style="width:130px">Último scraping</th>
-              <th style="width:80px">Estado</th>
               <th style="width:60px"></th>
             </tr>
           </thead>
-          <tbody>
-
-            <!-- Canal 1 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#EF4444,#DC2626)">CF</div>
-                  <div class="cell-editable"><input class="inline-input" value="Ciencia y Fitness" placeholder="Nombre del canal" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Ciencia aplicada · Fitness" placeholder="Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(6,182,212,0.15);border-color:rgba(6,182,212,0.3);color:#67E8F9">Long-form educativo</span>
-                  <span class="tipo-chip sel" style="background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#A78BFA">Desmitificación</span>
-                  <span class="tipo-chip" style="color:#475569">+ Shorts</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">1.8M</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Lun 9 Jun · 6AM</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Canal 2 -->
-            <tr class="ref-row">
-              <td>
-                <div class="flex items-center gap-2.5">
-                  <div class="avatar" style="background:linear-gradient(135deg,#3B82F6,#1D4ED8)">FH</div>
-                  <div class="cell-editable"><input class="inline-input" value="FitHabits" placeholder="Nombre del canal" /></div>
-                </div>
-              </td>
-              <td><div class="cell-editable"><input class="inline-input" value="Hábitos · Bienestar" placeholder="Nombre · Nicho" /></div></td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class="tipo-chip sel" style="background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.3);color:#34D399">Hábitos</span>
-                  <span class="tipo-chip sel" style="background:rgba(245,158,11,0.15);border-color:rgba(245,158,11,0.3);color:#FCD34D">Motivación</span>
-                  <span class="tipo-chip" style="color:#475569">+ Rutinas</span>
-                </div>
-              </td>
-              <td><span class="text-[11px] text-slate-300 font-medium">892K</span></td>
-              <td>
-                <div class="flex items-center gap-1.5">
-                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-                  <span class="text-[10px] text-slate-400">Lun 9 Jun · 6AM</span>
-                </div>
-              </td>
-              <td><span class="badge badge-ok">Activo</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-            <!-- Canales 3-5 vacíos -->
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">3</div><div class="cell-editable"><input class="inline-input" placeholder="Nombre del canal de YouTube" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Long-form educativo</span><span class="tipo-chip" style="color:#475569">+ Shorts</span><span class="tipo-chip" style="color:#475569">+ Desmitificación</span><span class="tipo-chip" style="color:#475569">+ Motivación</span><span class="tipo-chip" style="color:#475569">+ Entrevistas</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 500K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">4</div><div class="cell-editable"><input class="inline-input" placeholder="Nombre del canal de YouTube" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Long-form educativo</span><span class="tipo-chip" style="color:#475569">+ Shorts</span><span class="tipo-chip" style="color:#475569">+ Desmitificación</span><span class="tipo-chip" style="color:#475569">+ Motivación</span><span class="tipo-chip" style="color:#475569">+ Entrevistas</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 500K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-            <tr class="ref-row">
-              <td><div class="flex items-center gap-2.5"><div class="avatar" style="background:rgba(255,255,255,0.06);color:#475569">5</div><div class="cell-editable"><input class="inline-input" placeholder="Nombre del canal de YouTube" /></div></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="Nombre · Nicho" /></div></td>
-              <td><div class="flex flex-wrap gap-1"><span class="tipo-chip" style="color:#475569">+ Long-form educativo</span><span class="tipo-chip" style="color:#475569">+ Shorts</span><span class="tipo-chip" style="color:#475569">+ Desmitificación</span><span class="tipo-chip" style="color:#475569">+ Motivación</span><span class="tipo-chip" style="color:#475569">+ Entrevistas</span></div></td>
-              <td><div class="cell-editable"><input class="inline-input" placeholder="ej: 500K" style="width:70px"/></div></td>
-              <td><span class="text-[10px] text-slate-600">—</span></td>
-              <td><span class="badge badge-paused">Sin datos</span></td>
-              <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeRow(this)"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
-            </tr>
-
-          </tbody>
+          <tbody id="yt-tbody"></tbody>
         </table>
-      </div>
-
-      <div class="mt-4 rounded-xl p-3 flex items-start gap-3" style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18)">
-        <svg class="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        <p class="text-[10px] text-slate-300 leading-relaxed">RIMA extrae los últimos 5 videos de cada canal por semana. Para YouTube se analiza el título, descripción, visualizaciones y comentarios. Los videos con mayor engagement relativo aparecen en el Estudio de mercado como candidatos para modelar el script o formato.</p>
       </div>
     </div>
 
@@ -506,6 +221,17 @@
 </main>
 
 <script>
+const IG_TIPOS = ['Transformación','Educación','Ventas','Testimonio','Humor','Behind the scenes'];
+const YT_TIPOS = ['Long-form educativo','Shorts','Desmitificación','Motivación','Entrevistas','Rutinas'];
+let state = { plan: 'pro', limits: {instagram:6,youtube:2}, instagram: [], youtube: [], scraping: { manual_remaining: 3 }, drafts: { instagram: [], youtube: [] } };
+
+const PLAN_LABELS = { basico: 'Básico', pro: 'Pro', max: 'Max' };
+
+function setTxt(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
 function switchPlat(p){
   document.querySelectorAll('.plat-panel').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.plat-tab').forEach(x=>x.classList.remove('active'));
@@ -513,29 +239,196 @@ function switchPlat(p){
   document.getElementById('pt-'+p).classList.add('active');
 }
 
-function toggleTipo(el){
-  const colors=['rgba(124,58,237,0.15)','rgba(124,58,237,0.3)','#A78BFA'];
-  el.classList.toggle('sel');
-  if(el.classList.contains('sel')){
-    el.style.background=colors[0];
-    el.style.borderColor=colors[1];
-    el.style.color=colors[2];
-  } else {
-    el.style.background='';el.style.borderColor='';el.style.color='#475569';
+function avatarLetters(username){
+  const u = (username||'').replace('@','').trim();
+  return u ? u.slice(0,2).toUpperCase() : '?';
+}
+
+function igProfileUrl(username){
+  const u = (username||'').replace('@','').trim();
+  return u ? `https://www.instagram.com/${encodeURIComponent(u)}/` : '#';
+}
+
+function proxiedPic(url){
+  return url ? `/api/referentes/image?url=${encodeURIComponent(url)}` : '';
+}
+
+function avatarCellHtml(p){
+  const ig = esc(p.ig_url || igProfileUrl(p.username));
+  const pic = p.profile_pic_url;
+  const letters = avatarLetters(p.username);
+  if (pic) {
+    return `<a href="${ig}" target="_blank" rel="noopener noreferrer" class="avatar-link avatar" title="Ver perfil en Instagram">
+      <img src="${esc(proxiedPic(pic))}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'avatar',style:'background:linear-gradient(135deg,#7C3AED,#06B6D4)',textContent:'${letters}'}))"/>
+    </a>`;
+  }
+  return `<a href="${ig}" target="_blank" rel="noopener noreferrer" class="avatar-link avatar" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)" title="Ver perfil en Instagram">${letters}</a>`;
+}
+
+function tipoChipsHtml(tipos, plataforma, profileId){
+  const all = plataforma === 'youtube' ? YT_TIPOS : IG_TIPOS;
+  return all.map(t => {
+    const sel = (tipos||[]).includes(t);
+    const style = sel ? 'background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.3);color:#A78BFA' : 'color:#475569';
+    const cls = sel ? 'tipo-chip sel' : 'tipo-chip';
+    const label = sel ? t : '+'+t;
+    return `<span class="${cls}" style="${style}" onclick="toggleTipoChip(this,'${plataforma}','${profileId}','${t}')">${label}</span>`;
+  }).join('');
+}
+
+function buildRow(p, plataforma, isDraft){
+  const isYt = plataforma === 'youtube';
+  const phUser = isYt ? 'Nombre del canal' : '@usuario de Instagram';
+  const phNicho = 'Nombre · Nicho';
+  const phSeg = isYt ? 'ej: 500K' : 'ej: 50K';
+  const id = p.id || ('draft-'+Math.random().toString(36).slice(2));
+  const avatar = isYt
+    ? `<div class="avatar" style="background:linear-gradient(135deg,#7C3AED,#06B6D4)">${avatarLetters(p.username)}</div>`
+    : avatarCellHtml(p);
+  return `<tr class="ref-row" data-id="${id}" data-plat="${plataforma}" data-draft="${isDraft?'1':'0'}">
+    <td><div class="flex items-center gap-2.5">
+      ${avatar}
+      <div class="cell-editable"><input class="inline-input" data-field="username" value="${esc(p.username||'')}" placeholder="${phUser}" onblur="saveField(this)" /></div>
+    </div></td>
+    <td><div class="cell-editable"><input class="inline-input" data-field="nombre_nicho" value="${esc(p.nombre_nicho||'')}" placeholder="${phNicho}" onblur="saveField(this)" /></div></td>
+    <td><div class="flex flex-wrap gap-1" data-tipos>${tipoChipsHtml(p.tipos, plataforma, id)}</div></td>
+    <td><div class="cell-editable"><input class="inline-input" data-field="seguidores" value="${esc(p.seguidores||'')}" placeholder="${phSeg}" style="width:70px" onblur="saveField(this)" /></div></td>
+    <td><button class="w-7 h-7 rounded-lg glass gh flex items-center justify-center cursor-pointer" onclick="removeProfile('${plataforma}','${id}',${isDraft})"><svg class="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg></button></td>
+  </tr>`;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+function renderTable(plataforma){
+  const tbody = document.getElementById(plataforma === 'youtube' ? 'yt-tbody' : 'ig-tbody');
+  const filled = state[plataforma] || [];
+  const drafts = state.drafts[plataforma] || [];
+  tbody.innerHTML = filled.map(p => buildRow(p, plataforma, false)).join('') +
+    drafts.map(p => buildRow(p, plataforma, true)).join('');
+  if (!filled.length && !drafts.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-[11px] text-slate-600 py-8">Sin perfiles. Usa «Agregar perfil» para comenzar.</td></tr>`;
   }
 }
 
-function removeRow(btn){
-  btn.closest('tr').remove();
+function updateUI(){
+  const igLim = state.limits.instagram;
+  const ytLim = state.limits.youtube;
+  const igCount = state.instagram.length;
+  const ytCount = state.youtube.length;
+  setTxt('ig-count', `${igCount} / ${igLim}`);
+  setTxt('yt-count', `${ytCount} / ${ytLim}`);
+  setTxt('ig-hint', `Máximo ${igLim} perfiles (Plan ${PLAN_LABELS[state.plan]||state.plan}) · Edita en línea`);
+  setTxt('yt-hint', `Máximo ${ytLim} canales (Plan ${PLAN_LABELS[state.plan]||state.plan}) · Edita en línea`);
+  const btnIg = document.getElementById('btn-add-ig');
+  const btnYt = document.getElementById('btn-add-yt');
+  if (btnIg) btnIg.style.display = igCount >= igLim ? 'none' : '';
+  if (btnYt) btnYt.style.display = ytCount >= ytLim ? 'none' : '';
+  renderTable('instagram');
+  renderTable('youtube');
 }
 
-function runScraping(){
-  alert('En la versión real: lanza el Apify Actor para scrapear todos los perfiles activos ahora mismo. El resultado llega al Estudio de mercado en ~5 minutos.');
+async function loadProfiles(){
+  const res = await fetch('/api/referentes/profiles');
+  if (!res.ok) throw new Error('No se pudieron cargar los perfiles');
+  const data = await res.json();
+  state.plan = data.plan;
+  state.limits = data.limits;
+  state.instagram = data.instagram || [];
+  state.youtube = data.youtube || [];
+  state.scraping = data.scraping || { manual_remaining: 3 };
+  state.drafts = { instagram: [], youtube: [] };
+  const me = await fetch('/auth/me').then(r=>r.json()).catch(()=>({}));
+  updateUI();
 }
 
-function addIG(){
-  alert('En la versión real: agrega una fila nueva al final de la tabla IG. Limitado a 10 filas.');
+function addProfile(plataforma){
+  const saved = state[plataforma].length;
+  const lim = state.limits[plataforma];
+  if (saved >= lim) {
+    alert(`Límite del plan alcanzado (${lim})`);
+    return;
+  }
+  if ((state.drafts[plataforma]||[]).length >= 1) {
+    alert('Completa el perfil en edición antes de agregar otro');
+    return;
+  }
+  state.drafts[plataforma].push({ id: 'draft-'+Date.now(), username:'', nombre_nicho:'', tipos:[], seguidores:'' });
+  updateUI();
+  const tbody = document.getElementById(plataforma === 'youtube' ? 'yt-tbody' : 'ig-tbody');
+  const lastInput = tbody.querySelector('tr:last-child input[data-field="username"]');
+  if (lastInput) lastInput.focus();
 }
+
+async function saveField(input){
+  const tr = input.closest('tr');
+  const id = tr.dataset.id;
+  const plataforma = tr.dataset.plat;
+  const isDraft = tr.dataset.draft === '1';
+  const field = input.dataset.field;
+  const value = input.value.trim();
+  const rowData = {};
+  tr.querySelectorAll('[data-field]').forEach(el => { rowData[el.dataset.field] = el.value.trim(); });
+
+  if (isDraft) {
+    if (!rowData.username) return;
+    const res = await fetch('/api/referentes/profiles', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ plataforma, ...rowData, tipos: getTiposFromRow(tr) })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); alert(e.detail); return; }
+    const data = await res.json();
+    state.drafts[plataforma] = state.drafts[plataforma].filter(d => d.id !== id);
+    state[plataforma].push(data.profile);
+    updateUI();
+    return;
+  }
+
+  const res = await fetch(`/api/referentes/profiles/${id}`, {
+    method:'PATCH', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ plataforma, ...rowData, tipos: getTiposFromRow(tr) })
+  });
+  if (!res.ok) return;
+  const data = await res.json();
+  const idx = state[plataforma].findIndex(p => p.id === id);
+  if (idx >= 0) state[plataforma][idx] = data.profile;
+}
+
+function getTiposFromRow(tr){
+  return [...tr.querySelectorAll('.tipo-chip.sel')].map(el => el.textContent.trim());
+}
+
+function toggleTipoChip(el, plataforma, profileId, tipo){
+  el.classList.toggle('sel');
+  if (el.classList.contains('sel')) {
+    el.style.background='rgba(124,58,237,0.15)'; el.style.borderColor='rgba(124,58,237,0.3)'; el.style.color='#A78BFA';
+    el.textContent = tipo;
+  } else {
+    el.style.background=''; el.style.borderColor=''; el.style.color='#475569';
+    el.textContent = '+'+tipo;
+  }
+  const tr = el.closest('tr');
+  if (tr.dataset.draft === '0') {
+    fetch(`/api/referentes/profiles/${profileId}`, {
+      method:'PATCH', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ plataforma, tipos: getTiposFromRow(tr) })
+    });
+  }
+}
+
+async function removeProfile(plataforma, id, isDraft){
+  if (isDraft) {
+    state.drafts[plataforma] = state.drafts[plataforma].filter(d => d.id !== id);
+    updateUI();
+    return;
+  }
+  if (!confirm('¿Eliminar este perfil?')) return;
+  const res = await fetch(`/api/referentes/profiles/${id}?plataforma=${plataforma}`, { method:'DELETE' });
+  if (!res.ok) return;
+  state[plataforma] = state[plataforma].filter(p => p.id !== id);
+  updateUI();
+}
+
+loadProfiles().catch(e => { console.error(e); setTxt('ig-hint', 'Error al cargar: ' + e.message); });
 </script>
 </body>
 </html>

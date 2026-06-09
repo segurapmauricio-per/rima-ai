@@ -1,11 +1,11 @@
-{
+﻿{
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "rima-ai",
+      "name": "mockup-popup",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["main.py"],
-      "port": 8000
+      "runtimeArgs": ["-m", "http.server", "7722", "--directory", "C:/Users/Mauricio/projects/rima-ai/dashboard"],
+      "port": 7722
     }
   ]
 }

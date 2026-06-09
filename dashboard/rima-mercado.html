@@ -33,7 +33,12 @@
     .tab-btn.active { border-bottom-color: #7C3AED; color: #fff; }
     .tab-btn:not(.active):hover { color: #94A3B8; }
     .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .tab-panel.active { display: block; height: 100%; }
+    #panel-global.tab-panel.active { display: flex; min-height: 0; }
+
+    /* Scroll en columna de detalle */
+    .mercado-detail-pane { min-height: 0; }
+    .mercado-posts-scroll { overflow-y: auto; min-height: 0; flex: 1 1 auto; }
 
     /* Referent row */
     .ref-row { transition: all .15s; border-left: 2px solid transparent; }
@@ -47,6 +52,18 @@
     .score-high { background: rgba(52,211,153,0.15); color: #34D399; border: 1px solid rgba(52,211,153,0.25); }
     .score-mid  { background: rgba(251,191,36,0.15); color: #FBBF24; border: 1px solid rgba(251,191,36,0.25); }
     .score-low  { background: rgba(148,163,184,0.1); color: #94A3B8; border: 1px solid rgba(148,163,184,0.15); }
+
+    /* Post row */
+    .post-row { transition: background .15s; border: 1px solid rgba(255,255,255,0.05); }
+    .post-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(124,58,237,0.2); }
+
+    /* Modal */
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(6px); z-index:50; display:flex; align-items:center; justify-content:center; padding:24px; }
+    .modal-backdrop.hidden { display:none; }
+    .modal-panel { background:#12121C; border:1px solid rgba(255,255,255,0.09); border-radius:20px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto; box-shadow:0 24px 80px rgba(0,0,0,0.7); }
+    .badge-venta { background:rgba(52,211,153,0.12); color:#34D399; border:1px solid rgba(52,211,153,0.25); }
+    .badge-edu { background:rgba(56,189,248,0.12); color:#38BDF8; border:1px solid rgba(56,189,248,0.25); }
+    .badge-conexion { background:rgba(251,191,36,0.12); color:#FBBF24; border:1px solid rgba(251,191,36,0.25); }
 
     /* Content thumb */
     .content-thumb {
@@ -160,25 +177,35 @@
         <div class="flex items-center gap-2 mb-1">
           <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
           <h1 class="text-sm font-semibold text-white">Estudio de Mercado</h1>
-          <span class="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 font-medium border border-sky-500/30">15 referentes</span>
+          <span class="text-[9px] px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 font-medium border border-sky-500/30" id="mercado-ref-badge">0 referentes</span>
         </div>
-        <p class="text-[11px] text-slate-500">Qué le funciona a quienes admiras · actualizado hace 2h</p>
+        <p class="text-[11px] text-slate-500" id="mercado-subtitle">Cargando estudio de mercado…</p>
       </div>
-      <!-- Métricas globales rápidas -->
-      <div class="flex items-center gap-5 pb-1">
-        <div class="text-right">
-          <p class="text-xs font-bold text-white">4.8%</p>
-          <p class="text-[9px] text-slate-500">Fuerza prom.</p>
+      <div class="flex items-center gap-3 pb-1 flex-wrap justify-end">
+        <div class="glass rounded-xl px-4 py-2 flex items-center gap-2.5">
+          <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 status-dot"></div>
+          <div>
+            <p class="text-[10px] text-slate-400">Próxima actualización</p>
+            <p class="text-[10px] font-semibold text-white" id="lbl-next-update">—</p>
+          </div>
         </div>
-        <div class="text-right">
-          <p class="text-xs font-bold text-white">3.2x</p>
-          <p class="text-[9px] text-slate-500">Impacto prom.</p>
+        <button onclick="runScraping()" id="btn-scrape-now" class="btn-primary px-4 py-2 rounded-xl text-white text-[10px] font-semibold cursor-pointer flex items-center gap-1.5 disabled:opacity-40" disabled>
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>
+          <span id="lbl-scrape-now">Actualizar ahora (1)</span>
+        </button>
+        <div class="text-right hidden sm:block">
+          <p class="text-xs font-bold text-white" id="mercado-avg-score">—</p>
+          <p class="text-[9px] text-slate-500" id="mercado-avg-score-label">Score ventas prom.</p>
         </div>
-        <div class="text-right">
-          <p class="text-xs font-bold gradient-text">Reels</p>
-          <p class="text-[9px] text-slate-500">Formato ganador</p>
+        <div class="text-right hidden sm:block">
+          <p class="text-xs font-bold text-white" id="mercado-posts-count">—</p>
+          <p class="text-[9px] text-slate-500">Posts analizados</p>
         </div>
-        <button class="btn-primary px-3 py-1.5 rounded-lg text-white text-[10px] font-medium cursor-pointer">+ Referente</button>
+        <div class="text-right hidden sm:block">
+          <p class="text-xs font-bold gradient-text" id="mercado-top-format">—</p>
+          <p class="text-[9px] text-slate-500">Formato top</p>
+        </div>
+        <a href="/referencias" class="glass glass-hover px-3 py-1.5 rounded-lg text-slate-300 text-[10px] font-medium cursor-pointer no-underline">Gestionar referentes</a>
       </div>
     </div>
 
@@ -187,396 +214,106 @@
       <button onclick="switchTab('global')" id="tab-global" class="tab-btn active pb-3 cursor-pointer">Vista Global</button>
       <button onclick="switchTab('ig')" id="tab-ig" class="tab-btn pb-3 cursor-pointer flex items-center gap-1.5">
         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-        Instagram <span class="text-[9px] bg-white/8 px-1.5 py-0.5 rounded text-slate-400">10</span>
+        Instagram <span class="text-[9px] bg-white/8 px-1.5 py-0.5 rounded text-slate-400" id="tab-ig-count">0</span>
       </button>
       <button onclick="switchTab('yt')" id="tab-yt" class="tab-btn pb-3 cursor-pointer flex items-center gap-1.5">
         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-        YouTube <span class="text-[9px] bg-white/8 px-1.5 py-0.5 rounded text-slate-400">5</span>
+        YouTube <span class="text-[9px] bg-white/8 px-1.5 py-0.5 rounded text-slate-400" id="tab-yt-count">0</span>
       </button>
     </div>
   </div>
 
   <!-- Tab panels -->
-  <div class="flex-1 overflow-hidden">
+  <div class="flex-1 overflow-hidden min-h-0">
 
     <!-- ====== VISTA GLOBAL ====== -->
-    <div id="panel-global" class="tab-panel active h-full flex overflow-hidden">
+    <div id="panel-global" class="tab-panel active h-full flex overflow-hidden min-h-0">
 
-      <!-- Left: Lista de referentes -->
-      <div class="w-72 flex-shrink-0 border-r border-white/5 overflow-y-auto">
-        <div class="px-4 py-3 border-b border-white/5">
-          <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold">Ranking por Fuerza</p>
-        </div>
-
-        <!-- IG referentes -->
-        <div class="px-3 py-2">
-          <p class="text-[9px] text-slate-600 px-2 mb-1 flex items-center gap-1.5"><svg class="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg> Instagram</p>
-
-          <!-- Ref 1 — Seleccionado -->
-          <div class="ref-row selected rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">AF</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-semibold text-white truncate">@alexfit_mx</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-high font-bold ml-1">8.3%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">284K seg.</p>
-                  <div class="flex-1 fuerza-bar" style="width:85%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ref 2 -->
-          <div class="ref-row rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-blue-500 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">NF</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-medium text-slate-300 truncate">@nutrifit.pro</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-high font-bold ml-1">7.1%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">521K seg.</p>
-                  <div class="flex-1 fuerza-bar" style="width:71%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ref 3 -->
-          <div class="ref-row rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">GP</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-medium text-slate-300 truncate">@gympepe_oficial</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-mid font-bold ml-1">5.8%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">98K seg.</p>
-                  <div class="flex-1 fuerza-bar" style="width:58%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Ref 4 -->
-          <div class="ref-row rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-rose-400 to-orange-400 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">MV</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-medium text-slate-300 truncate">@movimientovital</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-mid font-bold ml-1">4.9%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">1.2M seg.</p>
-                  <div class="flex-1 fuerza-bar" style="width:49%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Más referentes colapsados -->
-          <div class="ref-row rounded-lg px-3 py-2 mb-1 cursor-pointer pl-4 opacity-60">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-slate-700/60 flex items-center justify-center flex-shrink-0"><span class="text-[10px] text-slate-500">+6</span></div>
-              <p class="text-[11px] text-slate-500">6 referentes más de IG</p>
-            </div>
-          </div>
-
-          <!-- Divider YT -->
-          <p class="text-[9px] text-slate-600 px-2 mb-1 mt-3 flex items-center gap-1.5"><svg class="w-2.5 h-2.5 text-red-400" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg> YouTube</p>
-
-          <div class="ref-row rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">CF</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-medium text-slate-300 truncate">Ciencia y Fitness</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-high font-bold ml-1">9.1%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">1.8M subs.</p>
-                  <div class="flex-1 fuerza-bar" style="width:91%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="ref-row rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center flex-shrink-0"><span class="text-[10px] font-bold text-white">FH</span></div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between">
-                  <p class="text-[11px] font-medium text-slate-300 truncate">FitHabits</p>
-                  <span class="text-[9px] px-1.5 py-0.5 rounded score-mid font-bold ml-1">6.4%</span>
-                </div>
-                <div class="flex items-center gap-2 mt-0.5">
-                  <p class="text-[9px] text-slate-500">892K subs.</p>
-                  <div class="flex-1 fuerza-bar" style="width:64%"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="ref-row rounded-lg px-3 py-2 cursor-pointer pl-4 opacity-60">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-full bg-slate-700/60 flex items-center justify-center flex-shrink-0"><span class="text-[10px] text-slate-500">+3</span></div>
-              <p class="text-[11px] text-slate-500">3 canales más</p>
-            </div>
-          </div>
-        </div>
+    <!-- Estado vacío (sin scraping) -->
+    <div id="mercado-empty" class="hidden flex-1 flex flex-col items-center justify-center p-10 text-center">
+      <div class="w-14 h-14 rounded-2xl flex items-center justify-center mb-4" style="background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25)">
+        <svg class="w-7 h-7 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg>
       </div>
-
-      <!-- Right: Detalle del referente seleccionado -->
-      <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-        <!-- Referent profile header -->
-        <div class="glass rounded-2xl border border-white/5 p-5">
-          <div class="flex items-start gap-4">
-            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center flex-shrink-0 text-xl font-bold text-white">AF</div>
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-1">
-                <h2 class="text-base font-bold text-white">@alexfit_mx</h2>
-                <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Referente principal</span>
-                <span class="text-[9px] px-2 py-0.5 rounded bg-gradient-to-r from-violet-500/20 to-cyan-500/20 text-violet-300 border border-violet-500/25 font-semibold">Fuerza: 8.3%</span>
-              </div>
-              <p class="text-[11px] text-slate-400 mb-3">Fitness · Transformación · México · Publica 5–6x/semana · Mejor formato: Reels</p>
-              <!-- Stats row -->
-              <div class="grid grid-cols-5 gap-3">
-                <div class="text-center p-2 rounded-lg" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
-                  <p class="text-sm font-bold text-white">284K</p>
-                  <p class="text-[9px] text-slate-500">Seguidores</p>
-                </div>
-                <div class="text-center p-2 rounded-lg" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
-                  <p class="text-sm font-bold text-white">42.1K</p>
-                  <p class="text-[9px] text-slate-500">Vistas prom.</p>
-                </div>
-                <div class="text-center p-2 rounded-lg" style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)">
-                  <p class="text-sm font-bold gradient-text">8.3%</p>
-                  <p class="text-[9px] text-violet-400">Fuerza prom.</p>
-                </div>
-                <div class="text-center p-2 rounded-lg" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.18)">
-                  <p class="text-sm font-bold text-cyan-300">3.8x</p>
-                  <p class="text-[9px] text-cyan-500">Impacto prom.</p>
-                </div>
-                <div class="text-center p-2 rounded-lg" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">
-                  <p class="text-sm font-bold text-white">71%</p>
-                  <p class="text-[9px] text-slate-500">% Reels</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Explicación de métricas -->
-        <div class="grid grid-cols-2 gap-3">
-          <div class="rounded-xl p-3 flex items-start gap-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)">
-            <div class="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
-            </div>
-            <div>
-              <p class="text-[11px] font-semibold text-white">Fuerza de publicación</p>
-              <p class="text-[9px] text-slate-400 leading-relaxed mt-0.5">(Vistas + Comentarios) / Seguidores × 100<br/>Mide el impacto real en su audiencia</p>
-            </div>
-          </div>
-          <div class="rounded-xl p-3 flex items-start gap-3" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18)">
-            <div class="w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941"/></svg>
-            </div>
-            <div>
-              <p class="text-[11px] font-semibold text-white">Impacto relativo</p>
-              <p class="text-[9px] text-slate-400 leading-relaxed mt-0.5">Vistas del post / Vistas promedio del referente<br/>Identifica cuánto superó su propio promedio</p>
-            </div>
-          </div>
-        </div>
-
-        <!-- Top contenido para modelar -->
-        <div class="glass rounded-2xl border border-white/5 overflow-hidden">
-          <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-            <div class="flex items-center gap-2">
-              <svg class="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.499z"/></svg>
-              <h3 class="text-xs font-semibold text-white">Top contenido · Ideas para modelar</h3>
-            </div>
-            <div class="flex gap-1.5">
-              <button class="text-[9px] px-2 py-1 rounded-lg text-violet-400 cursor-pointer" style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25)">Reels</button>
-              <button class="text-[9px] px-2 py-1 rounded-lg text-slate-500 cursor-pointer glass">Carruseles</button>
-              <button class="text-[9px] px-2 py-1 rounded-lg text-slate-500 cursor-pointer glass">Historias</button>
-            </div>
-          </div>
-
-          <div class="p-5 space-y-3">
-
-            <!-- Post #1 — ESTRELLA -->
-            <div class="rounded-xl p-4 flex gap-4" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)">
-              <div class="content-thumb" style="background:linear-gradient(180deg,#1a0d2e,#0d1a2e);border:1px solid rgba(124,58,237,0.4)">
-                <div class="absolute inset-0 flex flex-col items-center justify-end p-1.5">
-                  <div class="w-5 h-5 rounded-full bg-violet-500/30 flex items-center justify-center mb-1"><svg class="w-2.5 h-2.5 text-violet-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                </div>
-                <div class="absolute top-1 left-1"><span class="text-[7px] px-1 py-0.5 rounded bg-amber-500/80 text-white font-bold">#1</span></div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <p class="text-xs font-semibold text-white leading-snug">"Hice esto cada mañana por 90 días y perdí 18kg — sin dietas extremas"</p>
-                    <p class="text-[9px] text-slate-500 mt-0.5">Reel · hace 3 semanas</p>
-                  </div>
-                  <div class="flex items-center gap-1 flex-shrink-0">
-                    <span class="text-[9px] px-2 py-1 rounded-lg font-bold glow-amber" style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.3);color:#FCD34D">⚡ 18.7%</span>
-                  </div>
-                </div>
-                <div class="grid grid-cols-4 gap-2 mb-3">
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)">
-                    <p class="text-xs font-bold text-white">158K</p>
-                    <p class="text-[8px] text-slate-500">Vistas</p>
-                  </div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)">
-                    <p class="text-xs font-bold text-white">2,341</p>
-                    <p class="text-[8px] text-slate-500">Comentarios</p>
-                  </div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(124,58,237,0.1)">
-                    <p class="text-xs font-bold gradient-text">18.7%</p>
-                    <p class="text-[8px] text-violet-400">Fuerza</p>
-                  </div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(6,182,212,0.08)">
-                    <p class="text-xs font-bold text-cyan-300">3.7x</p>
-                    <p class="text-[8px] text-cyan-500">Impacto</p>
-                  </div>
-                </div>
-                <!-- Insight para modelar -->
-                <div class="rounded-lg px-3 py-2 flex items-start gap-2" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
-                  <svg class="w-3 h-3 text-amber-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg>
-                  <p class="text-[9px] text-amber-300/80 leading-relaxed"><span class="font-semibold text-amber-300">Hook numérico + tiempo definido.</span> "X días/semanas" + resultado concreto genera alto engagement. Modelar para FitLife con testimonios de miembros reales.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Post #2 -->
-            <div class="rounded-xl p-4 flex gap-4" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07)">
-              <div class="content-thumb" style="background:linear-gradient(180deg,#0d1f1a,#0a0a0f);border:1px solid rgba(52,211,153,0.3)">
-                <div class="absolute inset-0 flex items-center justify-center"><svg class="w-5 h-5 text-emerald-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                <div class="absolute top-1 left-1"><span class="text-[7px] px-1 py-0.5 rounded bg-white/15 text-white font-bold">#2</span></div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <p class="text-xs font-semibold text-white leading-snug">"Lo que NADIE te dice sobre las proteínas — el mito que te está saboteando"</p>
-                    <p class="text-[9px] text-slate-500 mt-0.5">Reel · hace 5 semanas</p>
-                  </div>
-                  <span class="text-[9px] px-2 py-1 rounded-lg font-bold flex-shrink-0 score-high">12.4%</span>
-                </div>
-                <div class="grid grid-cols-4 gap-2 mb-3">
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)"><p class="text-xs font-bold text-white">93K</p><p class="text-[8px] text-slate-500">Vistas</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)"><p class="text-xs font-bold text-white">1,847</p><p class="text-[8px] text-slate-500">Comentarios</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(124,58,237,0.1)"><p class="text-xs font-bold gradient-text">12.4%</p><p class="text-[8px] text-violet-400">Fuerza</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(6,182,212,0.08)"><p class="text-xs font-bold text-cyan-300">2.2x</p><p class="text-[8px] text-cyan-500">Impacto</p></div>
-                </div>
-                <div class="rounded-lg px-3 py-2 flex items-start gap-2" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">
-                  <svg class="w-3 h-3 text-violet-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg>
-                  <p class="text-[9px] text-violet-300/80 leading-relaxed"><span class="font-semibold text-violet-300">"Lo que nadie te dice" + mito desmontado.</span> Alta curiosidad, baja resistencia. Funciona en fitness y en ventas. Adaptar a objeciones comunes de FitLife.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Post #3 -->
-            <div class="rounded-xl p-4 flex gap-4" style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.07)">
-              <div class="content-thumb" style="background:linear-gradient(180deg,#1a0d0d,#0a0a0f);border:1px solid rgba(244,63,94,0.3)">
-                <div class="absolute inset-0 flex items-center justify-center"><svg class="w-5 h-5 text-rose-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-                <div class="absolute top-1 left-1"><span class="text-[7px] px-1 py-0.5 rounded bg-white/15 text-white font-bold">#3</span></div>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="flex items-start justify-between gap-2 mb-2">
-                  <div>
-                    <p class="text-xs font-semibold text-white leading-snug">"Comparé 3 métodos de entrenamiento por 6 meses — esto fue lo que pasó"</p>
-                    <p class="text-[9px] text-slate-500 mt-0.5">Reel · hace 8 semanas</p>
-                  </div>
-                  <span class="text-[9px] px-2 py-1 rounded-lg font-bold flex-shrink-0 score-mid">9.6%</span>
-                </div>
-                <div class="grid grid-cols-4 gap-2 mb-3">
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)"><p class="text-xs font-bold text-white">71K</p><p class="text-[8px] text-slate-500">Vistas</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(255,255,255,0.04)"><p class="text-xs font-bold text-white">1,212</p><p class="text-[8px] text-slate-500">Comentarios</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(124,58,237,0.1)"><p class="text-xs font-bold gradient-text">9.6%</p><p class="text-[8px] text-violet-400">Fuerza</p></div>
-                  <div class="text-center rounded-lg py-1.5" style="background:rgba(6,182,212,0.08)"><p class="text-xs font-bold text-cyan-300">1.7x</p><p class="text-[8px] text-cyan-500">Impacto</p></div>
-                </div>
-                <div class="rounded-lg px-3 py-2 flex items-start gap-2" style="background:rgba(6,182,212,0.05);border:1px solid rgba(6,182,212,0.15)">
-                  <svg class="w-3 h-3 text-cyan-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18"/></svg>
-                  <p class="text-[9px] text-cyan-300/80 leading-relaxed"><span class="font-semibold text-cyan-300">Comparativa A vs B vs C + experimento personal.</span> Genera confianza y curiosidad. FitLife puede comparar tipos de membresía, rutinas o planes de nutrición.</p>
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <!-- Patrones detectados -->
-        <div class="glass rounded-2xl border border-white/5 p-5">
-          <div class="flex items-center gap-2 mb-4">
-            <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
-            <h3 class="text-xs font-semibold text-white">Patrones detectados por RIMA · @alexfit_mx</h3>
-          </div>
-          <div class="grid grid-cols-3 gap-3">
-            <div class="rounded-xl p-3" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18)">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm">🎯</span>
-                <p class="text-[10px] font-semibold text-amber-300">Hooks que funcionan</p>
-              </div>
-              <ul class="space-y-1">
-                <li class="text-[9px] text-slate-400">· Números + tiempo ("90 días")</li>
-                <li class="text-[9px] text-slate-400">· "Nadie te dice que..."</li>
-                <li class="text-[9px] text-slate-400">· Comparativas directas</li>
-                <li class="text-[9px] text-slate-400">· Resultado en el título</li>
-              </ul>
-            </div>
-            <div class="rounded-xl p-3" style="background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.18)">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm">📅</span>
-                <p class="text-[10px] font-semibold text-violet-300">Mejor momento</p>
-              </div>
-              <ul class="space-y-1">
-                <li class="text-[9px] text-slate-400">· Lunes 7–9 AM (activación)</li>
-                <li class="text-[9px] text-slate-400">· Miércoles 6–8 PM</li>
-                <li class="text-[9px] text-slate-400">· Sábado 10 AM (récord)</li>
-                <li class="text-[9px] text-slate-400">· Evitar domingos</li>
-              </ul>
-            </div>
-            <div class="rounded-xl p-3" style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18)">
-              <div class="flex items-center gap-2 mb-2">
-                <span class="text-sm">🎬</span>
-                <p class="text-[10px] font-semibold text-cyan-300">Formato ganador</p>
-              </div>
-              <ul class="space-y-1">
-                <li class="text-[9px] text-slate-400">· Reels 15–30 seg: 8.3%</li>
-                <li class="text-[9px] text-slate-400">· Carruseles edu: 5.1%</li>
-                <li class="text-[9px] text-slate-400">· Historias venta: 3.2%</li>
-                <li class="text-[9px] text-slate-400">· Fotos: 1.8% (evitar)</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
+      <p class="text-sm font-semibold text-white mb-2">Sin datos de mercado aún</p>
+      <p class="text-[11px] text-slate-500 max-w-md leading-relaxed mb-5" id="mercado-empty-msg">Configura tus referentes en la pestaña Referencias y pulsa «Actualizar ahora» aquí arriba para que el agente analice su contenido.</p>
+      <div class="flex gap-3">
+        <a href="/referencias" class="px-4 py-2 rounded-xl text-[11px] font-semibold text-slate-300 no-underline glass">Gestionar referentes</a>
+        <button onclick="runScraping()" class="px-4 py-2 rounded-xl text-[11px] font-semibold text-white cursor-pointer border-0 btn-primary">Actualizar ahora</button>
       </div>
     </div>
 
+    <!-- Vista con datos reales -->
+    <div id="mercado-live" class="hidden flex-1 flex overflow-hidden w-full min-h-0">
+      <div class="w-72 flex-shrink-0 border-r border-white/5 overflow-y-auto min-h-0">
+        <div class="px-4 py-3 border-b border-white/5">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold" id="ranking-title">Ranking ventas</p>
+            <div class="flex rounded-lg overflow-hidden text-[9px] border border-white/10">
+              <button type="button" id="rank-mode-ventas" onclick="setRankMode('ventas')" class="px-2 py-0.5 font-semibold bg-violet-500/25 text-violet-300">Ventas</button>
+              <button type="button" id="rank-mode-alcance" onclick="setRankMode('alcance')" class="px-2 py-0.5 font-medium text-slate-500">Alcance</button>
+            </div>
+          </div>
+        </div>
+        <div class="px-3 py-2" id="ranking-ig-list"></div>
+        <div class="px-3 py-2 border-t border-white/5" id="ranking-yt-note"></div>
+      </div>
+      <div class="flex-1 flex flex-col min-h-0 overflow-hidden p-5 gap-4 mercado-detail-pane">
+        <div class="glass rounded-2xl p-4 flex-shrink-0" id="mercado-detail-card"></div>
+        <div class="glass rounded-2xl p-4 flex-1 flex flex-col min-h-0 overflow-hidden">
+          <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold mb-3 flex-shrink-0">Análisis</p>
+          <div id="mercado-posts-list" class="mercado-posts-scroll space-y-2 pr-1"></div>
+          <p id="mercado-posts-empty" class="hidden text-[10px] text-slate-500 flex-shrink-0">Selecciona un referente del ranking para ver sus posts.</p>
+        </div>
+      </div>
+    </div>
+
+
     <!-- ====== IG TAB ====== -->
     <div id="panel-ig" class="tab-panel h-full overflow-y-auto px-6 py-5">
-      <div class="glass rounded-2xl border border-white/5 p-8 flex items-center justify-center">
-        <p class="text-slate-500 text-sm">Vista de tabla con todos los 10 perfiles de IG — próximamente</p>
-      </div>
+      <div class="glass rounded-2xl border border-white/5 overflow-hidden" id="panel-ig-content"></div>
     </div>
 
     <!-- ====== YT TAB ====== -->
     <div id="panel-yt" class="tab-panel h-full overflow-y-auto px-6 py-5">
-      <div class="glass rounded-2xl border border-white/5 p-8 flex items-center justify-center">
-        <p class="text-slate-500 text-sm">Vista de tabla con los 5 canales de YouTube — próximamente</p>
+      <div class="glass rounded-2xl border border-white/5 p-6 text-center text-slate-500 text-sm">
+        YouTube se habilitará cuando agregues canales en Referencias.
       </div>
     </div>
 
   </div>
 </main>
+
+<!-- Modal detalle post -->
+<div id="post-modal" class="modal-backdrop hidden" onclick="if(event.target===this)closePostModal()">
+  <div class="modal-panel p-5" role="dialog" aria-modal="true">
+    <div class="flex items-start justify-between gap-3 mb-4">
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold">Detalle del post</p>
+        <p class="text-sm font-semibold text-white mt-1" id="modal-owner">@referente</p>
+      </div>
+      <button type="button" onclick="closePostModal()" class="w-8 h-8 rounded-lg glass flex items-center justify-center cursor-pointer border-0 text-slate-400 hover:text-white">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="space-y-3 text-[11px]">
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-violet-400 font-semibold mb-1">Hook</p>
+        <p class="text-slate-200 leading-relaxed" id="modal-hook">—</p>
+      </div>
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Copy</p>
+        <p class="text-slate-300 leading-relaxed whitespace-pre-wrap" id="modal-copy">—</p>
+      </div>
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Descripción / formato</p>
+        <p class="text-slate-400 leading-relaxed" id="modal-desc">—</p>
+      </div>
+    </div>
+    <div class="flex gap-2 mt-5 pt-4 border-t border-white/5">
+      <a id="modal-link" href="#" target="_blank" rel="noopener noreferrer" class="text-[10px] text-sky-400 no-underline hover:text-sky-300">Ver en Instagram →</a>
+    </div>
+  </div>
+</div>
 
 <script>
 function switchTab(tab) {
@@ -585,6 +322,467 @@ function switchTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
 }
+
+function setTxt(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+
+function nextMondayLabel() {
+  const d = new Date();
+  const day = d.getDay();
+  const daysUntil = day === 0 ? 1 : day === 1 ? 7 : 8 - day;
+  const next = new Date(d);
+  next.setDate(d.getDate() + daysUntil);
+  next.setHours(6, 0, 0, 0);
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `Lunes ${next.getDate()} ${meses[next.getMonth()]} · 6:00 AM`;
+}
+
+function updateScrapeUI(profiles) {
+  setTxt('lbl-next-update', nextMondayLabel());
+  const igCount = (profiles.instagram || []).filter(p => (p.username || '').trim()).length;
+  const rem = (profiles.scraping || {}).manual_remaining ?? 0;
+  setTxt('lbl-scrape-now', `Actualizar ahora (${rem})`);
+  const btn = document.getElementById('btn-scrape-now');
+  if (btn) btn.disabled = rem <= 0 || igCount === 0;
+}
+
+async function runScraping() {
+  const btn = document.getElementById('btn-scrape-now');
+  const lbl = document.getElementById('lbl-scrape-now');
+  if (btn) btn.disabled = true;
+  if (lbl) lbl.textContent = 'Actualizando…';
+  try {
+    const res = await fetch('/api/referentes/scrape', { method: 'POST' });
+    const data = await res.json().catch(() => ({ detail: 'Error' }));
+    if (!res.ok) throw new Error(data.detail || res.statusText);
+    await loadMercado();
+    alert(`Análisis listo · ${data.posts_analyzed || 0} posts analizados`);
+  } catch (e) {
+    alert(e.message);
+    await loadMercado();
+  }
+}
+
+function fmtNum(n) { return n == null ? '—' : Number(n).toLocaleString('es'); }
+
+function fmtFuerza(f) {
+  if (f == null || f === '') return '—';
+  const pct = Number(f) * 100;
+  if (!Number.isFinite(pct)) return '—';
+  if (pct >= 9999) return '>9999%';
+  return pct.toFixed(1) + '%';
+}
+
+function fmtScoreVentas(v) {
+  if (v == null || v === '') return '—';
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toFixed(1) : '—';
+}
+
+let mercadoRankMode = 'ventas';
+
+function setRankMode(mode) {
+  mercadoRankMode = mode === 'alcance' ? 'alcance' : 'ventas';
+  const vBtn = document.getElementById('rank-mode-ventas');
+  const aBtn = document.getElementById('rank-mode-alcance');
+  const title = document.getElementById('ranking-title');
+  const lbl = document.getElementById('mercado-avg-score-label');
+  if (vBtn && aBtn) {
+    vBtn.className = 'px-2 py-0.5 font-semibold ' + (mercadoRankMode === 'ventas' ? 'bg-violet-500/25 text-violet-300' : 'text-slate-500');
+    aBtn.className = 'px-2 py-0.5 font-semibold ' + (mercadoRankMode === 'alcance' ? 'bg-sky-500/25 text-sky-300' : 'text-slate-500');
+  }
+  if (title) title.textContent = mercadoRankMode === 'ventas' ? 'Ranking ventas' : 'Ranking alcance';
+  if (lbl) lbl.textContent = mercadoRankMode === 'ventas' ? 'Score ventas prom.' : 'Fuerza prom.';
+  if (window._mercadoLatest && window._mercadoProfiles) {
+    renderMercado(window._mercadoLatest, window._mercadoProfiles);
+  }
+}
+
+function calcScoreVentas(p) {
+  const m = p.metrics || {};
+  const aj = p.analisis_json || {};
+  let modelN = 0;
+  if (p.modelabilidad != null && p.modelabilidad > 0) {
+    modelN = Math.max(0, Math.min(10, Number(p.modelabilidad))) / 10;
+  } else {
+    const cap = (p.caption || '').toLowerCase();
+    const ventasKw = ['comenta','comentá','dm','link en bio','agenda','cupos','oferta','compr','venta','cliente'];
+    modelN = ventasKw.some(k => cap.includes(k)) ? 0.55 : 0.35;
+  }
+  const conv = Math.min((m.ratio_conversacion || 0) / 5, 1);
+  const rel = Math.min((m.relevancia || 0) / 3, 1);
+  const fuerza = Math.max(m.fuerza || 0, 0);
+  const alcance = Math.min(Math.log1p(fuerza) / Math.log1p(100), 1);
+  let score = modelN * 0.35 + conv * 0.25 + rel * 0.20 + alcance * 0.10;
+  const enf = (aj.enfoque_contenido || '').toLowerCase();
+  if (enf.includes('venta')) score += 0.10;
+  const ang = (aj.tipo_angulo || '').toLowerCase();
+  if (ang === 'problema' || ang === 'solución' || ang === 'solucion') score += 0.05;
+  const cta = (aj.cta || '').trim().toLowerCase();
+  if (cta && !['sin cta explícito','sin cta','implícito: sígueme'].includes(cta)) score += 0.03;
+  return Math.round(Math.min(score, 1) * 1000) / 10;
+}
+
+function postScoreVentas(p) {
+  const sv = p.metrics && p.metrics.score_ventas;
+  return sv != null ? Number(sv) : calcScoreVentas(p);
+}
+
+function postRankValue(p) {
+  return mercadoRankMode === 'alcance'
+    ? ((p.metrics || {}).fuerza || 0)
+    : postScoreVentas(p);
+}
+
+function fmtRankValue(p) {
+  return mercadoRankMode === 'alcance'
+    ? fmtFuerza((p.metrics || {}).fuerza)
+    : fmtScoreVentas(postScoreVentas(p));
+}
+
+function fmtOwnerRankValue(v) {
+  return mercadoRankMode === 'alcance' ? fmtFuerza(v) : fmtScoreVentas(v);
+}
+
+function fmtVirality(rel) {
+  if (rel == null || rel === '') return '—';
+  const n = Number(rel);
+  if (!Number.isFinite(n)) return '—';
+  if (n >= 10) return n.toFixed(0) + 'x';
+  return n.toFixed(1) + 'x';
+}
+
+function fmtFormato(type) {
+  const t = (type || 'Video').replace('Video', 'Reel');
+  return t || 'Reel';
+}
+
+function enfoqueClass(enf) {
+  const e = (enf || '').toLowerCase();
+  if (e.includes('venta')) return 'badge-venta';
+  if (e.includes('conex')) return 'badge-conexion';
+  return 'badge-edu';
+}
+
+function enfoqueLabel(enf) {
+  const e = (enf || '').toLowerCase();
+  if (e.includes('venta')) return 'Ventas';
+  if (e.includes('conex')) return 'Conexión';
+  if (e.includes('educ')) return 'Educación';
+  return enf || 'Sin clasificar';
+}
+
+function profileInsightFor(owner, latest) {
+  const key = (owner || '').toLowerCase();
+  const stored = (latest && latest.profile_insights) || {};
+  if (stored[key]) return stored[key];
+  return buildProfileInsightsFallback(owner, window._mercadoRefPosts || [], latest && latest.profile_meta);
+}
+
+function buildProfileInsightsFallback(owner, allRefPosts, profileMeta) {
+  const key = (owner || '').toLowerCase();
+  const posts = allRefPosts.filter(p => (p.owner || '').toLowerCase() === key);
+  if (!posts.length) return null;
+  const meta = (profileMeta || {})[key] || {};
+  const top = [...posts].sort((a, b) => postScoreVentas(b) - postScoreVentas(a))[0];
+  const enfoques = {};
+  const mods = [];
+  posts.forEach(p => {
+    const e = (p.analisis_json || {}).enfoque_contenido || 'Sin clasificar';
+    enfoques[e] = (enfoques[e] || 0) + 1;
+    if (p.modelabilidad) mods.push(Number(p.modelabilidad));
+  });
+  const dom = Object.keys(enfoques).sort((a, b) => enfoques[b] - enfoques[a])[0] || '—';
+  const avgMod = mods.length ? (mods.reduce((s, n) => s + n, 0) / mods.length).toFixed(1) : '—';
+  const bio = (meta.biography || '').trim();
+  const name = meta.full_name || owner;
+  const fol = Number(meta.followers || 0);
+  let folS = fol ? fol.toLocaleString('es') : '?';
+  if (fol >= 1e6) folS = (fol / 1e6).toFixed(1).replace('.0', '') + 'M';
+  else if (fol >= 1e3) folS = (fol / 1e3).toFixed(1).replace('.0', '') + 'K';
+  const resumen = bio
+    ? `${name} · ${folS} seg. — ${bio.split('\n')[0].slice(0, 140)}`
+    : `${name} · ${folS} seguidores`;
+  return {
+    resumen,
+    para_nicho: `${posts.length} posts · Enfoque dominante: ${dom} · Model. media ${avgMod}/10 · Top ventas ${fmtScoreVentas(postScoreVentas(top))}.`,
+    considerar: (top.analisis_json || {}).como_adaptar || 'Adapta el hook y formato a tu oferta; no copies el tema literal si el nicho difiere.',
+  };
+}
+
+function renderPostAnalysisList(owner, posts) {
+  const list = document.getElementById('mercado-posts-list');
+  const empty = document.getElementById('mercado-posts-empty');
+  if (!list) return;
+  const sorted = [...posts].sort((a, b) => postRankValue(b) - postRankValue(a));
+  window._mercadoSelectedPosts = sorted;
+  if (!sorted.length) {
+    list.innerHTML = '';
+    if (empty) { empty.classList.remove('hidden'); empty.textContent = 'Sin posts para este referente.'; }
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+  list.innerHTML = sorted.map((p, i) => {
+    const m = p.metrics || {};
+    const aj = p.analisis_json || {};
+    const enf = aj.enfoque_contenido || '';
+    const hook = (aj.hook || p.caption || '').slice(0, 72);
+    const mod = p.modelabilidad != null ? `${p.modelabilidad}/10` : '—';
+    return `<div class="post-row rounded-xl px-3 py-2.5 flex items-center gap-3">
+      <div class="flex-1 min-w-0">
+        <p class="text-[11px] text-white font-medium truncate">${esc(hook)}${hook.length >= 72 ? '…' : ''}</p>
+        <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <span class="text-[9px] px-1.5 py-0.5 rounded font-medium ${enfoqueClass(enf)}">${esc(enfoqueLabel(enf))}</span>
+          <span class="text-[9px] text-slate-500">${esc(fmtFormato(p.type))}</span>
+          <span class="text-[9px] text-cyan-400">Vir. ${fmtVirality(m.relevancia)}</span>
+          <span class="text-[9px] text-violet-300">Fuerza ${fmtFuerza(m.fuerza)}</span>
+          <span class="text-[9px] text-emerald-400">Model. ${mod}</span>
+        </div>
+      </div>
+      <button type="button" onclick="openPostModal(${i})" class="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[9px] font-semibold text-white cursor-pointer border-0 btn-primary">Ver copy</button>
+    </div>`;
+  }).join('');
+}
+
+function openPostModal(idx) {
+  const posts = window._mercadoSelectedPosts || [];
+  const p = posts[idx];
+  if (!p) return;
+  const aj = p.analisis_json || {};
+  setTxt('modal-owner', '@' + (p.owner || ''));
+  setTxt('modal-hook', aj.hook || (p.caption || '').split('\n')[0] || '—');
+  setTxt('modal-copy', p.caption || '—');
+  const desc = [
+    aj.formato_descripcion,
+    aj.por_que_funciona,
+    aj.como_adaptar,
+  ].filter(Boolean).join('\n\n');
+  setTxt('modal-desc', desc || '—');
+  const link = document.getElementById('modal-link');
+  if (link) {
+    link.href = p.url || '#';
+    link.style.display = p.url ? 'inline' : 'none';
+  }
+  document.getElementById('post-modal').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePostModal() {
+  const el = document.getElementById('post-modal');
+  if (el) el.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePostModal(); });
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
+}
+
+function igProfileUrl(username) {
+  const u = (username || '').replace('@', '').trim();
+  return u ? `https://www.instagram.com/${encodeURIComponent(u)}/` : '#';
+}
+
+function proxiedPic(url) {
+  return url ? `/api/referentes/image?url=${encodeURIComponent(url)}` : '';
+}
+
+function profileMap(profiles) {
+  const m = {};
+  (profiles.instagram || []).forEach(p => {
+    const k = (p.username || '').replace('@', '').trim().toLowerCase();
+    if (k) m[k] = p;
+  });
+  return m;
+}
+
+function refAvatarHtml(username, profile, sizeClass, stopProp) {
+  const key = (username || '').toLowerCase();
+  const prof = profile || {};
+  const ig = esc(prof.ig_url || igProfileUrl(username));
+  const pic = prof.profile_pic_url;
+  const letters = avatarLetters(username);
+  const stop = stopProp ? ' onclick="event.stopPropagation()"' : '';
+  if (pic) {
+    return `<a href="${ig}" target="_blank" rel="noopener noreferrer" class="flex-shrink-0"${stop}>
+      <img src="${esc(proxiedPic(pic))}" alt="" class="${sizeClass} rounded-full object-cover ring-1 ring-white/10 bg-slate-800"
+        onerror="this.outerHTML='<a href=\\'${ig}\\' target=\\'_blank\\' rel=\\'noopener\\' class=\\'${sizeClass} rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center flex-shrink-0\\'><span class=\\'text-[10px] font-bold text-white\\'>${letters}</span></a>'"/>
+    </a>`;
+  }
+  return `<a href="${ig}" target="_blank" rel="noopener noreferrer" class="${sizeClass} rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center flex-shrink-0"${stop}><span class="text-[10px] font-bold text-white">${letters}</span></a>`;
+}
+
+function avatarLetters(u) {
+  const s = (u||'').replace('@','').trim();
+  return s ? s.slice(0,2).toUpperCase() : '?';
+}
+
+function aggregateByOwner(posts) {
+  const map = {};
+  posts.forEach(p => {
+    const o = p.owner || '?';
+    if (!map[o]) map[o] = { owner: o, posts: [], maxRank: 0, totalViews: 0 };
+    const rv = postRankValue(p);
+    map[o].posts.push(p);
+    map[o].maxRank = Math.max(map[o].maxRank, rv);
+    map[o].totalViews += p.views || 0;
+  });
+  return Object.values(map).sort((a,b) => b.maxRank - a.maxRank);
+}
+
+function renderMercado(latest, profiles) {
+  window._mercadoLatest = latest;
+  window._mercadoProfiles = profiles;
+  const allPosts = latest.posts || [];
+  const pmap = profileMap(profiles);
+  const allowed = new Set(Object.keys(pmap));
+  const refPosts = allowed.size
+    ? allPosts.filter(p => allowed.has((p.owner || '').toLowerCase()))
+    : allPosts;
+  const hasPosts = allPosts.length > 0;
+  const igRefs = (profiles.instagram || []).length;
+  const ytRefs = (profiles.youtube || []).length;
+
+  setTxt('mercado-ref-badge', `${igRefs + ytRefs} referentes`);
+  setTxt('tab-ig-count', String(igRefs));
+  setTxt('tab-yt-count', String(ytRefs));
+
+  updateScrapeUI(profiles);
+
+  const empty = document.getElementById('mercado-empty');
+  const live = document.getElementById('mercado-live');
+
+  if (!hasPosts) {
+    empty.classList.remove('hidden');
+    empty.classList.add('flex');
+    live.classList.add('hidden');
+    setTxt('mercado-subtitle', 'Sin análisis · configura referentes y actualiza');
+    setTxt('mercado-avg-score', '—');
+    setTxt('mercado-posts-count', '0');
+    setTxt('mercado-top-format', '—');
+    return;
+  }
+
+  empty.classList.add('hidden');
+  empty.classList.remove('flex');
+
+  if (hasPosts) {
+    live.classList.remove('hidden');
+    const owners = aggregateByOwner(refPosts);
+    const avgRank = refPosts.length
+      ? refPosts.reduce((s,p) => s + postRankValue(p), 0) / refPosts.length
+      : 0;
+    const topType = [...allPosts].sort((a,b) => postRankValue(b) - postRankValue(a))[0] || allPosts[0];
+    const updated = latest.timestamp ? new Date(latest.timestamp).toLocaleString('es') : 'reciente';
+
+    setTxt('mercado-subtitle', `Qué le funciona a quienes admiras · actualizado ${updated}`);
+    setTxt('mercado-avg-score', mercadoRankMode === 'alcance' ? fmtFuerza(avgRank) : fmtScoreVentas(avgRank));
+    setTxt('mercado-posts-count', String(allPosts.length));
+    setTxt('mercado-top-format', (topType.type || 'Reel').replace('Video','Reel'));
+
+    const list = document.getElementById('ranking-ig-list');
+    list.innerHTML = owners.slice(0, 8).map((o, i) => {
+      const topR = owners[0]?.maxRank || 1;
+      const pct = Math.min(100, Math.round((o.maxRank / topR) * 100));
+      const sel = i === 0 ? ' selected' : '';
+      const prof = pmap[(o.owner || '').toLowerCase()] || {};
+      const ig = esc(prof.ig_url || igProfileUrl(o.owner));
+      return `<div class="ref-row${sel} rounded-lg px-3 py-2.5 mb-1 cursor-pointer pl-4" data-owner="${esc(o.owner)}" onclick="selectOwner('${esc(o.owner)}')">
+        <div class="flex items-center gap-2.5">
+          ${refAvatarHtml(o.owner, prof, 'w-8 h-8', true)}
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <a href="${ig}" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-white truncate hover:text-sky-300 no-underline" onclick="event.stopPropagation()">@${esc(o.owner)}</a>
+              <span class="text-[9px] px-1.5 py-0.5 rounded score-high font-bold ml-1">${fmtOwnerRankValue(o.maxRank)}</span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <p class="text-[9px] text-slate-500">${o.posts.length} posts</p>
+              <div class="flex-1 fuerza-bar" style="width:${pct}%"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    window._mercadoPosts = allPosts;
+    window._mercadoRefPosts = refPosts;
+    window._mercadoOwners = owners;
+    window._mercadoProfileMap = pmap;
+    if (owners.length) selectOwner(owners[0].owner);
+    else {
+      document.getElementById('mercado-detail-card').innerHTML = '<p class="text-[10px] text-slate-500">Selecciona un referente del ranking</p>';
+      renderPostAnalysisList('', []);
+    }
+
+    document.getElementById('panel-ig-content').innerHTML = `<table class="w-full text-[11px]"><thead><tr class="text-slate-500 text-left"><th class="p-3">Cuenta</th><th class="p-3">Posts</th><th class="p-3">${mercadoRankMode === 'ventas' ? 'Score ventas máx' : 'Fuerza máx'}</th><th class="p-3">Vistas tot.</th></tr></thead><tbody>${
+      owners.map(o => {
+        const prof = pmap[(o.owner || '').toLowerCase()] || {};
+        const ig = esc(prof.ig_url || igProfileUrl(o.owner));
+        return `<tr style="border-top:1px solid rgba(255,255,255,0.06)"><td class="p-3"><div class="flex items-center gap-2">${refAvatarHtml(o.owner, prof, 'w-7 h-7', true)}<a href="${ig}" target="_blank" rel="noopener noreferrer" class="text-white hover:text-sky-300 no-underline">@${esc(o.owner)}</a></div></td><td class="p-3">${o.posts.length}</td><td class="p-3 text-violet-300">${fmtOwnerRankValue(o.maxRank)}</td><td class="p-3">${fmtNum(o.totalViews)}</td></tr>`;
+      }).join('')
+    }</tbody></table>`;
+  } else {
+    live.classList.remove('hidden');
+    document.getElementById('ranking-ig-list').innerHTML = '<p class="text-[10px] text-slate-500 px-2">Sin posts scrapeados</p>';
+    setTxt('mercado-subtitle', 'Sin datos · configura referentes y actualiza');
+    setTxt('mercado-posts-count', '0');
+  }
+}
+
+function selectOwner(owner) {
+  if (!owner || !window._mercadoRefPosts) return;
+  document.querySelectorAll('.ref-row').forEach(row => {
+    row.classList.toggle('selected', row.dataset.owner === owner);
+  });
+  const posts = window._mercadoRefPosts.filter(p => p.owner === owner);
+  const best = [...posts].sort((a, b) => postScoreVentas(b) - postScoreVentas(a))[0];
+  if (!posts.length) return;
+  const prof = (window._mercadoProfileMap || {})[(owner || '').toLowerCase()] || {};
+  const ig = prof.ig_url || igProfileUrl(owner);
+  const insight = profileInsightFor(owner, window._mercadoLatest) || {};
+  const avgMod = posts.filter(p => p.modelabilidad).length
+    ? (posts.reduce((s, p) => s + (Number(p.modelabilidad) || 0), 0) / posts.filter(p => p.modelabilidad).length).toFixed(1)
+    : '—';
+  document.getElementById('mercado-detail-card').innerHTML = `
+    <div class="flex items-start gap-3 mb-4 pb-4 border-b border-white/5">
+      ${refAvatarHtml(owner, prof, 'w-11 h-11', false)}
+      <div class="flex-1 min-w-0">
+        <a href="${esc(ig)}" target="_blank" rel="noopener noreferrer" class="text-sm font-semibold text-white hover:text-sky-300 no-underline">@${esc(owner)}</a>
+        <p class="text-[10px] text-slate-500 mt-1">${posts.length} posts · Score ventas top ${fmtScoreVentas(postScoreVentas(best))} · Model. media ${avgMod}/10</p>
+      </div>
+    </div>
+    <div class="space-y-3">
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold mb-1">Resumen del perfil</p>
+        <p class="text-[11px] text-slate-300 leading-relaxed">${esc(insight.resumen || 'Sin bio disponible — revisa sus posts para entender el ángulo.')}</p>
+      </div>
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-violet-400/80 font-semibold mb-1">Para nuestro nicho</p>
+        <p class="text-[11px] text-slate-300 leading-relaxed">${esc(insight.para_nicho || '')}</p>
+      </div>
+      <div class="rounded-xl px-3 py-2.5" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">
+        <p class="text-[9px] uppercase tracking-widest text-amber-400/90 font-semibold mb-1">Qué considerar al modelar</p>
+        <p class="text-[10px] text-slate-400 leading-relaxed">${esc(insight.considerar || '')}</p>
+      </div>
+    </div>`;
+  renderPostAnalysisList(owner, posts);
+}
+
+async function loadMercado() {
+  try {
+    const [latestRes, profRes] = await Promise.all([
+      fetch('/api/market-research/latest'),
+      fetch('/api/referentes/profiles'),
+    ]);
+    const latest = latestRes.ok ? await latestRes.json() : {};
+    const profiles = profRes.ok ? await profRes.json() : { instagram: [], youtube: [], scraping: { manual_remaining: 0 } };
+    renderMercado(latest, profiles);
+  } catch (e) {
+    setTxt('mercado-subtitle', 'Error al cargar: ' + e.message);
+  }
+}
+
+loadMercado();
 </script>
 </body>
 </html>

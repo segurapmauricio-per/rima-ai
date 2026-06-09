@@ -41,7 +41,11 @@ class CarouselCopyAgent:
             if p.get("type", "").lower() in ("sidecar", "carousel", "image")
             and p.get("metrics", {}).get("fuerza", 0) > 0
         ]
-        carousels.sort(key=lambda p: p.get("metrics", {}).get("engagement_score", 0), reverse=True)
+        carousels.sort(
+            key=lambda p: p.get("metrics", {}).get("score_ventas")
+            or p.get("metrics", {}).get("engagement_score", 0),
+            reverse=True,
+        )
 
         topic = carousel_slot.get("topic", "")
         carousel_type = carousel_slot.get("carousel_type", "informativo")

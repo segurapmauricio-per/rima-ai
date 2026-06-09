@@ -1,5 +1,5 @@
-﻿from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -15,11 +15,12 @@ import hashlib
 import uuid
 import calendar as cal_module
 import re
+import urllib.request
 from datetime import datetime
 
 from core.auth import (
     verify_login, create_token, require_auth, get_current_user, COOKIE_NAME,
-    get_or_create_google_user,
+    get_or_create_google_user, decode_token,
 )
 
 from dotenv import load_dotenv
@@ -44,7 +45,15 @@ from agents.weekly.agent import weekly_agent
 from core.client_store import (
     save_brief, load_brief, load_memory, update_memory,
     ensure_client_dirs, load_weekly_state, save_weekly_state,
+    load_latest_market_research, clear_market_research,
 )
+from core.referentes_store import (
+    get_profiles, add_profile, update_profile, delete_profile,
+    consume_manual_scrape, reset_manual_scrape_after_weekly,
+    get_user_brand, set_user_brand, get_user_plan, cliente_id_from_brand,
+    active_ig_usernames, sync_ig_profiles_from_meta,
+)
+from core.plan_limits import get_ref_limits, normalize_plan, MANUAL_SCRAPE_CREDITS
 
 app = FastAPI(title="RIMA AI", description="Marketing AI para LATAM")
 
@@ -79,9 +88,28 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # Persistencia local en JSON
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+
+ENFOQUE_RECOMENDADO = {"ventas": 60, "educacion": 30, "conexion": 10}
+ENFOQUE_LEGACY = {"ventas": 70, "educacion": 20, "conexion": 10}
+
+
+def normalize_enfoque_default(enfoque: Optional[dict] = None) -> dict:
+    """Devuelve el enfoque guardado o el recomendado (60/30/10). Migra el legacy 70/20/10."""
+    if not enfoque:
+        return dict(ENFOQUE_RECOMENDADO)
+    try:
+        v = int(enfoque.get("ventas", ENFOQUE_RECOMENDADO["ventas"]))
+        e = int(enfoque.get("educacion", ENFOQUE_RECOMENDADO["educacion"]))
+        c = int(enfoque.get("conexion", ENFOQUE_RECOMENDADO["conexion"]))
+    except (TypeError, ValueError):
+        return dict(ENFOQUE_RECOMENDADO)
+    if v == ENFOQUE_LEGACY["ventas"] and e == ENFOQUE_LEGACY["educacion"] and c == ENFOQUE_LEGACY["conexion"]:
+        return dict(ENFOQUE_RECOMENDADO)
+    return {"ventas": v, "educacion": e, "conexion": c}
+
 
 def load_data() -> dict:
     DATA_FILE.parent.mkdir(exist_ok=True)
@@ -98,19 +126,19 @@ def save_data(data: dict):
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # CSS compartido inyectado en <head>
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
-SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;height:100vh;background:rgba(15,15,25,0.97);border-right:1px solid rgba(255,255,255,0.07);overflow:hidden">
-  <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px">
+SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;height:100%;min-height:0;align-self:stretch;background:rgba(15,15,25,0.97);border-right:1px solid rgba(255,255,255,0.07);overflow:hidden">
+  <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;flex-shrink:0">
     <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#6D28D9);display:flex;align-items:center;justify-content:center;flex-shrink:0">
       <svg style="width:16px;height:16px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
     </div>
     <div><p style="font-size:15px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0">RIMA</p>
     <p style="font-size:9px;color:#475569;margin:0">Marketing AI · LATAM</p></div>
   </div>
-  <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06)">
+  <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div style="width:34px;height:34px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#7C3AED,#06B6D4);flex-shrink:0">
         <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb923c,#fbbf24);display:flex;align-items:center;justify-content:center">
@@ -126,16 +154,32 @@ SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;fl
       <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p style="font-size:11px;font-weight:700;color:#34D399;margin:0">$18K</p><p style="font-size:8px;color:#475569;margin:0">Ventas</p></div>
     </div>
   </div>
-  <nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>
-  <div style="padding:10px 14px;border-top:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:8px">
-    <div style="width:26px;height:26px;border-radius:50%;padding:1.5px;background:linear-gradient(135deg,#7C3AED,#06B6D4);flex-shrink:0">
-      <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb923c,#fbbf24);display:flex;align-items:center;justify-content:center">
-        <span style="font-size:9px;font-weight:700;color:#fff">FL</span>
-      </div>
+  <nav id="rima-nav" style="flex:1 1 auto;min-height:0;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>
+  <div id="rima-user-bar" style="position:relative;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0">
+    <div style="display:flex;align-items:center;gap:6px">
+      <button type="button" id="rima-user-trigger" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;transition:background .15s">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>
+        </div>
+        <div style="flex:1;min-width:0">
+          <p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>
+          <p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">Plan —</p>
+        </div>
+        <svg id="rima-user-chevron" style="width:14px;height:14px;color:#475569;flex-shrink:0;transition:transform .15s" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15"/></svg>
+      </button>
+      <button type="button" id="rima-user-settings" title="Cerrar sesión" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s">
+        <svg style="width:14px;height:14px;color:#94A3B8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      </button>
     </div>
-    <div style="flex:1;min-width:0">
-      <p id="rima-brand-footer" style="font-size:11px;font-weight:600;color:#CBD5E1;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">FitLife Studio</p>
-      <div style="display:flex;align-items:center;gap:4px"><div style="width:5px;height:5px;border-radius:50%;background:#34D399"></div><p style="font-size:9px;color:#475569;margin:0">Plan Pro</p></div>
+    <div id="rima-user-menu" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:#14141F;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px;box-shadow:0 -8px 32px rgba(0,0,0,0.45);z-index:200">
+      <div style="padding:8px 10px 6px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:4px">
+        <p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>
+        <p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">—</p>
+      </div>
+      <a href="/auth/logout" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:11px;color:#F87171;text-decoration:none;transition:background .12s">
+        <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
+        Cerrar sesión
+      </a>
     </div>
   </div>
 </aside>"""
@@ -145,11 +189,23 @@ SHARED_CSS = """
   /* Layout base */
   html { zoom: 1.1; }
   body { display:flex !important; height:calc(100vh / 1.1) !important; overflow:hidden !important; font-size: 13px !important; }
-  #rima-sidebar { flex-shrink:0 !important; width:240px !important; min-width:240px !important; }
+  #rima-sidebar { flex-shrink:0 !important; width:240px !important; min-width:240px !important;
+    display:flex !important; flex-direction:column !important; height:100% !important; min-height:0 !important; align-self:stretch !important; overflow:hidden !important; }
+  #rima-nav { flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; }
+  #rima-user-bar { flex-shrink:0 !important; z-index:50 !important; background:rgba(15,15,25,0.97) !important; font-size:11px !important; }
+  #rima-user-name { font-size:11px !important; font-weight:600 !important; color:#E2E8F0 !important; }
+  #rima-user-plan { font-size:10px !important; color:#64748B !important; }
+  #rima-user-initials { font-size:11px !important; font-weight:700 !important; }
+  #rima-user-menu-email { font-size:11px !important; }
+  #rima-user-menu-plan { font-size:10px !important; }
+  #rima-user-menu a { font-size:11px !important; }
   body > main, body > .flex-1 { flex:1 !important; min-width:0 !important; min-height:0 !important; overflow:hidden !important; display:flex !important; flex-direction:column !important; }
   main > div[class*="overflow-y-auto"], main > .flex-1 { flex:1 !important; min-height:0 !important; overflow-y:auto !important; }
   aside nav span { font-size: 11px !important; }
-  aside p, aside .text-\\[9px\\], aside .text-\\[10px\\] { font-size: 9px !important; }
+  #rima-nav p { font-size: 9px !important; }
+  #rima-sidebar > div:not(#rima-user-bar) p { font-size: 9px !important; }
+  #rima-brand-name { font-size: 12px !important; font-weight: 600 !important; }
+  #rima-brand-handle { font-size: 10px !important; }
   input, textarea, select { font-size: 12px !important; font-family: 'Inter', sans-serif !important; }
   button { font-family: 'Inter', sans-serif !important; }
 
@@ -168,12 +224,19 @@ SHARED_CSS = """
   }
   #rima-toast.show { transform: translateY(0); opacity: 1; }
   #rima-toast.error { background: linear-gradient(135deg,#DC2626,#991B1B); border-color: rgba(220,38,38,0.5); box-shadow: 0 8px 32px rgba(220,38,38,0.35); }
+
+  /* User bar (footer sidebar) */
+  #rima-user-trigger:hover { background: rgba(255,255,255,0.05) !important; }
+  #rima-user-settings:hover { background: rgba(255,255,255,0.08) !important; border-color: rgba(124,58,237,0.3) !important; }
+  #rima-user-menu.open { display: block !important; }
+  #rima-user-menu a:hover { background: rgba(255,255,255,0.06); }
+  #rima-user-bar.menu-open #rima-user-chevron { transform: rotate(180deg); }
 </style>
 """
 
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # JS universal inyectado al final del <body>
-# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
 SHARED_JS = """
 <div id="rima-toast"></div>
@@ -181,9 +244,9 @@ SHARED_JS = """
 (function() {
   var currentPath = window.location.pathname;
 
-  // â”€â”€ Sidebar estandarizado (reemplaza el de cada pÃ¡gina) â”€â”€
+  // â"€â"€ Sidebar estandarizado (reemplaza el de cada pÃ¡gina) â"€â"€
   var NAV_ITEMS = [
-    { label:'Dashboard',             href:'/',             group:'COMENCEMOS', color:'violet',  icon:'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z' },
+    { label:'Dashboard',             href:'/home',         group:'COMENCEMOS', color:'violet',  icon:'M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z' },
     { label:'Calendario',            href:'/calendario',   group:'COMENCEMOS', color:'violet',  icon:'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' },
     { label:'Contenido',             href:'/contenido',    group:'COMENCEMOS', color:'pink',    icon:'M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z' },
     { label:'Estudio de mercado',    href:'/mercado',      group:'COMENCEMOS', color:'sky',     icon:'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z' },
@@ -321,10 +384,11 @@ SHARED_JS = """
     return sidebar;
   }
 
-  // Poblar el nav del sidebar (ya inyectado en HTML por Python)
+  // Poblar el nav del sidebar (Python ya lo inyecta en serve_html — no duplicar)
   function initSidebar() {
     var nav = document.getElementById('rima-nav');
     if (!nav) return;
+    if (nav.dataset.rimaBuilt === '1' || nav.children.length > 0) return;
 
     var groups = {}, groupOrder = [];
     NAV_ITEMS.forEach(function(item) {
@@ -344,6 +408,7 @@ SHARED_JS = """
       section.appendChild(list);
       nav.appendChild(section);
     });
+    nav.dataset.rimaBuilt = '1';
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initSidebar);
@@ -351,15 +416,15 @@ SHARED_JS = """
     initSidebar();
   }
 
-  // â”€â”€ Toast helper â”€â”€
+  // â"€â"€ Toast helper â"€â"€
   window.rimaToast = function(msg, type) {
     var t = document.getElementById('rima-toast');
-    t.textContent = (type === 'error' ? 'âœ—  ' : 'âœ“  ') + msg;
+    t.textContent = (type === 'error' ? 'âœ—  ' : 'âœ"  ') + msg;
     t.className = type === 'error' ? 'error show' : 'show';
     setTimeout(function() { t.className = ''; }, 3000);
   };
 
-  // â”€â”€ Guardar datos de marca â”€â”€
+  // â"€â"€ Guardar datos de marca â"€â"€
   // Recoge TODOS los inputs de la pÃ¡gina usando label+placeholder como clave
   function collectAllInputs() {
     var data = {};
@@ -373,7 +438,7 @@ SHARED_JS = """
       var lbl = fg.querySelector('.field-label');
       var inp = fg.querySelector('input,textarea,select');
       if (lbl && inp && inp.value) {
-        var key = (lbl.textContent || '').trim().replace(/[^a-zA-ZÃ€-É0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_').slice(0,40);
+        var key = (lbl.textContent || '').trim().replace(/[^a-zA-Z0-9 ]/g,'').trim().toLowerCase().replace(/ +/g,'_').slice(0,40);
         if (key) data[key] = inp.value;
       }
     });
@@ -406,7 +471,7 @@ SHARED_JS = """
     await saveBrand();
   };
 
-  // â”€â”€ Cargar datos de marca en formulario â”€â”€
+  // â"€â"€ Cargar datos de marca en formulario â"€â"€
   async function loadBrand() {
     try {
       var r = await fetch('/api/brand');
@@ -422,7 +487,7 @@ SHARED_JS = """
     } catch(e) {}
   }
 
-  // â”€â”€ Credenciales â”€â”€
+  // â"€â"€ Credenciales â"€â"€
   async function saveCredentials() {
     var data = {};
     document.querySelectorAll('.cred-input, input[data-cred], input[id*="cred"], input[id*="token"], input[id*="bot"], input[id*="telegram"], input[id*="instagram"], input[id*="meta"], input[id*="api"]').forEach(function(el) {
@@ -457,26 +522,96 @@ SHARED_JS = """
     } catch(e) {}
   }
 
-  // â”€â”€ Perfil de negocio (sidebar) â”€â”€
+  var PLAN_LABELS = { basico: 'Basic', pro: 'Pro', max: 'Max', admin: 'Admin' };
+
+  function userInitials(name, email) {
+    var n = (name || '').trim();
+    if (n && n.indexOf('@') < 0) {
+      return n.split(/\\s+/).filter(Boolean).map(function(w){ return w[0] || ''; }).join('').slice(0, 2).toUpperCase();
+    }
+    var e = (email || '').split('@')[0] || '?';
+    return e.slice(0, 2).toUpperCase();
+  }
+
+  function setUserBarText(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
+  function applyUserSession(u) {
+    if (!u) return;
+    var email = u.email || u.sub || '';
+    var name = u.name || email.split('@')[0] || 'Usuario';
+    var planKey = (u.plan || 'pro').toLowerCase();
+    var planLabel = PLAN_LABELS[planKey] || planKey;
+    var initials = u.initials || userInitials(name, email);
+
+    setUserBarText('rima-user-initials', initials);
+    setUserBarText('rima-user-name', name);
+    setUserBarText('rima-user-plan', planLabel);
+    setUserBarText('rima-user-menu-email', email);
+    setUserBarText('rima-user-menu-plan', planLabel);
+  }
+
+  function initUserMenu() {
+    var bar = document.getElementById('rima-user-bar');
+    var menu = document.getElementById('rima-user-menu');
+    var trigger = document.getElementById('rima-user-trigger');
+    var settings = document.getElementById('rima-user-settings');
+    if (!bar || !menu) return;
+
+    function toggleMenu(force) {
+      var open = force !== undefined ? force : !menu.classList.contains('open');
+      menu.classList.toggle('open', open);
+      bar.classList.toggle('menu-open', open);
+    }
+
+    if (trigger) {
+      trigger.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleMenu();
+      });
+    }
+    if (settings) {
+      settings.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleMenu();
+      });
+    }
+    document.addEventListener('click', function() { toggleMenu(false); });
+    menu.addEventListener('click', function(e) { e.stopPropagation(); });
+  }
+
+  async function loadUserSession() {
+    if (window.RIMA_USER) {
+      applyUserSession(window.RIMA_USER);
+      return;
+    }
+    try {
+      var r = await fetch('/auth/me', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      applyUserSession(await r.json());
+    } catch(e) {}
+  }
+
+  // Perfil de negocio (parte superior del sidebar)
   async function loadProfile() {
     try {
       var r = await fetch('/api/brand');
       if (!r.ok) return;
       var d = await r.json();
-      if (d.brand_name) {
-        document.querySelectorAll('aside p.font-semibold, aside .font-semibold').forEach(function(el) {
-          if (el.textContent.includes('FitLife') || el.textContent.includes('Studio')) el.textContent = d.brand_name;
-        });
-        // KPI sidebar initials
-        document.querySelectorAll('aside span.font-bold.text-white').forEach(function(el) {
-          var initials = d.brand_name.split(' ').map(function(w){return w[0]||'';}).join('').slice(0,2).toUpperCase();
-          if (el.textContent === 'FL') el.textContent = initials;
-        });
+      var brandName = d.brand_name || '';
+      var handle = d.brand_ig || d.ig_username || '';
+      if (brandName) {
+        setUserBarText('rima-brand-name', brandName);
+        var ini = userInitials(brandName, '');
+        setUserBarText('rima-initials', ini);
       }
+      if (handle) setUserBarText('rima-brand-handle', handle.indexOf('@') === 0 ? handle : '@' + handle);
     } catch(e) {}
   }
 
-  // â”€â”€ Wiring de botones "Guardar" â”€â”€
+  // â"€â"€ Wiring de botones "Guardar" â"€â"€
   document.querySelectorAll('button').forEach(function(btn) {
     var txt = btn.textContent.trim().toLowerCase();
 
@@ -499,20 +634,18 @@ SHARED_JS = """
     }
   });
 
-  // â”€â”€ Cargar datos al iniciar â”€â”€
-  window.addEventListener('DOMContentLoaded', function() {
-    var path = window.location.pathname;
-    if (path === '/credenciales') { loadCredentials(); }
-    else { loadBrand(); loadProfile(); }
-  });
-  // tambiÃ©n si el DOM ya cargÃ³
-  if (document.readyState !== 'loading') {
+  // Cargar datos al iniciar
+  function bootSidebar() {
+    initUserMenu();
+    loadUserSession();
     var path = window.location.pathname;
     if (path === '/credenciales') { loadCredentials(); }
     else { loadBrand(); loadProfile(); }
   }
+  window.addEventListener('DOMContentLoaded', bootSidebar);
+  if (document.readyState !== 'loading') { bootSidebar(); }
 
-  // â”€â”€ Modal "Generar todo" â”€â”€
+  // â"€â"€ Modal "Generar todo" â"€â"€
   function generarTodo() {
     var modal = document.getElementById('rima-modal');
     if (modal) { modal.style.display = 'flex'; return; }
@@ -600,7 +733,7 @@ SHARED_JS = """
 
 
 NAV_ITEMS_PY = [
-    ("Dashboard",            "/",             "COMENCEMOS", "violet",  "M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"),
+    ("Dashboard",            "/home",         "COMENCEMOS", "violet",  "M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"),
     ("Calendario",           "/calendario",   "COMENCEMOS", "violet",  "M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"),
     ("Contenido",            "/contenido",    "COMENCEMOS", "pink",    "M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"),
     ("Estudio de mercado",   "/mercado",      "COMENCEMOS", "sky",     "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"),
@@ -659,7 +792,98 @@ def _build_nav_html(current_path: str) -> str:
     return html
 
 
-def serve_html(filename: str) -> HTMLResponse:
+PLAN_DISPLAY = {"basico": "Basic", "pro": "Pro", "max": "Max", "admin": "Admin"}
+
+
+def _user_initials(name: str, email: str = "") -> str:
+    n = (name or "").strip()
+    if n and "@" not in n:
+        parts = [p for p in n.split() if p]
+        return "".join(p[0] for p in parts[:2]).upper()[:2] or "?"
+    local = (email or "").split("@")[0] or "?"
+    return local[:2].upper()
+
+
+def _session_from_request(request: Optional[Request]) -> Optional[dict]:
+    if not request:
+        return None
+    token = request.cookies.get(COOKIE_NAME)
+    if not token:
+        return None
+    payload = decode_token(token)
+    if not payload:
+        return None
+
+    email = payload.get("sub", "")
+    role = payload.get("role", "user")
+    data = load_data()
+
+    if role == "admin":
+        brand = get_user_brand(data, email)
+        plan = normalize_plan(brand.get("plan", "max"))
+        name = payload.get("name", "Admin")
+    else:
+        rec = data.get("users", {}).get(email, {})
+        plan = get_user_plan(data, email)
+        name = rec.get("name", payload.get("name", email.split("@")[0] if email else "Usuario"))
+
+    return {
+        "email": email,
+        "sub": email,
+        "name": name,
+        "plan": plan,
+        "initials": _user_initials(name, email),
+    }
+
+
+def _apply_session_to_sidebar(sidebar: str, session: dict) -> str:
+    plan_label = PLAN_DISPLAY.get(session.get("plan", "pro"), session.get("plan", "pro"))
+    name = session.get("name", "Usuario")
+    initials = session.get("initials", "?")
+    email = session.get("email", "")
+    sidebar = sidebar.replace(
+        '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>',
+        f'<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">{initials}</span>',
+    )
+    sidebar = sidebar.replace(
+        '<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>',
+        f'<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">{name}</p>',
+    )
+    sidebar = sidebar.replace(
+        '<p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">Plan —</p>',
+        f'<p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">{plan_label}</p>',
+    )
+    sidebar = sidebar.replace(
+        '<p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>',
+        f'<p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{email}</p>',
+    )
+    sidebar = sidebar.replace(
+        '<p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">—</p>',
+        f'<p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">{plan_label}</p>',
+    )
+    return sidebar
+
+
+def _user_bootstrap_script(session: dict) -> str:
+    payload = json.dumps(session, ensure_ascii=False)
+    return (
+        f"<script>window.RIMA_USER={payload};</script>\n"
+        "<script>\n"
+        "(function(){var u=window.RIMA_USER;if(!u)return;"
+        "function s(id,v){var e=document.getElementById(id);if(e)e.textContent=v;}"
+        "var plans={basico:'Basic',pro:'Pro',max:'Max',admin:'Admin'};"
+        "var plan=plans[(u.plan||'pro').toLowerCase()]||u.plan;"
+        "s('rima-user-initials',u.initials||'?');"
+        "s('rima-user-name',u.name||'Usuario');"
+        "s('rima-user-plan',plan);"
+        "s('rima-user-menu-email',u.email||'');"
+        "s('rima-user-menu-plan',plan);"
+        "})();\n"
+        "</script>\n"
+    )
+
+
+def serve_html(filename: str, request: Optional[Request] = None) -> HTMLResponse:
     import re as _re
     path = DASHBOARD / filename
     if not path.exists():
@@ -668,140 +892,189 @@ def serve_html(filename: str) -> HTMLResponse:
 
     # Determinar path activo para resaltar nav item
     route_map = {
-        "rima-home.html": "/", "rima-calenadrio.html": "/calendario",
+        "rima-home.html": "/home", "rima-calenadrio.html": "/calendario",
         "rima-contenido.html": "/contenido", "rima-mercado.html": "/mercado",
         "rima-meta.html": "/meta", "rima-ventas.html": "/ventas",
         "rima-landing.html": "/landing", "rima-marca.html": "/marca",
         "rima-referencias.html": "/referencias", "rima-imagenes.html": "/imagenes",
         "rima-videos.html": "/videos", "rima-credenciales.html": "/credenciales",
+        "rima-configuracion.html": "/configuracion",
     }
     current_path = route_map.get(filename, "/")
 
+    session = _session_from_request(request)
+
     # Construir sidebar con nav activo
     nav_html = _build_nav_html(current_path)
-    sidebar = SIDEBAR_HTML.replace('<nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>',
-                                   f'<nav id="rima-nav" style="flex:1;padding:10px;overflow-y:auto;scrollbar-width:none">{nav_html}</nav>')
+    sidebar = SIDEBAR_HTML.replace(
+        '<nav id="rima-nav" style="flex:1 1 auto;min-height:0;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>',
+        f'<nav id="rima-nav" data-rima-built="1" style="flex:1 1 auto;min-height:0;padding:10px;overflow-y:auto;scrollbar-width:none">{nav_html}</nav>',
+    )
+    if session:
+        sidebar = _apply_session_to_sidebar(sidebar, session)
 
     # Reemplazar cualquier aside (vacío o lleno) con el sidebar generado
     content = _re.sub(r'<aside[^>]*>.*?</aside>', sidebar, content, count=1, flags=_re.DOTALL)
 
     # Inyectar CSS en <head>
     content = content.replace("</head>", SHARED_CSS + "\n</head>")
-    # Inyectar JS universal antes del cierre de body
-    content = content.replace("</body>", SHARED_JS + "\n</body>")
+
+    user_bootstrap = _user_bootstrap_script(session) if session else ""
+
+    # Inyectar sesión + JS universal antes del cierre de body
+    content = content.replace("</body>", user_bootstrap + SHARED_JS + "\n</body>")
     return HTMLResponse(content=content)
 
 
-# â”€â”€ Rutas de pÃ¡ginas â”€â”€
+# â"€â"€ Rutas de pÃ¡ginas â"€â"€
 
 @app.get("/home", response_class=HTMLResponse)
 def home_dashboard(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
-    return serve_html("rima-home.html")
+    return serve_html("rima-home.html", request)
 
 @app.get("/calendario", response_class=HTMLResponse)
 def calendario(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-calenadrio.html")
+    return serve_html("rima-calenadrio.html", request)
 
 @app.get("/contenido", response_class=HTMLResponse)
 def contenido(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-contenido.html")
+    return serve_html("rima-contenido.html", request)
+
+@app.get("/lab", response_class=HTMLResponse)
+def agent_lab(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
+    return serve_html("rima-lab.html", request)
 
 @app.get("/mercado", response_class=HTMLResponse)
 def mercado(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-mercado.html")
+    return serve_html("rima-mercado.html", request)
 
 @app.get("/meta", response_class=HTMLResponse)
 def meta(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-meta.html")
+    return serve_html("rima-meta.html", request)
 
 @app.get("/ventas", response_class=HTMLResponse)
 def ventas(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-ventas.html")
+    return serve_html("rima-ventas.html", request)
 
 @app.get("/landing", response_class=HTMLResponse)
 def landing(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-landing.html")
+    return serve_html("rima-landing.html", request)
 
 @app.get("/marca", response_class=HTMLResponse)
 def marca(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-marca.html")
+    return serve_html("rima-marca.html", request)
 
 @app.get("/referencias", response_class=HTMLResponse)
 def referencias(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-referencias.html")
+    return serve_html("rima-referencias.html", request)
 
 @app.get("/imagenes", response_class=HTMLResponse)
 def imagenes(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-imagenes.html")
+    return serve_html("rima-imagenes.html", request)
 
 @app.get("/videos", response_class=HTMLResponse)
 def videos(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-videos.html")
+    return serve_html("rima-videos.html", request)
 
 @app.get("/credenciales", response_class=HTMLResponse)
 def credenciales(request: Request):
     redirect = require_auth(request)
     if redirect: return redirect
-    return serve_html("rima-credenciales.html")
+    return serve_html("rima-credenciales.html", request)
+
+@app.get("/configuracion", response_class=HTMLResponse)
+def configuracion(request: Request):
+    redirect = require_auth(request)
+    if redirect: return redirect
+    return serve_html("rima-configuracion.html", request)
 
 
-# â”€â”€ API: Datos de marca â”€â”€
+# â"€â"€ API: Datos de marca â"€â"€
 
-@app.get(“/api/brand”)
+def _brand_brief_from_brand(brand: dict, user_plan: str = None) -> dict:
+    return {
+        "business_name": brand.get("brand_name", "Mi Negocio"),
+        "service": brand.get("brand_service", ""),
+        "ideal_client": brand.get("brand_ideal_client", ""),
+        "problem": brand.get("brand_problem", ""),
+        "main_result": brand.get("brand_result", ""),
+        "price": brand.get("brand_price", ""),
+        "success_cases": brand.get("brand_success_cases", ""),
+        "guarantee": brand.get("brand_guarantee", ""),
+        "ig_avg_views": brand.get("ig_avg_views", 0),
+        "plan": normalize_plan(user_plan or brand.get("plan", "pro")),
+        "enfoque": normalize_enfoque_default(brand.get("enfoque_default")),
+    }
+
+
+@app.get("/api/brand")
 def get_brand(user: dict = Depends(get_current_user)):
     data = load_data()
-    return JSONResponse(content=data.get(“brand”, {}))
+    email = user.get("email", "")
+    brand = dict(get_user_brand(data, email))
+    normalized = normalize_enfoque_default(brand.get("enfoque_default"))
+    if brand.get("enfoque_default") != normalized:
+        brand["enfoque_default"] = normalized
+        set_user_brand(data, email, brand)
+        save_data(data)
+    brand["plan"] = get_user_plan(data, email)
+    return JSONResponse(content=brand)
 
-@app.post(“/api/brand”)
+@app.post("/api/brand")
 def post_brand(payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
-    existing = data.get(“brand”, {})
+    email = user.get("email", "")
+    existing = dict(get_user_brand(data, email))
     existing.update(payload)
-    data[“brand”] = existing
+    if "enfoque_default" in payload:
+        existing["enfoque_default"] = normalize_enfoque_default(existing.get("enfoque_default"))
+    set_user_brand(data, email, existing)
     save_data(data)
-    return {“status”: “ok”, “saved”: len(existing)}
+    return {"status": "ok", "saved": len(existing)}
 
-# â”€â”€ API: Credenciales â”€â”€
+# â"€â"€ API: Credenciales â"€â"€
 
-@app.get(“/api/credentials”)
+@app.get("/api/credentials")
 def get_credentials(user: dict = Depends(get_current_user)):
     data = load_data()
-    return JSONResponse(content=data.get(“credentials”, {}))
+    return JSONResponse(content=data.get("credentials", {}))
 
-@app.post(“/api/credentials”)
+@app.post("/api/credentials")
 def post_credentials(payload: dict, user: dict = Depends(get_current_user)):
     data = load_data()
-    existing = data.get(“credentials”, {})
+    existing = data.get("credentials", {})
     existing.update(payload)
-    data[“credentials”] = existing
+    data["credentials"] = existing
     save_data(data)
-    return {“status”: “ok”}
+    return {"status": "ok"}
 
 
-# â”€â”€ Modelos de request para agentes â”€â”€
+# â"€â"€ Modelos de request para agentes â"€â"€
 
 class BrandBrief(BaseModel):
     business_name: str = "Mi Negocio"
@@ -814,7 +1087,7 @@ class BrandBrief(BaseModel):
     guarantee: str = ""
 
 
-# â”€â”€ Endpoints de agentes â”€â”€
+# â"€â"€ Endpoints de agentes â"€â"€
 
 @app.post("/api/generate/landing")
 def generate_landing(brief: BrandBrief, user: dict = Depends(get_current_user)):
@@ -857,7 +1130,7 @@ def generate_prospecting(brief: BrandBrief, user: dict = Depends(get_current_use
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# â”€â”€ API: ImÃ¡genes â”€â”€
+# â"€â"€ API: ImÃ¡genes â"€â"€
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE_MB = 10
@@ -939,7 +1212,7 @@ def delete_image(category: str, filename: str, user: dict = Depends(get_current_
     return {"status": "deleted", "file": filename}
 
 
-# â”€â”€ API: Clips de video por reel â”€â”€
+# â"€â"€ API: Clips de video por reel â"€â"€
 
 ALLOWED_VIDEO = {"video/mp4","video/quicktime","video/x-msvideo","video/webm","video/mpeg","video/mov"}
 MAX_CLIP_MB = 500
@@ -991,7 +1264,7 @@ def delete_clip(reel_id: str, filename: str, user: dict = Depends(get_current_us
     p.unlink()
     return {"status": "deleted"}
 
-# â”€â”€ API: Video final por reel â”€â”€
+# â"€â"€ API: Video final por reel â"€â"€
 
 @app.post("/api/videos/{reel_id}/final")
 async def upload_final(reel_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
@@ -1023,7 +1296,7 @@ def get_final(reel_id: str, user: dict = Depends(get_current_user)):
     if not path.exists(): return {"final": None}
     return {"final": final}
 
-# â”€â”€ API: Estado de reel (aprobaciÃ³n guiÃ³n, paso actual) â”€â”€
+# â"€â"€ API: Estado de reel (aprobaciÃ³n guiÃ³n, paso actual) â"€â"€
 
 @app.get("/api/videos/{reel_id}/state")
 def get_reel_state(reel_id: str, user: dict = Depends(get_current_user)):
@@ -1054,124 +1327,21 @@ def trigger_edit(reel_id: str, user: dict = Depends(get_current_user)):
         "requested_at": int(time.time())
     }
     save_data(d)
-    return {"status": "queued", "message": f"EdiciÃ³n iniciada â€” {len(clip_files)} clip(s) en cola", "clips": clip_files}
+    return {"status": "queued", "message": f"Edicion iniciada - {len(clip_files)} clip(s) en cola", "clips": clip_files}
 
 
-# â”€â”€ API: Calendario â”€â”€
+# â"€â"€ API: Calendario â"€â"€
 
-@app.get("/api/calendar")
-def get_calendar(month: str = None, user: dict = Depends(get_current_user)):
-    data = load_data()
-    items = data.get("calendar_items", [])
-    if month:
-        items = [i for i in items if i.get("date", "").startswith(month)]
-    return {"items": items}
-
-@app.post("/api/calendar")
-def create_calendar_item(payload: dict, user: dict = Depends(get_current_user)):
-    data = load_data()
-    items = data.setdefault("calendar_items", [])
-    item = {
-        "id": str(uuid.uuid4()),
-        "date": payload.get("date", ""),
-        "type": payload.get("type", "reel"),
-        "title": payload.get("title", ""),
-        "caption": payload.get("caption", ""),
-        "hashtags": payload.get("hashtags", []),
-        "status": payload.get("status", "pendiente"),
-        "metrics": payload.get("metrics", {}),
-        "created_at": int(time.time()),
-    }
-    items.append(item)
-    save_data(data)
-    return item
-
-@app.put("/api/calendar/{item_id}")
-def update_calendar_item(item_id: str, payload: dict, user: dict = Depends(get_current_user)):
-    data = load_data()
-    items = data.get("calendar_items", [])
-    for i, item in enumerate(items):
-        if item["id"] == item_id:
-            items[i].update({k: v for k, v in payload.items() if k != "id"})
-            save_data(data)
-            return items[i]
-    raise HTTPException(404, "Item no encontrado")
-
-@app.delete("/api/calendar/{item_id}")
-def delete_calendar_item(item_id: str, user: dict = Depends(get_current_user)):
-    data = load_data()
-    items = data.get("calendar_items", [])
-    data["calendar_items"] = [i for i in items if i["id"] != item_id]
-    save_data(data)
-    return {"status": "deleted"}
-
-@app.post("/api/calendar/generate")
-def generate_calendar(payload: dict, user: dict = Depends(get_current_user)):
-    from core.gemini_client import gemini
-    month = payload.get("month")
-    if not month:
-        raise HTTPException(400, "month requerido (YYYY-MM)")
-
-    brand = load_data().get("brand", {})
-    brand_name = brand.get("brand_name", "Mi Negocio")
-    service = brand.get("brand_service", "servicios de alto valor")
-    ideal_client = brand.get("brand_ideal_client", "emprendedores LATAM")
-
-    year, mon = map(int, month.split("-"))
-    days_in_month = cal_module.monthrange(year, mon)[1]
-    month_name = cal_module.month_name[mon]
-    mon_str = str(mon).zfill(2)
-
-    prompt = f"""Eres experto en marketing de contenidos para Instagram en LATAM.
-Genera un plan de contenidos para {month_name} {year} ({days_in_month} dÃ­as).
-
-Negocio: {brand_name}
-Servicio: {service}
-Cliente ideal: {ideal_client}
-
-Genera exactamente 20 piezas distribuidas a lo largo del mes.
-DistribuciÃ³n: 8 Reels, 6 Carruseles, 6 Historias.
-MÃ¡ximo 1 pieza por dÃ­a. Prefer lunes/miercoles/viernes/sabado para reels.
-
-Responde SOLO con JSON array vÃ¡lido, sin markdown, sin texto extra:
-[
-  {{"date": "{year}-{mon_str}-DD", "type": "reel|carrusel|historia", "title": "TÃ­tulo", "caption": "Caption completo...", "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]}},
-  ...20 items...
-]
-Las fechas deben estar entre {year}-{mon_str}-01 y {year}-{mon_str}-{str(days_in_month).zfill(2)}."""
-
-    try:
-        raw = gemini.generate(prompt)
-        match = re.search(r'\[[\s\S]*\]', raw)
-        if not match:
-            raise HTTPException(500, "No se pudo parsear la respuesta de IA")
-        items_data = json.loads(match.group())
-    except json.JSONDecodeError as e:
-        raise HTTPException(500, f"JSON invÃ¡lido de IA: {e}")
-
-    data = load_data()
-    existing = [i for i in data.get("calendar_items", []) if not i.get("date", "").startswith(month)]
-
-    new_items = []
-    for d in items_data:
-        new_items.append({
-            "id": str(uuid.uuid4()),
-            "date": d.get("date", ""),
-            "type": d.get("type", "reel"),
-            "title": d.get("title", ""),
-            "caption": d.get("caption", ""),
-            "hashtags": d.get("hashtags", []),
-            "status": "pendiente",
-            "metrics": {},
-            "created_at": int(time.time()),
-        })
-
-    data["calendar_items"] = existing + new_items
-    save_data(data)
-    return {"items": new_items, "count": len(new_items)}
+# NOTA: los endpoints /api/calendar* (GET/POST/PUT/DELETE/generate) que usaban
+# almacenamiento en JSON (load_data/save_data, "calendar_items") fueron retirados —
+# quedaban registrados ANTES que los adaptadores basados en SQLite (más abajo en
+# este archivo) y FastAPI siempre matcheaba estos primero, por lo que el calendario
+# nunca reflejaba lo generado por el agente (que sí escribe en SQLite). Los
+# endpoints vigentes para /api/calendar* viven más abajo y leen/escriben en
+# `publicaciones` (SQLite por cliente).
 
 
-# â”€â”€ API: Contenido â€” slides, regenerar, telegram â”€â”€
+# â"€â"€ API: Contenido â€" slides, regenerar, telegram â"€â"€
 
 @app.post("/api/calendar/{item_id}/generate-slides")
 def generate_slides(item_id: str, user: dict = Depends(get_current_user)):
@@ -1388,7 +1558,7 @@ async def weekly_start(payload: dict, user: dict = Depends(get_current_user)):
     }
 
 
-# â”€â”€ Webhook Lemon Squeezy â”€â”€
+# â"€â"€ Webhook Lemon Squeezy â"€â"€
 
 LEMON_WEBHOOK_SECRET = os.getenv("LEMON_WEBHOOK_SECRET", "")
 
@@ -1513,14 +1683,203 @@ class SalesDMRequest(BaseModel):
 @app.post("/api/agent/market-research")
 def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_current_user)):
     try:
-        result = market_research_agent.run(
-            brand_brief=req.brand_brief,
-            competitor_profiles=req.competitor_profiles,
-            hashtags=req.hashtags,
+        data = load_data()
+        email = user.get("email", "")
+        brand = get_user_brand(data, email)
+        brand_slug = cliente_id_from_brand(brand)
+        brief = req.brand_brief if req.brand_brief else _brand_brief_from_brand(
+            brand, user_plan=get_user_plan(data, email)
         )
+        profiles = req.competitor_profiles or active_ig_usernames(data, email)
+        result = market_research_agent.run(
+            brand=brand_slug,
+            brand_brief=brief,
+            competitor_profiles=profiles,
+            hashtags=req.hashtags,
+            cliente_id=brand_slug,
+        )
+        if email and result.get("profile_meta"):
+            sync_ig_profiles_from_meta(data, email, result["profile_meta"])
+            save_data(data)
         return JSONResponse(content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market-research/latest")
+def api_market_research_latest(user: dict = Depends(get_current_user)):
+    from core.db import init_db, get_referentes_market_dashboard, referente_row_to_post
+
+    slug = _get_cliente_id(user)
+    latest = load_latest_market_research(slug) or {}
+
+    posts = latest.get("posts") or []
+    top_posts = latest.get("top_posts") or []
+
+    # Fallback/enriquecimiento desde SQLite si no hay posts en el JSON backup
+    if not posts:
+        try:
+            init_db(slug)
+            db_rows = get_referentes_market_dashboard(slug, limit=60)
+            if db_rows:
+                posts = [referente_row_to_post(r) for r in db_rows]
+                top_posts = posts[:20]
+        except Exception:
+            pass
+
+    if not latest:
+        return {
+            "posts": posts,
+            "top_posts": top_posts,
+            "analysis": "",
+            "week": None,
+        }
+
+    latest["posts"] = posts
+    latest["top_posts"] = top_posts or posts[:20]
+    return latest
+
+
+@app.delete("/api/market-research/scraped")
+def api_clear_market_research(user: dict = Depends(get_current_user)):
+    from core.db import clear_referentes_contenido, init_db
+
+    slug = _get_cliente_id(user)
+    cleared = clear_market_research(slug)
+    try:
+        init_db(slug)
+        cleared["sqlite_referentes"] = clear_referentes_contenido(slug)
+    except Exception as e:
+        cleared["sqlite_error"] = str(e)
+    return {"ok": True, "cleared": cleared}
+
+
+# ── API: Perfiles referentes (por plan) ──
+
+@app.get("/api/referentes/image")
+def api_referente_image(url: str):
+    """Proxy de fotos IG (evita bloqueo CORS/hotlink en el dashboard)."""
+    if not url or not any(h in url for h in ("cdninstagram.com", "fbcdn.net", "instagram.com")):
+        raise HTTPException(400, "URL de imagen no permitida")
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; RIMA/1.0)"},
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            body = resp.read()
+            ctype = resp.headers.get("Content-Type", "image/jpeg")
+        return Response(content=body, media_type=ctype, headers={"Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        raise HTTPException(502, f"No se pudo cargar la imagen: {e}")
+
+
+@app.get("/api/referentes/profiles")
+def api_referentes_profiles(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = user.get("email", "")
+    result = get_profiles(data, email)
+    # Persistir limpieza de perfiles vacíos
+    if email in data.get("users", {}):
+        save_data(data)
+    return result
+
+
+class ReferenteProfileRequest(BaseModel):
+    plataforma: str = "instagram"
+    username: str = ""
+    nombre_nicho: str = ""
+    tipos: List[str] = []
+    seguidores: str = ""
+
+
+@app.post("/api/referentes/profiles")
+def api_add_referente_profile(req: ReferenteProfileRequest, user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = user.get("email", "")
+    plataforma = req.plataforma if req.plataforma in ("instagram", "youtube") else "instagram"
+    try:
+        profile = add_profile(data, email, plataforma, req.model_dump())
+        save_data(data)
+        return {"ok": True, "profile": profile}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.patch("/api/referentes/profiles/{profile_id}")
+def api_update_referente_profile(profile_id: str, payload: dict,
+                                  user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = user.get("email", "")
+    plataforma = payload.pop("plataforma", "instagram")
+    updated = update_profile(data, email, plataforma, profile_id, payload)
+    if not updated:
+        raise HTTPException(404, "Perfil no encontrado")
+    save_data(data)
+    return {"ok": True, "profile": updated}
+
+
+@app.delete("/api/referentes/profiles/{profile_id}")
+def api_delete_referente_profile(profile_id: str, plataforma: str = "instagram",
+                                  user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = user.get("email", "")
+    if not delete_profile(data, email, plataforma, profile_id):
+        raise HTTPException(404, "Perfil no encontrado")
+    save_data(data)
+    return {"ok": True}
+
+
+@app.post("/api/referentes/scrape")
+def api_referentes_scrape(user: dict = Depends(get_current_user)):
+    """Actualización manual — consume 1 crédito semanal (se renueva cada lunes)."""
+    data = load_data()
+    email = user.get("email", "")
+    try:
+        remaining = consume_manual_scrape(data, email)
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+
+    brand = get_user_brand(data, email)
+    slug = cliente_id_from_brand(brand)
+    brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
+    profiles = active_ig_usernames(data, email)
+    if not profiles:
+        raise HTTPException(400, "Agrega al menos un perfil de Instagram activo en Referencias")
+
+    try:
+        result = market_research_agent.run(
+            brand=slug,
+            brand_brief=brief,
+            competitor_profiles=profiles,
+            cliente_id=slug,
+        )
+        # Actualizar referentes: foto, seguidores, nicho, último scrape
+        user_rec = data["users"][email]
+        now_label = datetime.now().strftime("Lun %d %b · %H:%M")
+        if result.get("profile_meta"):
+            sync_ig_profiles_from_meta(data, email, result["profile_meta"])
+        for p in user_rec.get("referentes_profiles", {}).get("instagram", []):
+            if p.get("username", "").strip():
+                p["ultimo_scraping"] = now_label
+                p["estado"] = "activo"
+        save_data(data)
+        return {
+            "ok": True,
+            "manual_remaining": remaining,
+            "posts_analyzed": result.get("posts_analyzed", 0),
+            "analysis_preview": (result.get("analysis") or "")[:300],
+        }
+    except Exception as e:
+        # Devolver crédito si falló el scrape
+        user_rec = data["users"][email]
+        scraping = user_rec.setdefault("scraping", {})
+        scraping["manual_remaining"] = min(
+            MANUAL_SCRAPE_CREDITS,
+            scraping.get("manual_remaining", 0) + 1,
+        )
+        save_data(data)
+        raise HTTPException(500, str(e))
 
 
 # ── Endpoint: Calendario mensual de contenido ──
@@ -1536,6 +1895,138 @@ def run_content_monthly(req: ContentMonthlyRequest, user: dict = Depends(get_cur
         return JSONResponse(content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Endpoint: Calendario de contenido desde dashboard ──
+
+class ContentRunRequest(BaseModel):
+    month: str = ""
+    enfoque: dict = {"ventas": 60, "educacion": 30, "conexion": 10}
+
+@app.post("/api/agent/content/run")
+def run_content_dashboard(req: ContentRunRequest, user: dict = Depends(get_current_user)):
+    """Genera calendario mensual usando el brief guardado en rima_data.json."""
+    data = load_data()
+    email = user.get("email", "")
+    brand = get_user_brand(data, email)
+    brand_brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
+    enfoque = normalize_enfoque_default(req.enfoque or brand.get("enfoque_default"))
+    cliente_id = cliente_id_from_brand(brand)
+    try:
+        result = content_agent.run(
+            brand_brief=brand_brief,
+            month=req.month or None,
+            enfoque=enfoque,
+            cliente_id=cliente_id,
+        )
+        data["last_content_calendar"] = result
+        save_data(data)
+        return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/content/clear-planned")
+def clear_planned_content(user: dict = Depends(get_current_user)):
+    """Borra piezas planificadas sin aprobaciones ni contenido cargado (ventana 30 días)."""
+    from core.db import delete_publicaciones_regenerables, init_db
+    from datetime import date, timedelta
+    from agents.content.agent import PLAN_DAYS
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        start = date.today() + timedelta(days=1)
+        end = start + timedelta(days=PLAN_DAYS - 1)
+        deleted = delete_publicaciones_regenerables(
+            cid,
+            start_date=start.strftime("%Y-%m-%d"),
+            end_date=end.strftime("%Y-%m-%d"),
+        )
+        return {
+            "ok": True,
+            "deleted": deleted,
+            "starts_on": start.strftime("%Y-%m-%d"),
+            "ends_on": end.strftime("%Y-%m-%d"),
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+# ── API: Publicaciones desde SQLite ──
+
+def _get_cliente_id(user: dict) -> str:
+    data = load_data()
+    brand = get_user_brand(data, user.get("email", ""))
+    return cliente_id_from_brand(brand)
+
+@app.get("/api/publicaciones")
+def api_get_publicaciones(mes: str = None, status: str = None,
+                           tipo: str = None, user: dict = Depends(get_current_user)):
+    from core.db import get_publicaciones, init_db
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        pubs = get_publicaciones(cid, mes=mes, status=status, tipo=tipo)
+        return {"publicaciones": pubs, "total": len(pubs)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/api/publicaciones/{pub_id}")
+def api_get_publicacion(pub_id: str, user: dict = Depends(get_current_user)):
+    from core.db import get_publicacion
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicacion no encontrada")
+    return pub
+
+@app.patch("/api/publicaciones/{pub_id}/status")
+def api_update_status(pub_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    from core.db import update_publicacion_status
+    cid = _get_cliente_id(user)
+    status = payload.get("status")
+    if not status:
+        raise HTTPException(400, "status requerido")
+    update_publicacion_status(cid, pub_id, status)
+    return {"ok": True, "pub_id": pub_id, "status": status}
+
+@app.patch("/api/publicaciones/{pub_id}/aprobar")
+def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    from core.db import update_publicacion_field, get_publicacion
+    cid = _get_cliente_id(user)
+    campo = payload.get("campo")  # tematica | copy | visual
+    if campo not in ("tematica", "copy", "visual"):
+        raise HTTPException(400, "campo debe ser tematica, copy o visual")
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicacion no encontrada")
+    aprobaciones = pub.get("aprobaciones_json") or {}
+    aprobaciones[campo] = True
+    update_publicacion_field(cid, pub_id, "aprobaciones_json", aprobaciones)
+    return {"ok": True, "aprobaciones": aprobaciones}
+
+@app.get("/api/referentes/top")
+def api_top_referentes(tipo: str = None, limit: int = 10,
+                        user: dict = Depends(get_current_user)):
+    from core.db import get_top_referentes, init_db
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        refs = get_top_referentes(cid, tipo=tipo, limit=limit)
+        return {"referentes": refs, "total": len(refs)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@app.get("/api/imagenes")
+def api_get_imagenes(uso: str = None, user: dict = Depends(get_current_user)):
+    from core.db import get_imagenes_para, init_db
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        imgs = get_imagenes_para(cid, uso or "")
+        return {"imagenes": imgs, "total": len(imgs)}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 # ── Endpoint: Generación de guion ──
@@ -1796,6 +2287,10 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+@app.get("/", response_class=HTMLResponse)
+def root_redirect():
+    return RedirectResponse(url="/login", status_code=302)
+
 @app.get("/login", response_class=HTMLResponse)
 def login_page():
     path = DASHBOARD / "login.html"
@@ -1838,7 +2333,7 @@ def auth_login(body: LoginRequest, response: JSONResponse.__class__ = None):
     from fastapi.responses import JSONResponse as JR
     d = load_data()
     users_db = d.get("users", {})
-    user = verify_login(body.email, body.password, users_db)
+    user = verify_login(body.email.strip().lower(), body.password.strip(), users_db)
     if not user:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
     token = create_token(user["email"], user["role"])
@@ -1861,7 +2356,33 @@ def auth_logout():
 
 @app.get("/auth/me")
 def auth_me(user: dict = Depends(get_current_user)):
-    return user
+    data = load_data()
+    email = user.get("email") or user.get("sub", "")
+    role = user.get("role", "user")
+    if role == "admin":
+        brand = get_user_brand(data, email)
+        return {
+            "email": email,
+            "sub": email,
+            "role": role,
+            "name": user.get("name", "Admin"),
+            "plan": normalize_plan(brand.get("plan", "max")),
+            "brand_name": brand.get("brand_name", "Mi Negocio"),
+            "ref_limits": get_ref_limits(brand.get("plan", "max")),
+        }
+    rec = data.get("users", {}).get(email, {})
+    brand = get_user_brand(data, email)
+    plan = get_user_plan(data, email)
+    limits = get_ref_limits(plan)
+    return {
+        "email": email,
+        "sub": email,
+        "role": role,
+        "name": rec.get("name", user.get("name", email.split("@")[0] if email else "Usuario")),
+        "plan": plan,
+        "brand_name": brand.get("brand_name", ""),
+        "ref_limits": limits,
+    }
 
 # ── Proteger home y dashboard ─────────────────────────────────────────────────
 
@@ -1870,7 +2391,233 @@ def home_protected(request: Request):
     redirect = require_auth(request)
     if redirect:
         return redirect
-    return serve_html("index.html")
+    return serve_html("index.html", request)
+
+
+# ── API: Calendar (adaptador para rima-calenadrio.html) ──
+# Mapea publicaciones SQLite al formato esperado por el calendario del dashboard.
+
+def _pub_to_calendar_item(pub: dict) -> dict:
+    copy_j = pub.get("copy_json") or {}
+    prop_j = pub.get("propuesta_json") or {}
+    if isinstance(copy_j, str):
+        import json as _json
+        try: copy_j = _json.loads(copy_j)
+        except Exception: copy_j = {}
+    if isinstance(prop_j, str):
+        import json as _json
+        try: prop_j = _json.loads(prop_j)
+        except Exception: prop_j = {}
+
+    title = (
+        copy_j.get("titulo") or
+        prop_j.get("angulo") or
+        pub.get("tematica") or
+        pub.get("tipo", "Sin título")
+    )
+
+    status_map = {
+        "planificado": "pendiente",
+        "propuesta_generada": "validacion",
+        "propuesta_enviada": "validacion",
+        "propuesta_aprobada": "validacion",
+        "copy_generado": "validacion",
+        "copy_enviado": "validacion",
+        "copy_aprobado": "validacion",
+        "en_produccion": "validacion",
+        "produccion_enviada": "validacion",
+        "produccion_aprobada": "validacion",
+        "programado": "programado",
+        "publicado": "publicado",
+        "cancelado": "pendiente",
+    }
+
+    return {
+        "id": pub["id"],
+        "date": pub["fecha"],
+        "type": pub["tipo"],
+        "title": title,
+        "caption": copy_j.get("hook", ""),
+        "development": copy_j.get("desarrollo", "") or prop_j.get("hook_idea", ""),
+        "cta": copy_j.get("cta", ""),
+        "status": status_map.get(pub.get("status", "planificado"), "pendiente"),
+        "content_type": (pub.get("tematica") or "").lower().replace("ó", "o").replace("ú", "u"),
+        "content_type_label": pub.get("tematica", ""),
+        "enfoque": pub.get("enfoque", ""),
+        "semana": pub.get("semana"),
+        "dia": pub.get("dia", ""),
+    }
+
+
+@app.get("/api/calendar")
+def api_calendar_get(month: str = None, user: dict = Depends(get_current_user)):
+    """GET /api/calendar?month=YYYY-MM — retorna items en formato calendario.
+
+    Filtra por RANGO DE FECHAS del mes mostrado en la grilla (no por el string
+    "mes" guardado en cada fila). Esto es necesario porque el plan del agente es
+    una ventana continua de 30 días desde mañana — sus piezas pueden caer en dos
+    meses calendario distintos, y filtrar por igualdad de string "mes" dejaba
+    piezas recién generadas fuera de la vista (parecía que "no se reflejaban").
+    """
+    from core.db import get_publicaciones, init_db
+    from datetime import date
+    import calendar as _calmod
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        if month:
+            y, m = (int(x) for x in month.split("-"))
+        else:
+            today = date.today()
+            y, m = today.year, today.month
+
+        last_day = _calmod.monthrange(y, m)[1]
+        start_str = f"{y:04d}-{m:02d}-01"
+        end_str = f"{y:04d}-{m:02d}-{last_day:02d}"
+        mes_str = f"{y:04d}-{m:02d}"
+
+        pubs = get_publicaciones(cid)
+        pubs_in_range = [p for p in pubs if start_str <= (p.get("fecha") or "") <= end_str]
+        items = [_pub_to_calendar_item(p) for p in pubs_in_range]
+        return {"items": items, "total": len(items), "mes": mes_str}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/calendar/generate")
+def api_calendar_generate(payload: dict, user: dict = Depends(get_current_user)):
+    """POST /api/calendar/generate — ejecuta el Planificador (ventana de 30 días
+    desde mañana, según límites de volumen del plan del cliente) y retorna las
+    piezas recién creadas, identificadas por su rango real de fechas (starts_on..ends_on)
+    — no por un "mes calendario", que el plan ya no usa como ancla.
+    """
+    data = load_data()
+    brand = data.get("brand", {})
+    brand_brief = {
+        "business_name": brand.get("brand_name", "Mi Negocio"),
+        "service": brand.get("brand_service", ""),
+        "ideal_client": brand.get("brand_ideal_client", ""),
+        "problem": brand.get("brand_problem", ""),
+        "main_result": brand.get("brand_result", ""),
+        "price": brand.get("brand_price", ""),
+        "success_cases": brand.get("brand_success_cases", ""),
+        "ig_avg_views": brand.get("ig_avg_views", 0),
+        "plan": brand.get("plan", "pro"),
+    }
+    enfoque = normalize_enfoque_default(payload.get("enfoque") or brand.get("enfoque_default"))
+    cid = brand.get("brand_name", "default").lower().replace(" ", "_")
+
+    try:
+        result = content_agent.run(
+            brand_brief=brand_brief,
+            enfoque=enfoque,
+            cliente_id=cid,
+        )
+        starts_on = result.get("starts_on")
+        ends_on = result.get("ends_on")
+
+        from core.db import get_publicaciones
+        pubs = get_publicaciones(cid)
+        pubs_in_range = [p for p in pubs
+                         if starts_on <= (p.get("fecha") or "") <= ends_on]
+        items = [_pub_to_calendar_item(p) for p in pubs_in_range]
+        return {
+            "items": items,
+            "count": len(items),
+            "starts_on": starts_on,
+            "ends_on": ends_on,
+            "plan_tier": result.get("plan_tier"),
+            "limites_semanales": result.get("limites_semanales"),
+        }
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/calendar")
+def api_calendar_create(payload: dict, user: dict = Depends(get_current_user)):
+    """POST /api/calendar — crea una publicación manual."""
+    from core.db import create_publicacion, init_db
+    from datetime import date as _date, datetime as _dt
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        fecha = payload.get("date", str(_date.today()))
+        tipo = payload.get("type", "reel")
+        title = payload.get("title", "Sin título")
+        caption = payload.get("caption", "")
+        status_in = payload.get("status", "pendiente")
+
+        # Calcular mes y dia
+        d = _dt.strptime(fecha, "%Y-%m-%d")
+        MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                 "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+        mes_str = MESES[d.month - 1] + " " + str(d.year)
+        dia_str = DIAS[d.weekday()]
+        semana = (d.day - 1) // 7 + 1
+
+        # Mapear status inverso
+        inv_status = {
+            "pendiente": "planificado", "validacion": "propuesta_generada",
+            "programado": "programado", "publicado": "publicado",
+        }
+        db_status = inv_status.get(status_in, "planificado")
+
+        pub = create_publicacion(cid, {
+            "fecha": fecha, "semana": semana, "dia": dia_str,
+            "mes": mes_str, "tipo": tipo, "tematica": title,
+            "status": db_status, "agente_origen": "manual",
+        })
+
+        # Si hay caption, guardarlo en copy_json
+        if caption:
+            from core.db import update_publicacion_field
+            update_publicacion_field(cid, pub["id"], "copy_json", {"hook": caption})
+            pub["copy_json"] = {"hook": caption}
+
+        return _pub_to_calendar_item(pub)
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.put("/api/calendar/{item_id}")
+def api_calendar_update(item_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    """PUT /api/calendar/{id} — actualiza titulo, tipo, caption y status."""
+    from core.db import get_publicacion, update_publicacion_field, update_publicacion_status
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, item_id)
+    if not pub:
+        raise HTTPException(404, "Publicacion no encontrada")
+
+    if "title" in payload:
+        update_publicacion_field(cid, item_id, "tematica", payload["title"])
+    if "type" in payload:
+        update_publicacion_field(cid, item_id, "tipo", payload["type"])
+    if "caption" in payload:
+        from core.db import update_publicacion_field as upf
+        copy_j = pub.get("copy_json") or {}
+        copy_j["hook"] = payload["caption"]
+        upf(cid, item_id, "copy_json", copy_j)
+    if "status" in payload:
+        inv_status = {
+            "pendiente": "planificado", "validacion": "propuesta_generada",
+            "programado": "programado", "publicado": "publicado",
+        }
+        update_publicacion_status(cid, item_id, inv_status.get(payload["status"], "planificado"))
+
+    from core.db import get_publicacion as gp
+    updated = gp(cid, item_id)
+    return _pub_to_calendar_item(updated)
+
+
+@app.delete("/api/calendar/{item_id}")
+def api_calendar_delete(item_id: str, user: dict = Depends(get_current_user)):
+    """DELETE /api/calendar/{id} — elimina la publicación."""
+    from core.db import db as _db
+    cid = _get_cliente_id(user)
+    with _db(cid) as conn:
+        conn.execute("DELETE FROM publicaciones WHERE id = ? AND cliente_id = ?", (item_id, cid))
+    return {"ok": True, "deleted": item_id}
 
 
 if __name__ == "__main__":

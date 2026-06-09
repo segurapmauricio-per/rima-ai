@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mockup — Generar Plan Mensual</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0A0A0F;
+      color: #F1F5F9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .modal {
+      background: #12121C;
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 24px;
+      width: 500px;
+      padding: 28px 28px 24px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(124,58,237,0.08);
+    }
+
+    /* Header */
+    .modal-header { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+    .modal-icon {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.35);
+    }
+    .modal-icon svg { width: 20px; height: 20px; }
+    .modal-title { font-size: 16px; font-weight: 700; }
+    .modal-sub { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+    /* Month */
+    .field-label {
+      font-size: 9px; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: #64748B; margin-bottom: 8px;
+    }
+    .month-display {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 12px 16px; margin-bottom: 28px;
+    }
+    .month-name { font-size: 16px; font-weight: 800; color: #F1F5F9; }
+    .month-lock {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 10px; color: #475569;
+    }
+    .month-lock svg { width: 11px; height: 11px; }
+
+    /* Divider */
+    .divider { height: 1px; background: rgba(255,255,255,0.05); margin: 24px 0; }
+
+    /* Enfoque bar */
+    .enfoque-header {
+      display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 12px;
+    }
+    .btn-reset {
+      font-size: 9px; font-weight: 600; color: #7C3AED;
+      background: none; border: none; cursor: pointer;
+      opacity: .65; transition: opacity .15s; letter-spacing: .02em;
+    }
+    .btn-reset:hover { opacity: 1; }
+
+    .bar-wrap {
+      position: relative; height: 48px; border-radius: 14px;
+      margin-bottom: 14px; user-select: none;
+    }
+    .bar-track {
+      position: absolute; inset: 0; border-radius: 14px;
+      overflow: hidden; display: flex;
+    }
+    .bar-seg {
+      height: 100%; display: flex; align-items: center;
+      justify-content: center; font-size: 12px; font-weight: 700;
+      color: rgba(255,255,255,0.95); white-space: nowrap;
+      overflow: hidden; transition: width .04s;
+    }
+    .bar-handle {
+      position: absolute; top: 0; bottom: 0; width: 20px;
+      transform: translateX(-50%); cursor: col-resize; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bar-handle::after {
+      content: ''; width: 3px; height: 24px;
+      background: rgba(255,255,255,0.6); border-radius: 2px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.7);
+    }
+    .bar-handle:hover::after { background: #fff; }
+
+    .c-ventas   { background: linear-gradient(90deg,#6D28D9,#7C3AED); }
+    .c-educa    { background: linear-gradient(90deg,#0891B2,#06B6D4); }
+    .c-conexion { background: linear-gradient(90deg,#047857,#10B981); }
+
+    /* Legend */
+    .legend { display: flex; gap: 20px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 7px; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .legend-name { font-size: 12px; font-weight: 600; color: #CBD5E1; }
+    .legend-val { font-size: 12px; font-weight: 800; color: #F1F5F9; }
+    .legend-sub { font-size: 10px; color: #475569; margin-left: 1px; }
+
+    /* Descripcion del enfoque */
+    .enfoque-desc {
+      margin-top: 16px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      font-size: 11px; color: #64748B; line-height: 1.6;
+      transition: all .25s;
+      min-height: 44px;
+    }
+    .enfoque-desc strong { color: #94A3B8; }
+
+    /* Footer */
+    .modal-footer { display: flex; gap: 10px; margin-top: 28px; }
+    .btn-cancel {
+      flex: 1; padding: 13px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.04); color: #94A3B8;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      font-family: 'Inter', sans-serif; transition: all .18s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,0.07); color: #F1F5F9; }
+    .btn-generate {
+      flex: 2.5; padding: 13px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, #7C3AED, #6D28D9);
+      color: #fff; font-size: 13px; font-weight: 700; cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.35); transition: all .18s;
+      letter-spacing: .01em;
+    }
+    .btn-generate:hover { box-shadow: 0 6px 28px rgba(124,58,237,0.5); transform: translateY(-1px); }
+    .btn-generate svg { width: 15px; height: 15px; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+<div class="modal">
+
+  <!-- Header -->
+  <div class="modal-header">
+    <div class="modal-icon">
+      <svg fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="modal-title">Generar plan del mes</div>
+      <div class="modal-sub">RIMA arma tu calendario · Se ejecuta una vez por mes</div>
+    </div>
+  </div>
+
+  <!-- Mes -->
+  <div class="field-label">Mes</div>
+  <div class="month-display">
+    <span class="month-name" id="month-name">—</span>
+    <span class="month-lock">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+      </svg>
+      Próximo mes
+    </span>
+  </div>
+
+  <!-- Enfoque -->
+  <div class="enfoque-header">
+    <div class="field-label" style="margin-bottom:0">¿Qué enfoque le damos este mes?</div>
+    <button class="btn-reset" onclick="reset()">↺ Recomendado</button>
+  </div>
+
+  <div class="bar-wrap">
+    <div class="bar-track">
+      <div class="bar-seg c-ventas"   id="seg0" style="width:60%"><span id="lbl0">60%</span></div>
+      <div class="bar-seg c-educa"    id="seg1" style="width:30%"><span id="lbl1">30%</span></div>
+      <div class="bar-seg c-conexion" id="seg2" style="width:10%"><span id="lbl2">10%</span></div>
+    </div>
+    <div class="bar-handle" id="h0" style="left:60%"></div>
+    <div class="bar-handle" id="h1" style="left:90%"></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#7C3AED"></div>
+      <span class="legend-name">Ventas</span>
+      <span class="legend-val" id="v0">60%</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#06B6D4"></div>
+      <span class="legend-name">Educación</span>
+      <span class="legend-val" id="v1">30%</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#10B981"></div>
+      <span class="legend-name">Conexión</span>
+      <span class="legend-val" id="v2">10%</span>
+    </div>
+  </div>
+
+  <!-- Descripción dinámica -->
+  <div class="enfoque-desc" id="enfoque-desc"></div>
+
+  <!-- Footer -->
+  <div class="modal-footer">
+    <button class="btn-cancel">Cancelar</button>
+    <button class="btn-generate" onclick="generate()">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+      </svg>
+      <span id="btn-label">Generar plan de Julio 2026</span>
+    </button>
+  </div>
+
+</div>
+<script>
+const REC = [60, 30, 10];
+const vals = [...REC];
+const MIN = 5;
+
+function getNextMonth() {
+  const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const d = new Date();
+  const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+  return months[next.getMonth()] + ' ' + next.getFullYear();
+}
+
+const MONTH = getNextMonth();
+document.getElementById('month-name').textContent = MONTH;
+document.getElementById('btn-label').textContent = 'Generar plan de ' + MONTH;
+
+function renderBar() {
+  let cum = 0;
+  vals.forEach((v, i) => {
+    document.getElementById('seg' + i).style.width = v + '%';
+    document.getElementById('lbl' + i).textContent = v > 7 ? v + '%' : '';
+    document.getElementById('v'   + i).textContent = v + '%';
+    cum += v;
+    if (i < 2) document.getElementById('h' + i).style.left = cum + '%';
+  });
+  renderDesc();
+}
+
+function renderDesc() {
+  const [ventas, educa, conexion] = vals;
+  const desc = document.getElementById('enfoque-desc');
+  let text = '';
+
+  if (ventas >= 70) {
+    text = '<strong>Modo conversión agresiva.</strong> La mayoría del contenido va a hablar de los problemas de tu cliente ideal y cómo los resolvés. El objetivo es llenar tu inbox de personas listas para hablar.';
+  } else if (ventas >= 50 && educa >= 25) {
+    text = '<strong>Modo equilibrado.</strong> Mitad del contenido genera conversaciones de venta, la otra mitad construye autoridad y educa. Ideal para la mayoría de los meses.';
+  } else if (educa >= 50) {
+    text = '<strong>Modo autoridad.</strong> Más contenido de proceso, insights y educación. Construye confianza a largo plazo. Útil cuando estás lanzando algo nuevo o cambiando de audiencia.';
+  } else if (conexion >= 30) {
+    text = '<strong>Modo humanización.</strong> Este mes priorizás que tu audiencia te conozca como persona. Funciona bien después de un mes muy comercial o al arrancar una cuenta nueva.';
+  } else {
+    text = '<strong>Configuración personalizada.</strong> RIMA va a distribuir el contenido respetando estos porcentajes a lo largo del mes.';
+  }
+
+  desc.innerHTML = text;
+}
+
+function reset() { vals[0] = REC[0]; vals[1] = REC[1]; vals[2] = REC[2]; renderBar(); }
+
+// Drag
+['h0','h1'].forEach((id, hi) => {
+  const handle = document.getElementById(id);
+  const wrap   = document.querySelector('.bar-wrap');
+  handle.addEventListener('mousedown', e => {
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    function onMove(ev) {
+      const raw = ((ev.clientX - rect.left) / rect.width) * 100;
+      if (hi === 0) {
+        const v0 = Math.round(Math.max(MIN, Math.min(100 - vals[2] - MIN - MIN, raw)));
+        const v1 = 100 - v0 - vals[2];
+        if (v1 < MIN) return;
+        vals[0] = v0; vals[1] = v1;
+      } else {
+        const v2 = Math.round(100 - Math.max(vals[0] + MIN + MIN, Math.min(100 - MIN, raw)));
+        const v1 = 100 - vals[0] - v2;
+        if (v1 < MIN || v2 < MIN) return;
+        vals[1] = v1; vals[2] = v2;
+      }
+      renderBar();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+});
+
+function generate() {
+  const payload = {
+    month: MONTH,
+    enfoque: { ventas: vals[0], educacion: vals[1], conexion: vals[2] }
+  };
+  alert('Payload:\n' + JSON.stringify(payload, null, 2));
+}
+
+renderBar();
+</script>
+</body>
+</html>

@@ -79,6 +79,8 @@ def verify_login(email: str, password: str, users_db: dict) -> Optional[dict]:
     if email == admin_email and password == admin_password:
         return {"email": email, "role": "admin", "name": "Admin"}
 
+    email = (email or "").strip().lower()
+
     # Usuarios del JSON
     user = users_db.get(email)
     if user and user.get("status") == "active":
@@ -95,6 +97,11 @@ def verify_login(email: str, password: str, users_db: dict) -> Optional[dict]:
 # Middleware / dependencia de proteccion
 # ---------------------------------------------------------------------------
 
+def user_email(user: dict) -> str:
+    """Email del JWT/sesión (sub) normalizado."""
+    return (user.get("email") or user.get("sub") or "").strip().lower()
+
+
 def get_current_user(request: Request) -> dict:
     """Dependencia FastAPI — lanza 401 si no hay token valido."""
     token = request.cookies.get(COOKIE_NAME)
@@ -110,6 +117,9 @@ def get_current_user(request: Request) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token invalido o expirado",
         )
+    email = user_email(payload)
+    if email:
+        payload = {**payload, "email": email}
     return payload
 
 

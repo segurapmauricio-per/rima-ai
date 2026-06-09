@@ -89,6 +89,26 @@
     .bar-pub  { background: linear-gradient(90deg,#34D399,#10B981); }
     .bar-prog { background: linear-gradient(90deg,#38BDF8,#0EA5E9); }
     .bar-pend { background: rgba(100,116,139,0.35); }
+
+    /* ── Barra de enfoque (modal generar) ── */
+    .enfoque-track { position:relative; height:28px; border-radius:10px; overflow:hidden; cursor:pointer;
+      background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); user-select:none; touch-action:none; }
+    .enfoque-track .seg { position:absolute; top:0; bottom:0; transition:width .08s ease; }
+    .seg-ventas { left:0; background:linear-gradient(90deg,#7C3AED,#6D28D9); }
+    .seg-educa  { background:linear-gradient(90deg,#06B6D4,#0891B2); }
+    .seg-conex  { background:linear-gradient(90deg,#F59E0B,#D97706); }
+    .enfoque-handle { position:absolute; top:-2px; width:14px; height:32px; margin-left:-7px;
+      border-radius:6px; background:#fff; border:2px solid rgba(124,58,237,0.6);
+      box-shadow:0 2px 8px rgba(0,0,0,0.35); cursor:ew-resize; z-index:2; }
+    .enfoque-handle:hover { border-color:#A78BFA; }
+    .enfoque-legend { display:flex; justify-content:space-between; font-size:10px; color:#94A3B8; margin-top:8px; }
+    .enfoque-legend strong { color:#F1F5F9; font-size:12px; }
+    .btn-enfoque-reset { font-size:10px; color:#A78BFA; background:transparent; border:none; cursor:pointer;
+      margin-top:6px; padding:0; text-decoration:underline; }
+    .btn-enfoque-reset:hover { color:#C4B5FD; }
+    .gen-done-icon { width:48px; height:48px; border-radius:50%; margin:0 auto 12px;
+      background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.35);
+      display:flex; align-items:center; justify-content:center; }
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -128,15 +148,15 @@
     </div>
   </header>
 
-  <!-- Scrollable content -->
-  <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-    <div class="grid grid-cols-3 gap-4 h-full">
+  <!-- Scrollable content: scroll único del wrapper principal -->
+  <div class="flex-1 overflow-y-auto px-5 py-4" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;align-items:start">
 
       <!-- ── LEFT: Calendar + Detail — 2/3 ── -->
-      <div class="col-span-2 space-y-4">
+      <div style="display:flex;flex-direction:column;gap:12px">
 
-        <!-- Calendar card -->
-        <div class="glass rounded-2xl border border-white/5 overflow-hidden">
+        <!-- Calendar card — altura fija, no crece -->
+        <div class="glass rounded-2xl border border-white/5 overflow-hidden flex-shrink-0">
           <!-- Calendar header -->
           <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
             <div class="flex items-center gap-3">
@@ -182,12 +202,12 @@
           <p class="text-[12px] font-medium text-slate-500">Selecciona una pieza para ver el detalle</p>
           <p class="text-[10px] text-slate-600 mt-1">O haz click en un día vacío para agregar contenido</p>
         </div>
-        <div id="cal-detail" class="glass rounded-2xl border border-white/5 p-5 hidden"></div>
+        <div id="cal-detail" class="glass rounded-2xl border border-white/5 hidden"></div>
 
       </div>
 
       <!-- ── RIGHT panel — 1/3 ── -->
-      <div class="space-y-3">
+      <div style="display:flex;flex-direction:column;gap:12px;position:sticky;top:0">
 
         <!-- Stats card con 3 sub-estados por tipo -->
         <div class="glass rounded-2xl border border-violet-500/20 p-4 glow-violet">
@@ -356,35 +376,63 @@
 
 <!-- ══════════ Modal: Generar con IA ══════════ -->
 <div id="modal-gen" class="modal-overlay hidden" onclick="if(event.target===this&&!isGenerating)closeGenerateModal()">
-  <div class="glass rounded-2xl p-6 w-full max-w-sm" style="border:1px solid rgba(124,58,237,0.35)">
+  <div class="glass rounded-2xl p-6 w-full max-w-md" style="border:1px solid rgba(124,58,237,0.35)">
     <div class="flex items-center gap-3 mb-4">
       <div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:linear-gradient(135deg,#7C3AED,#6D28D9)">
         <svg class="w-4.5 h-4.5" style="width:18px;height:18px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
       </div>
       <div>
-        <h2 class="text-sm font-bold text-white">Generar plan del mes</h2>
-        <p class="text-[10px] text-slate-500">Se ejecuta una vez por mes</p>
+        <h2 class="text-sm font-bold text-white">Generar plan de contenido</h2>
+        <p class="text-[10px] text-slate-500">Ventana de 30 días · según tu plan contratado</p>
       </div>
     </div>
 
     <div id="gen-normal-state">
       <p class="text-[12px] text-slate-300 mb-3 leading-relaxed">
-        RIMA creará <strong class="text-white">20 piezas de contenido</strong> optimizadas para
-        <strong class="text-violet-400" id="gen-month-label">este mes</strong>,
-        distribuidas estratégicamente a lo largo del mes.
+        RIMA creará <strong class="text-white" id="gen-total-piezas">–</strong> piezas estratégicas
+        (plan <strong class="text-violet-400" id="gen-plan-label">Pro</strong>)
+        para los <strong class="text-violet-400">próximos 30 días</strong> desde mañana.
       </p>
-      <div class="p-3 rounded-xl mb-4 text-[11px]" style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15)">
-        <p class="text-cyan-300 font-semibold mb-1">Distribución automática</p>
-        <div class="flex gap-4 text-slate-400">
-          <span>🎬 8 Reels</span>
-          <span>📸 6 Carruseles</span>
-          <span>📖 6 Historias</span>
+      <div class="p-3 rounded-xl mb-3 text-[11px]" style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15)">
+        <p class="text-cyan-300 font-semibold mb-1.5">Cuota por semana · plan <span id="gen-plan-label-2">Pro</span></p>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-slate-300">
+          <span>🎬 <strong id="gen-w-reels" class="text-white">5</strong> reels</span>
+          <span>📸 <strong id="gen-w-carr" class="text-white">2</strong> carruseles</span>
+          <span>📖 <strong id="gen-w-hist" class="text-white">5</strong> historias</span>
         </div>
+        <p class="text-slate-500 mt-1.5" id="gen-30d-breakdown">En 30 días: –</p>
       </div>
+
+      <div class="p-3 rounded-xl mb-3" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-[11px] text-violet-300 font-semibold">Distribución de enfoque</p>
+          <span class="text-[10px] text-slate-500">Total <strong id="enfoque-sum" class="text-white">100%</strong></span>
+        </div>
+        <div class="enfoque-track" id="enfoque-bar">
+          <div class="seg seg-ventas" id="seg-ventas" style="width:60%"></div>
+          <div class="seg seg-educa" id="seg-educa" style="left:60%;width:30%"></div>
+          <div class="seg seg-conex" id="seg-conex" style="left:90%;width:10%"></div>
+          <div class="enfoque-handle" id="handle-1" style="left:60%"></div>
+          <div class="enfoque-handle" id="handle-2" style="left:90%"></div>
+        </div>
+        <div class="enfoque-legend">
+          <span>Ventas <strong id="pct-ventas">60</strong>%</span>
+          <span>Educación <strong id="pct-educa">30</strong>%</span>
+          <span>Conexión <strong id="pct-conex">10</strong>%</span>
+        </div>
+        <p class="text-[9px] text-slate-500 mt-2 leading-relaxed">
+          Ventas → Problema + Solución · Educación → Resultado + Proceso · Conexión → Mentalidad + BTS
+        </p>
+        <button type="button" class="btn-enfoque-reset" id="btn-enfoque-reset">Usar recomendado (60/30/10)</button>
+      </div>
+
       <div id="gen-warning" class="p-3 rounded-xl mb-4 text-[11px] hidden" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2)">
-        <p class="text-amber-400 font-semibold mb-1">Ya existe un plan para este mes</p>
-        <p class="text-slate-400">Se reemplazarán las <span id="gen-existing-count">–</span> piezas existentes con un nuevo plan.</p>
+        <p class="text-amber-400 font-semibold mb-1">Ya hay piezas en la ventana del plan</p>
+        <p class="text-slate-400 mb-1.5">Se reemplazarán <strong class="text-amber-300" id="gen-replace-count">–</strong> piezas planificadas sin avance:</p>
+        <div class="flex flex-wrap gap-3 text-slate-400 mb-1" id="gen-replace-breakdown"></div>
+        <p class="text-slate-500 text-[10px]" id="gen-keep-note"></p>
       </div>
+
       <div class="flex gap-2">
         <button type="button" onclick="closeGenerateModal()"
           class="flex-1 py-2.5 rounded-xl text-[12px] text-slate-400 font-semibold cursor-pointer"
@@ -400,20 +448,34 @@
     </div>
 
     <div id="gen-loading-state" class="hidden py-6 text-center">
-      <div class="spinner mx-auto mb-4"></div>
-      <p class="text-[13px] font-semibold text-white mb-1">Generando plan del mes...</p>
-      <p class="text-[11px] text-slate-500">Gemini está creando 20 piezas optimizadas.<br/>Esto tarda entre 20 y 40 segundos.</p>
+      <div class="spinner mx-auto mb-4" style="width:28px;height:28px;border-width:3px"></div>
+      <p class="text-[13px] font-semibold text-white mb-1">Generando tu plan...</p>
+      <p class="text-[11px] text-slate-500" id="gen-loading-sub">Estrategia de <span id="gen-loading-count">–</span> piezas · 20–40 seg</p>
       <div class="mt-5 space-y-1.5 text-left">
         <div id="gen-step-1" class="flex items-center gap-2 text-[10px] text-slate-500">
-          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Analizando tu marca y cliente ideal
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Respetando cuotas de tu plan contratado
         </div>
         <div id="gen-step-2" class="flex items-center gap-2 text-[10px] text-slate-500">
-          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Generando ideas y guiones
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Asignando enfoque y ángulos estratégicos
         </div>
         <div id="gen-step-3" class="flex items-center gap-2 text-[10px] text-slate-500">
-          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Distribuyendo fechas estratégicas
+          <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>Distribuyendo fechas en la semana
         </div>
       </div>
+    </div>
+
+    <div id="gen-done-state" class="hidden py-4 text-center">
+      <div class="gen-done-icon">
+        <svg style="width:24px;height:24px;color:#34D399" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+        </svg>
+      </div>
+      <p class="text-[15px] font-bold text-white mb-1">¡Plan listo!</p>
+      <p class="text-[11px] text-slate-400 mb-4 leading-relaxed" id="gen-done-msg">–</p>
+      <button type="button" onclick="closeGenerateModal()"
+        class="btn-primary w-full py-2.5 rounded-xl text-[12px] text-white font-bold">
+        Ver calendario
+      </button>
     </div>
 
   </div>
@@ -506,8 +568,6 @@ function renderHeader() {
   document.getElementById('month-label').textContent = MONTH_NAMES[curMonth] + ' ' + curYear;
   document.getElementById('hdr-subtitle').textContent = items.length + ' piezas · Instagram';
   document.getElementById('cal-count').textContent = items.length + ' piezas';
-  document.getElementById('gen-month-label').textContent = MONTH_NAMES[curMonth] + ' ' + curYear;
-
   // Badge y botón generar
   var badge = document.getElementById('plan-badge');
   var btnLabel = document.getElementById('btn-gen-label');
@@ -523,14 +583,6 @@ function renderHeader() {
     document.getElementById('btn-gen-main').style.boxShadow = '';
   }
 
-  // Warning en modal generar
-  var warn = document.getElementById('gen-warning');
-  if (items.length > 0) {
-    document.getElementById('gen-existing-count').textContent = items.length;
-    warn.classList.remove('hidden');
-  } else {
-    warn.classList.add('hidden');
-  }
 }
 
 function renderGrid() {
@@ -594,36 +646,46 @@ function buildCell(day, todayKey) {
     var tc = TYPE_CFG[item.type] || TYPE_CFG.reel;
     var sc = STATUS_CFG[item.status] || STATUS_CFG.pendiente;
 
-    // Chip tipo + título
-    var chip = document.createElement('div');
-    chip.style.cssText = 'border-radius:6px;padding:3px 6px;margin-bottom:3px;background:'+tc.bg+';border:1px solid '+tc.border;
-    chip.innerHTML = '<p style="font-size:8px;font-weight:700;color:'+tc.text+'">'+tc.label+'</p>'
-      + '<p style="font-size:7px;color:'+tc.text+';opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">'+esc(item.title)+'</p>';
-    el.appendChild(chip);
+    // Mostrar todos los ítems del día (máx 3 visible)
+    var shown = dayItems.slice(0, 3);
+    shown.forEach(function(it) {
+      var itc = TYPE_CFG[it.type] || TYPE_CFG.reel;
+      var isc = STATUS_CFG[it.status] || STATUS_CFG.pendiente;
+      var chip = document.createElement('div');
+      chip.style.cssText = 'border-radius:6px;padding:3px 6px;margin-bottom:2px;background:'+itc.bg+';border:1px solid '+itc.border+';cursor:pointer';
+      // Tipo · Estado en una línea | título abajo
+      chip.innerHTML =
+        '<div style="display:flex;align-items:center;gap:4px;margin-bottom:1px">'
+        + '<span style="font-size:7px;font-weight:700;color:'+itc.text+'">'+itc.label+'</span>'
+        + '<span style="font-size:7px;color:#475569">·</span>'
+        + '<span style="font-size:7px;font-weight:600;color:'+isc.text+'">'+isc.label+'</span>'
+        + '</div>'
+        + '<p style="font-size:7px;color:'+itc.text+';opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0">'+esc(it.title)+'</p>';
+      (function(iid){
+        var clicks = 0, timer;
+        chip.addEventListener('click', function(e){
+          e.stopPropagation();
+          clicks++;
+          if (clicks === 1) {
+            timer = setTimeout(function(){ clicks = 0; selectDay(key, iid); }, 250);
+          } else {
+            clearTimeout(timer); clicks = 0;
+            window.location.href = '/contenido?item=' + iid;
+          }
+        });
+      })(it.id);
+      el.appendChild(chip);
+    });
 
-    // Badge estado
-    var sb = document.createElement('span');
-    sb.style.cssText = 'font-size:7px;padding:1px 5px;border-radius:4px;font-weight:600;background:'+sc.bg+';color:'+sc.text;
-    sb.textContent = sc.label;
-    el.appendChild(sb);
-
-    // +N si hay más
-    if (dayItems.length > 1) {
+    if (dayItems.length > 3) {
       var more = document.createElement('span');
-      more.style.cssText = 'font-size:7px;color:#475569;margin-left:3px';
-      more.textContent = '+' + (dayItems.length - 1);
+      more.style.cssText = 'font-size:7px;color:#475569';
+      more.textContent = '+' + (dayItems.length - 3) + ' más';
       el.appendChild(more);
     }
 
-    // Métricas rápidas si está publicado
-    if (item.status === 'publicado' && item.metrics && item.metrics.views) {
-      var met = document.createElement('div');
-      met.style.cssText = 'font-size:7px;color:#475569;margin-top:2px';
-      met.textContent = '👁 ' + fmtNum(item.metrics.views);
-      el.appendChild(met);
-    }
-
-    (function(iid){ el.addEventListener('click', function(){ selectItem(iid); }); })(item.id);
+    // Click en el día (fondo) → mostrar todos los ítems del día abajo
+    (function(k){ el.addEventListener('click', function(){ selectDay(k, null); }); })(key);
 
   } else {
     // Día vacío — hint de agregar
@@ -698,10 +760,104 @@ function renderPending() {
   }
 }
 
-function selectItem(id) {
-  selectedId = id;
+var selectedDate = null;
+
+function selectDay(dateKey, focusId) {
+  selectedDate = dateKey;
+  selectedId   = focusId;
   renderGrid();
-  renderDetail(id);
+  renderDayDetail(dateKey, focusId);
+}
+
+function selectItem(id) {
+  var item = items.find(function(i){ return i.id === id; });
+  if (item) selectDay(item.date, id);
+}
+
+var PSICO_CFG = {
+  'problema':    {bg:'rgba(239,68,68,0.12)',  border:'rgba(239,68,68,0.3)',   text:'#FCA5A5', icon:'🔥'},
+  'solucion':    {bg:'rgba(52,211,153,0.12)', border:'rgba(52,211,153,0.3)',  text:'#6EE7B7', icon:'✅'},
+  'testimonio':  {bg:'rgba(251,191,36,0.12)', border:'rgba(251,191,36,0.3)',  text:'#FCD34D', icon:'⭐'},
+  'mentalidad':  {bg:'rgba(139,92,246,0.12)', border:'rgba(139,92,246,0.3)',  text:'#C4B5FD', icon:'🧠'},
+  'conexion':    {bg:'rgba(236,72,153,0.12)', border:'rgba(236,72,153,0.3)',  text:'#F9A8D4', icon:'❤️'},
+  'lead_magnet': {bg:'rgba(16,185,129,0.12)', border:'rgba(16,185,129,0.3)',  text:'#6EE7B7', icon:'🎁'},
+  'venta':       {bg:'rgba(245,158,11,0.12)', border:'rgba(245,158,11,0.3)',  text:'#FCD34D', icon:'💰'},
+  'educacion':   {bg:'rgba(59,130,246,0.12)', border:'rgba(59,130,246,0.3)',  text:'#93C5FD', icon:'🎓'},
+};
+
+function renderDayDetail(dateKey, focusId) {
+  var detail = document.getElementById('cal-detail');
+  var empty  = document.getElementById('cal-empty');
+  var dayItems = byDate(dateKey);
+
+  if (!dateKey || dayItems.length === 0) {
+    detail.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+
+  detail.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  var d = new Date(dateKey + 'T12:00:00');
+  var dayName = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'][d.getDay()];
+  var dateLabel = dayName + ' ' + d.getDate() + ' ' + MONTH_NAMES[d.getMonth()];
+
+  var html = '<div style="padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between">'
+    + '<div><p style="font-size:13px;font-weight:700;color:#fff;margin:0">'+dateLabel+'</p>'
+    + '<p style="font-size:10px;color:#475569;margin:0">'+dayItems.length+' pieza'+(dayItems.length>1?'s':'')+' programada'+(dayItems.length>1?'s':'')+'</p></div>'
+    + '<button onclick="openAddModal(\''+dateKey+'\')" style="padding:5px 10px;border-radius:8px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-size:10px;cursor:pointer">+ Agregar</button>'
+    + '</div>';
+
+  dayItems.forEach(function(item, idx) {
+    var tc    = TYPE_CFG[item.type] || TYPE_CFG.reel;
+    var sc    = STATUS_CFG[item.status] || STATUS_CFG.pendiente;
+    var psico = PSICO_CFG[item.content_type] || null;
+    var isFocus = item.id === focusId;
+
+    html += '<div style="padding:14px 16px;'+(idx < dayItems.length-1 ? 'border-bottom:1px solid rgba(255,255,255,0.05);' : '')+(isFocus?'background:rgba(124,58,237,0.05)':'')+'">';
+
+    // Header: badges + acciones
+    html += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">'
+      + '<span style="font-size:9px;padding:2px 8px;border-radius:20px;background:'+tc.bg+';color:'+tc.text+';border:1px solid '+tc.border+';font-weight:700">'+tc.label+'</span>'
+      + '<span style="font-size:9px;padding:2px 8px;border-radius:20px;background:'+sc.bg+';color:'+sc.text+';font-weight:600">'+sc.label+'</span>';
+    if (psico) {
+      html += '<span style="font-size:9px;padding:2px 8px;border-radius:20px;background:'+psico.bg+';color:'+psico.text+';border:1px solid '+psico.border+'">'+psico.icon+' '+(item.content_type_label||'')+'</span>';
+    }
+    html += '<div style="margin-left:auto;display:flex;gap:4px">'
+      + '<button onclick="openEditModal(\''+item.id+'\')" style="padding:3px 8px;border-radius:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;font-size:10px;cursor:pointer">Editar</button>'
+      + '<button onclick="window.location.href=\'/contenido?item='+item.id+'\'" style="padding:3px 8px;border-radius:6px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);color:#A78BFA;font-size:10px;cursor:pointer">Ver →</button>'
+      + '<button onclick="confirmDelete(\''+item.id+'\')" style="padding:3px 8px;border-radius:6px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.15);color:#F87171;font-size:10px;cursor:pointer">✕</button>'
+      + '</div></div>';
+
+    // Título
+    html += '<p style="font-size:13px;font-weight:700;color:#fff;margin:0 0 6px">'+esc(item.title)+'</p>';
+
+    // Caption / hook
+    if (item.caption) {
+      html += '<p style="font-size:11px;color:#94A3B8;line-height:1.6;margin:0 0 8px">'+esc(item.caption)+'</p>';
+    }
+
+    // Desarrollo
+    if (item.development) {
+      html += '<div style="padding:10px;border-radius:8px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05);margin-bottom:8px">'
+        + '<p style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin:0 0 4px">Desarrollo</p>'
+        + '<p style="font-size:11px;color:#94A3B8;line-height:1.6;margin:0">'+esc(item.development)+'</p>'
+        + '</div>';
+    }
+
+    // CTA
+    if (item.cta) {
+      html += '<div style="padding:8px 10px;border-radius:8px;background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2)">'
+        + '<p style="font-size:9px;color:#A78BFA;font-weight:700;margin:0 0 2px">CTA</p>'
+        + '<p style="font-size:11px;color:#C4B5FD;margin:0">'+esc(item.cta)+'</p>'
+        + '</div>';
+    }
+
+    html += '</div>';
+  });
+
+  detail.innerHTML = html;
 }
 
 function renderDetail(id) {
@@ -849,40 +1005,257 @@ window.closeAddModal = closeAddModal;
 window.saveItem = saveItem;
 window.confirmDelete = confirmDelete;
 
-// ── Modal Generar ──
-function openGenerateModal() {
+// ── Plan + enfoque (modal generar) ──
+var PLAN_LIMITS_CAL = {
+  basico: { reels: 3, carruseles: 1, historias: 3, label: 'Básico' },
+  pro:    { reels: 5, carruseles: 2, historias: 5, label: 'Pro' },
+  max:    { reels: 9, carruseles: 3, historias: 7, label: 'Max' }
+};
+var PLAN_DAYS_CAL = 30;
+var WEEK_DAYS_CAL = 7;
+var ENFOQUE_RECOMENDADO = { ventas: 60, educacion: 30, conexion: 10 };
+var enfoqueState = { ventas: 60, educacion: 30, conexion: 10 };
+
+function resolveEnfoqueDefault(enf) {
+  if (!enf) return Object.assign({}, ENFOQUE_RECOMENDADO);
+  var v = parseInt(enf.ventas, 10), e = parseInt(enf.educacion, 10), c = parseInt(enf.conexion, 10);
+  if (v === 70 && e === 20 && c === 10) return Object.assign({}, ENFOQUE_RECOMENDADO);
+  if (isNaN(v) || isNaN(e) || isNaN(c)) return Object.assign({}, ENFOQUE_RECOMENDADO);
+  return { ventas: v, educacion: e, conexion: c };
+}
+var genPlanTotals = { total: 0, reels: 0, carruseles: 0, historias: 0 };
+
+function calcPlanTotalsCal(limits) {
+  var tr = 0, tc = 0, th = 0, off = 0;
+  while (off < PLAN_DAYS_CAL) {
+    var days = Math.min(WEEK_DAYS_CAL, PLAN_DAYS_CAL - off);
+    if (days === WEEK_DAYS_CAL) {
+      tr += limits.reels; tc += limits.carruseles; th += limits.historias;
+    } else {
+      tr += Math.round(limits.reels * days / WEEK_DAYS_CAL);
+      tc += Math.round(limits.carruseles * days / WEEK_DAYS_CAL);
+      th += Math.round(limits.historias * days / WEEK_DAYS_CAL);
+    }
+    off += days;
+  }
+  return { reels: tr, carruseles: tc, historias: th, total: tr + tc + th };
+}
+
+function planWindowDates() {
+  var start = new Date(today);
+  start.setDate(start.getDate() + 1);
+  start.setHours(0, 0, 0, 0);
+  var end = new Date(start);
+  end.setDate(end.getDate() + PLAN_DAYS_CAL - 1);
+  return {
+    start: start.getFullYear() + '-' + pad2(start.getMonth() + 1) + '-' + pad2(start.getDate()),
+    end: end.getFullYear() + '-' + pad2(end.getMonth() + 1) + '-' + pad2(end.getDate())
+  };
+}
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function pubIsReplaceable(pub) {
+  if ((pub.status || 'planificado') !== 'planificado') return false;
+  var ap = pub.aprobaciones_json || {};
+  if (ap.tematica || ap.copy || ap.visual) return false;
+  var copy = pub.copy_json || {};
+  if (copy.hook || copy.desarrollo || copy.cta) return false;
+  var arch = pub.archivos_json || {};
+  if (arch.imagen_url || arch.video_url || (arch.secuencia_urls && arch.secuencia_urls.length)) return false;
+  if (pub.programado_at) return false;
+  return true;
+}
+
+function setEnfoquePct(v, e, c) {
+  var MIN = 5;
+  v = Math.max(MIN, Math.min(100 - 2 * MIN, Math.round(v)));
+  e = Math.max(MIN, Math.min(100 - v - MIN, Math.round(e)));
+  c = 100 - v - e;
+  if (c < MIN) { c = MIN; e = 100 - v - c; }
+  enfoqueState = { ventas: v, educacion: e, conexion: c };
+  updateEnfoqueBarUI();
+}
+
+function updateEnfoqueBarUI() {
+  var v = enfoqueState.ventas, e = enfoqueState.educacion, c = enfoqueState.conexion;
+  document.getElementById('seg-ventas').style.width = v + '%';
+  var segE = document.getElementById('seg-educa');
+  var segC = document.getElementById('seg-conex');
+  segE.style.left = v + '%'; segE.style.width = e + '%';
+  segC.style.left = (v + e) + '%'; segC.style.width = c + '%';
+  document.getElementById('handle-1').style.left = v + '%';
+  document.getElementById('handle-2').style.left = (v + e) + '%';
+  document.getElementById('pct-ventas').textContent = v;
+  document.getElementById('pct-educa').textContent = e;
+  document.getElementById('pct-conex').textContent = c;
+  document.getElementById('enfoque-sum').textContent = (v + e + c) + '%';
+}
+
+function initEnfoqueBar() {
+  var bar = document.getElementById('enfoque-bar');
+  var h1 = document.getElementById('handle-1');
+  var h2 = document.getElementById('handle-2');
+  var MIN = 5;
+  var dragging = null;
+
+  function pctFromX(clientX) {
+    var rect = bar.getBoundingClientRect();
+    return Math.max(MIN, Math.min(100 - MIN, Math.round(((clientX - rect.left) / rect.width) * 100)));
+  }
+
+  function onMove(ev) {
+    if (!dragging) return;
+    ev.preventDefault();
+    var x = ev.touches ? ev.touches[0].clientX : ev.clientX;
+    var p = pctFromX(x);
+    var v = enfoqueState.ventas, e = enfoqueState.educacion;
+    var p2 = v + e;
+    if (dragging === 1) {
+      if (p >= p2 - MIN) p = p2 - MIN;
+      setEnfoquePct(p, p2 - p, 100 - p2);
+    } else {
+      if (p <= v + MIN) p = v + MIN;
+      if (p > 100 - MIN) p = 100 - MIN;
+      setEnfoquePct(v, p - v, 100 - p);
+    }
+  }
+
+  function stopDrag() { dragging = null; }
+
+  h1.addEventListener('mousedown', function(ev) { ev.preventDefault(); dragging = 1; });
+  h2.addEventListener('mousedown', function(ev) { ev.preventDefault(); dragging = 2; });
+  h1.addEventListener('touchstart', function(ev) { dragging = 1; }, { passive: true });
+  h2.addEventListener('touchstart', function(ev) { dragging = 2; }, { passive: true });
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', stopDrag);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', stopDrag);
+
+  document.getElementById('btn-enfoque-reset').onclick = function() {
+    setEnfoquePct(ENFOQUE_RECOMENDADO.ventas, ENFOQUE_RECOMENDADO.educacion, ENFOQUE_RECOMENDADO.conexion);
+  };
+}
+
+async function refreshGenerateModal() {
+  var brand = {};
+  try { brand = await apiGet('/api/brand'); } catch (_) {}
+
+  var planKey = (brand.plan || 'pro').toLowerCase();
+  if (planKey === 'basic') planKey = 'basico';
+  var limits = PLAN_LIMITS_CAL[planKey] || PLAN_LIMITS_CAL.pro;
+  genPlanTotals = calcPlanTotalsCal(limits);
+
+  document.getElementById('gen-total-piezas').textContent = genPlanTotals.total;
+  document.getElementById('gen-plan-label').textContent = limits.label;
+  document.getElementById('gen-plan-label-2').textContent = limits.label;
+  document.getElementById('gen-w-reels').textContent = limits.reels;
+  document.getElementById('gen-w-carr').textContent = limits.carruseles;
+  document.getElementById('gen-w-hist').textContent = limits.historias;
+  document.getElementById('gen-30d-breakdown').textContent =
+    'En 30 días: ' + genPlanTotals.reels + ' reels · ' + genPlanTotals.carruseles +
+    ' carruseles · ' + genPlanTotals.historias + ' historias';
+
+  var enf = resolveEnfoqueDefault(brand.enfoque_default);
+  setEnfoquePct(enf.ventas, enf.educacion, enf.conexion);
+
+  var win = planWindowDates();
+  var warn = document.getElementById('gen-warning');
+  try {
+    var data = await apiGet('/api/publicaciones');
+    var pubs = data.publicaciones || [];
+    var inWin = pubs.filter(function(p) { return p.fecha >= win.start && p.fecha <= win.end; });
+    var replace = inWin.filter(pubIsReplaceable);
+    var keep = inWin.length - replace.length;
+    var br = { reel: 0, carrusel: 0, historia: 0 };
+    replace.forEach(function(p) { br[p.tipo] = (br[p.tipo] || 0) + 1; });
+
+    if (replace.length > 0) {
+      document.getElementById('gen-replace-count').textContent = replace.length;
+      document.getElementById('gen-replace-breakdown').innerHTML =
+        '🎬 ' + (br.reel || 0) + ' reels · 📸 ' + (br.carrusel || 0) + ' carruseles · 📖 ' + (br.historia || 0) + ' historias';
+      document.getElementById('gen-keep-note').textContent = keep > 0
+        ? keep + ' pieza' + (keep !== 1 ? 's' : '') + ' con avance (copy, assets o aprobaciones) se conservan.'
+        : 'Todas las piezas planificadas en la ventana serán reemplazadas.';
+      warn.classList.remove('hidden');
+    } else {
+      warn.classList.add('hidden');
+    }
+  } catch (_) {
+    if (items.length > 0) {
+      document.getElementById('gen-replace-count').textContent = items.length;
+      document.getElementById('gen-replace-breakdown').textContent = 'En el mes visible del calendario';
+      document.getElementById('gen-keep-note').textContent = '';
+      warn.classList.remove('hidden');
+    } else {
+      warn.classList.add('hidden');
+    }
+  }
+}
+
+function resetGenModalViews() {
   document.getElementById('gen-normal-state').classList.remove('hidden');
   document.getElementById('gen-loading-state').classList.add('hidden');
+  document.getElementById('gen-done-state').classList.add('hidden');
+  ['gen-step-1','gen-step-2','gen-step-3'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.style.color = '#64748B';
+    el.querySelector('div').style.background = '#475569';
+  });
+}
+
+// ── Modal Generar ──
+function openGenerateModal() {
+  resetGenModalViews();
   document.getElementById('modal-gen').classList.remove('hidden');
+  refreshGenerateModal();
 }
 function closeGenerateModal() {
   if (isGenerating) return;
   document.getElementById('modal-gen').classList.add('hidden');
+  resetGenModalViews();
 }
 async function runGenerate() {
   isGenerating = true;
   window.isGenerating = true;
   document.getElementById('gen-normal-state').classList.add('hidden');
+  document.getElementById('gen-done-state').classList.add('hidden');
   document.getElementById('gen-loading-state').classList.remove('hidden');
+  document.getElementById('gen-loading-count').textContent = genPlanTotals.total || '–';
 
-  // Simular pasos visuales
   var steps = ['gen-step-1','gen-step-2','gen-step-3'];
   steps.forEach(function(s, i){
     setTimeout(function(){
       var el = document.getElementById(s);
+      if (!el) return;
       el.style.color = '#A78BFA';
       el.querySelector('div').style.background = '#7C3AED';
     }, i * 8000);
   });
 
+  var enfoque = {
+    ventas: enfoqueState.ventas,
+    educacion: enfoqueState.educacion,
+    conexion: enfoqueState.conexion
+  };
+
   try {
-    var ms = monthStr(curYear, curMonth);
-    var d = await apiPost('/api/calendar/generate', { month: ms });
-    items = d.items || [];
+    await apiPost('/api/brand', { enfoque_default: enfoque });
+    var d = await apiPost('/api/calendar/generate', { enfoque: enfoque });
+    if (d.starts_on) {
+      var parts = d.starts_on.split('-');
+      curYear = parseInt(parts[0], 10);
+      curMonth = parseInt(parts[1], 10) - 1;
+    }
     selectedId = null;
-    closeGenerateModal();
-    renderAll();
-    window.rimaToast && rimaToast(d.count + ' piezas generadas para ' + MONTH_NAMES[curMonth] + ' ' + curYear);
+    await loadItems();
+
+    document.getElementById('gen-loading-state').classList.add('hidden');
+    document.getElementById('gen-done-state').classList.remove('hidden');
+    var rango = d.starts_on && d.ends_on ? (d.starts_on + ' → ' + d.ends_on) : '';
+    document.getElementById('gen-done-msg').innerHTML =
+      '<strong class="text-white">' + (d.count || genPlanTotals.total) + ' piezas</strong> planificadas' +
+      (rango ? '<br><span class="text-slate-500">' + rango + '</span>' : '') +
+      '<br>Enfoque: ' + enfoque.ventas + '% ventas · ' + enfoque.educacion + '% educación · ' + enfoque.conexion + '% conexión';
   } catch(e) {
     closeGenerateModal();
     window.rimaToast && rimaToast('Error al generar: ' + e.message, 'error');
@@ -904,6 +1277,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 // ── Init ──
+initEnfoqueBar();
 loadItems();
 
 })();

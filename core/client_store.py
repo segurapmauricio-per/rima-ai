@@ -183,6 +183,26 @@ def load_latest_market_research(brand: str) -> Optional[dict]:
     return None
 
 
+def clear_market_research(brand: str) -> dict:
+    """Borra posts scrapeados, snapshots y último análisis del cliente."""
+    root = client_path(brand)
+    posts_db_path = root / "referents" / "posts_db.json"
+    latest_path = root / "market_research" / "latest.json"
+    snapshots_dir = root / "market_research" / "snapshots"
+    cleared = {"posts_db": False, "latest": False, "snapshots": 0}
+    if posts_db_path.exists():
+        posts_db_path.write_text("{}", encoding="utf-8")
+        cleared["posts_db"] = True
+    if latest_path.exists():
+        latest_path.unlink()
+        cleared["latest"] = True
+    if snapshots_dir.exists():
+        for f in snapshots_dir.glob("*.json"):
+            f.unlink()
+            cleared["snapshots"] += 1
+    return cleared
+
+
 # ─── Content Calendar ─────────────────────────────────────────────────────────
 
 def save_content_calendar(brand: str, calendar_data: dict, month: str) -> str:

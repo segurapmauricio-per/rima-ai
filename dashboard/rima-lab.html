@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Agent Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
+    .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9)}
+
+    .agent-card{border-radius:16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);padding:16px;transition:border-color .2s}
+    .agent-card.running{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.06)}
+    .agent-card.done{border-color:rgba(52,211,153,0.4);background:rgba(52,211,153,0.04)}
+    .agent-card.error{border-color:rgba(239,68,68,0.4);background:rgba(239,68,68,0.04)}
+
+    .run-btn{font-size:11px;font-weight:700;padding:7px 16px;border-radius:10px;border:none;cursor:pointer;
+      font-family:'Inter',sans-serif;display:flex;align-items:center;gap:6px;transition:all .18s;
+      background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;
+      box-shadow:0 2px 12px rgba(124,58,237,0.3)}
+    .run-btn:hover{box-shadow:0 4px 20px rgba(124,58,237,0.45);transform:translateY(-1px)}
+    .run-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+
+    .clear-btn{font-size:11px;font-weight:700;padding:7px 16px;border-radius:10px;cursor:pointer;
+      font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .18s;
+      background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.35);color:#F87171}
+    .clear-btn:hover{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.5)}
+    .clear-btn:disabled{opacity:.4;cursor:not-allowed}
+
+    .status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+    .dot-idle{background:#475569}
+    .dot-running{background:#7C3AED;animation:pulse 1.2s ease-in-out infinite}
+    .dot-done{background:#34D399}
+    .dot-error{background:#F87171}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinning{animation:spin 1s linear infinite}
+
+    /* Log panel */
+    .log-area{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:#94A3B8}
+    .log-section{margin-bottom:16px;border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.06)}
+    .log-header{padding:8px 12px;background:rgba(255,255,255,0.04);font-size:9px;font-weight:700;
+      letter-spacing:.1em;text-transform:uppercase;color:#64748B;display:flex;align-items:center;justify-content:space-between}
+    .log-body{padding:12px;background:rgba(0,0,0,0.2)}
+    .log-key{color:#A78BFA;font-weight:500}
+    .log-val{color:#F1F5F9}
+    .log-str{color:#86EFAC}
+    .log-num{color:#67E8F9}
+    .log-tag{display:inline-block;font-size:9px;font-weight:700;padding:1px 7px;border-radius:20px;margin-right:4px}
+    .tag-ok{background:rgba(52,211,153,0.15);color:#34D399}
+    .tag-warn{background:rgba(245,158,11,0.15);color:#FCD34D}
+    .tag-err{background:rgba(239,68,68,0.15);color:#F87171}
+    .tag-info{background:rgba(124,58,237,0.15);color:#A78BFA}
+
+    /* Config inputs */
+    .cfg-input{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.09);border-radius:8px;
+      padding:6px 10px;font-size:12px;color:#F1F5F9;font-family:'Inter',sans-serif;outline:none;width:100%;transition:border-color .2s}
+    .cfg-input:focus{border-color:rgba(124,58,237,0.5)}
+    .cfg-label{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;margin-bottom:4px;display:block}
+
+    /* Tabla estilo Excel para scrape */
+    .x-table-wrap{overflow:auto;border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(0,0,0,0.25)}
+    .x-table{width:100%;border-collapse:collapse;font-size:10px;font-family:'JetBrains Mono',monospace}
+    .x-table th{position:sticky;top:0;background:#1a1a2e;color:#94A3B8;font-weight:700;text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.1);white-space:nowrap}
+    .x-table td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.05);color:#E2E8F0;vertical-align:top;max-width:200px}
+    .x-table tr:nth-child(even) td{background:rgba(255,255,255,0.02)}
+    .x-table tr:hover td{background:rgba(124,58,237,0.08)}
+    .x-num{color:#67E8F9;text-align:right}
+    .x-link{color:#A78BFA;text-decoration:underline;word-break:break-all}
+  </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+<aside id="rima-sidebar"></aside>
+
+<main class="flex-1 flex flex-col h-screen overflow-hidden">
+
+  <!-- Topbar -->
+  <div class="flex items-center gap-3 px-6 py-3 border-b border-white/5 flex-shrink-0"
+       style="background:rgba(10,10,15,0.85);backdrop-filter:blur(12px)">
+    <div class="w-7 h-7 rounded-lg flex items-center justify-center"
+         style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25)">
+      <svg class="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .3 2.7-1.1 2.7H4.9c-1.4 0-2.1-1.7-1.1-2.7L5 14.5"/>
+      </svg>
+    </div>
+    <div>
+      <h1 class="text-sm font-bold text-white">Agent Lab</h1>
+      <p class="text-[10px] text-slate-500 -mt-0.5">Prueba y monitoreo de agentes · Solo desarrollo</p>
+    </div>
+    <div class="ml-auto flex items-center gap-2 text-[10px] text-slate-600">
+      <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+      Servidor local · localhost:8000
+    </div>
+  </div>
+
+  <!-- Two column layout -->
+  <div class="flex-1 flex overflow-hidden">
+
+    <!-- LEFT: Agent cards -->
+    <div class="w-80 flex-shrink-0 border-r border-white/5 overflow-y-auto p-4 space-y-3">
+
+      <p class="text-[9px] uppercase tracking-widest font-bold text-slate-600 px-1 pb-1">Agentes disponibles</p>
+
+      <!-- Monthly Planner -->
+      <div class="agent-card" id="card-monthly">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <div class="status-dot dot-idle" id="dot-monthly"></div>
+              <span class="text-xs font-bold text-white">Planificador Mensual</span>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed">Genera el plan estratégico de los próximos 30 días. Corre 1x/mes.</p>
+          </div>
+          <div class="text-[9px] font-bold px-2 py-1 rounded-lg" style="background:rgba(124,58,237,0.12);color:#A78BFA;white-space:nowrap">1x / mes</div>
+        </div>
+        <!-- Config -->
+        <div class="space-y-2 mb-3">
+          <div>
+            <label class="cfg-label">Ventana del plan</label>
+            <p class="text-[11px] text-slate-400 leading-relaxed"
+               style="padding:6px 10px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px">
+              Próximos 30 días corridos desde mañana — automático, sin mes calendario.
+            </p>
+          </div>
+          <div>
+            <label class="cfg-label">Plan contratado</label>
+            <select class="cfg-input" id="cfg-plan" onchange="savePlan()">
+              <option value="basico">Básico — 3 reels · 1 carrusel · 3 historias / sem</option>
+              <option value="pro" selected>Pro — 5 reels · 2 carruseles · 5 historias / sem</option>
+              <option value="max">Max — 9 reels · 3 carruseles · 7 historias / sem</option>
+            </select>
+          </div>
+          <div>
+            <label class="cfg-label">Enfoque (ventas / educacion / conexion)</label>
+            <div class="flex gap-2">
+              <input class="cfg-input" id="cfg-v" placeholder="Ventas%" value="60" style="width:33%" />
+              <input class="cfg-input" id="cfg-e" placeholder="Educ%" value="30" style="width:33%" />
+              <input class="cfg-input" id="cfg-c" placeholder="Conex%" value="10" style="width:33%" />
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button class="run-btn flex-1 justify-center" id="btn-monthly" onclick="runMonthly()">
+            <svg class="w-3.5 h-3.5" id="icon-monthly" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+            </svg>
+            <span id="lbl-monthly">Ejecutar agente</span>
+          </button>
+          <button class="clear-btn flex-1" id="btn-clear-planned" onclick="clearPlanned()" title="Borra solo planificado sin aprobaciones ni assets">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+            </svg>
+            <span id="lbl-clear-planned">Borrar planificado</span>
+          </button>
+        </div>
+        <p class="text-[9px] text-slate-600 mt-2" id="last-monthly">Sin ejecutar</p>
+      </div>
+
+      <!-- Market Research -->
+      <div class="agent-card" id="card-market">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <div class="status-dot dot-idle" id="dot-market"></div>
+              <span class="text-xs font-bold text-white">Estudio de Mercado</span>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed">Scrapea referentes, actualiza métricas, analiza cuenta del cliente.</p>
+          </div>
+          <div class="text-[9px] font-bold px-2 py-1 rounded-lg" style="background:rgba(6,182,212,0.1);color:#67E8F9;white-space:nowrap">1x / sem</div>
+        </div>
+        <div class="space-y-2 mb-3">
+          <div>
+            <label class="cfg-label">Referentes (separados por coma)</label>
+            <input class="cfg-input" id="cfg-market-refs" placeholder="Vacío = usa perfiles de Referencias" value="" />
+          </div>
+        </div>
+        <button class="run-btn w-full justify-center" id="btn-market" onclick="runMarket()">
+          <svg class="w-3.5 h-3.5" id="icon-market" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+          </svg>
+          <span id="lbl-market">Ejecutar agente</span>
+        </button>
+        <button type="button" onclick="deleteScraped()" id="btn-clear-market-data"
+          class="w-full mt-2 text-[10px] text-red-400 hover:text-red-300 transition-colors px-3 py-2 rounded-lg flex items-center justify-center gap-1.5"
+          style="border:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.05)">
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+          </svg>
+          Borrar data recopilada
+        </button>
+        <p class="text-[9px] text-slate-600 mt-2" id="last-market">Sin ejecutar</p>
+      </div>
+
+      <!-- Weekly Orchestrator -->
+      <div class="agent-card" id="card-weekly">
+        <div class="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <div class="status-dot dot-idle" id="dot-weekly"></div>
+              <span class="text-xs font-bold text-white">Orquestador Semanal</span>
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed">Toma el plan + mercado, propone tematicas. Corre cada lunes.</p>
+          </div>
+          <div class="text-[9px] font-bold px-2 py-1 rounded-lg" style="background:rgba(16,185,129,0.1);color:#34D399;white-space:nowrap">Lunes</div>
+        </div>
+        <button class="run-btn w-full justify-center" id="btn-weekly" onclick="runWeekly()">
+          <svg class="w-3.5 h-3.5" id="icon-weekly" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+          </svg>
+          <span id="lbl-weekly">Ejecutar agente</span>
+        </button>
+        <p class="text-[9px] text-slate-600 mt-2" id="last-weekly">Sin ejecutar</p>
+      </div>
+
+      <!-- Sub-agents -->
+      <p class="text-[9px] uppercase tracking-widest font-bold text-slate-600 px-1 pt-2 pb-1">Sub-agentes (demanda)</p>
+
+      <div class="agent-card" id="card-reel-copy">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="status-dot dot-idle" id="dot-reel-copy"></div>
+          <span class="text-xs font-bold text-white">Copy de Reel</span>
+          <div class="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-lg" style="background:rgba(236,72,153,0.1);color:#F472B6">Demanda</div>
+        </div>
+        <p class="text-[10px] text-slate-500 mb-3">Hook + guion + CTA para un reel especifico.</p>
+        <div class="mb-3">
+          <label class="cfg-label">Idea / angulo</label>
+          <input class="cfg-input" id="cfg-reel-idea" placeholder="Ej: Por que tu contenido no vende" />
+        </div>
+        <button class="run-btn w-full justify-center" id="btn-reel-copy" onclick="runReelCopy()">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+          </svg>
+          <span id="lbl-reel-copy">Ejecutar</span>
+        </button>
+        <p class="text-[9px] text-slate-600 mt-2" id="last-reel-copy">Sin ejecutar</p>
+      </div>
+
+      <div class="agent-card" id="card-story-copy">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="status-dot dot-idle" id="dot-story-copy"></div>
+          <span class="text-xs font-bold text-white">Copy de Historias</span>
+          <div class="ml-auto text-[9px] font-bold px-2 py-0.5 rounded-lg" style="background:rgba(99,102,241,0.1);color:#A5B4FC">Demanda</div>
+        </div>
+        <p class="text-[10px] text-slate-500 mb-3">Secuencia de historias: tipo + copy + slides.</p>
+        <div class="mb-3">
+          <label class="cfg-label">Tipo de historia</label>
+          <select class="cfg-input" id="cfg-story-tipo">
+            <option>Hand Raiser</option>
+            <option>CTA informativo</option>
+            <option>Awareness / Victorias</option>
+            <option>Encuesta</option>
+          </select>
+        </div>
+        <button class="run-btn w-full justify-center" id="btn-story-copy" onclick="runStoryCopy()">
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z"/>
+          </svg>
+          <span id="lbl-story-copy">Ejecutar</span>
+        </button>
+        <p class="text-[9px] text-slate-600 mt-2" id="last-story-copy">Sin ejecutar</p>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: Output log -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+
+      <!-- Log topbar -->
+      <div class="flex items-center justify-between px-5 py-3 border-b border-white/5 flex-shrink-0">
+        <div class="flex items-center gap-2">
+          <div class="w-2 h-2 rounded-full" id="log-status-dot" style="background:#475569"></div>
+          <span class="text-xs font-bold text-white" id="log-title">Esperando ejecucion...</span>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="toggleView()" id="btn-toggle-view" class="text-[10px] text-slate-400 hover:text-white transition-colors px-2 py-1 rounded" style="border:1px solid rgba(255,255,255,0.1)">Ver JSON</button>
+          <button onclick="copyRaw()" class="text-[10px] text-slate-600 hover:text-slate-400 transition-colors px-2 py-1 rounded" style="border:1px solid rgba(255,255,255,0.06)">Copiar</button>
+          <button onclick="deleteScraped()" id="btn-delete-scraped" class="text-[10px] text-red-400 hover:text-red-300 transition-colors px-2 py-1 rounded hidden" style="border:1px solid rgba(239,68,68,0.25)">Borrar scrapeado</button>
+          <button onclick="clearLog()" class="text-[10px] text-slate-600 hover:text-slate-400 transition-colors px-2 py-1 rounded" style="border:1px solid rgba(255,255,255,0.06)">Limpiar</button>
+        </div>
+      </div>
+
+      <!-- Log content -->
+      <div class="flex-1 overflow-y-auto p-5 log-area" id="log-panel">
+        <div style="text-align:center;padding:60px 0;color:#334155">
+          <svg style="width:32px;height:32px;margin:0 auto 12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3"/>
+          </svg>
+          <p style="font-size:12px">Ejecuta un agente para ver el resultado</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<script>
+let lastRawData = null;
+
+// ── Helpers de display ───────────────────────────────────────────────────────
+function setStatus(agentId, status) {
+  // status: idle | running | done | error
+  const dot = document.getElementById('dot-' + agentId);
+  const card = document.getElementById('card-' + agentId);
+  dot.className = 'status-dot dot-' + status;
+  card.className = 'agent-card' + (status === 'idle' ? '' : ' ' + status);
+}
+
+function setBtn(agentId, running) {
+  const btn = document.getElementById('btn-' + agentId);
+  const lbl = document.getElementById('lbl-' + agentId);
+  const icon = document.getElementById('icon-' + agentId);
+  if (btn) btn.disabled = running;
+  if (lbl) lbl.textContent = running ? 'Ejecutando...' : 'Ejecutar' + (agentId === 'monthly' ? ' agente' : '');
+  if (icon) icon.classList.toggle('spinning', running);
+}
+
+function logTitle(title, color) {
+  document.getElementById('log-title').textContent = title;
+  document.getElementById('log-status-dot').style.background = color || '#A78BFA';
+}
+
+function clearLog() {
+  document.getElementById('log-panel').innerHTML = '';
+  logTitle('Esperando ejecucion...', '#475569');
+  lastRawData = null;
+}
+
+function copyRaw() {
+  if (lastRawData) navigator.clipboard.writeText(JSON.stringify(lastRawData, null, 2));
+}
+
+let jsonViewActive = false;
+let lastReadableHTML = '';
+
+function toggleView() {
+  const panel = document.getElementById('log-panel');
+  const btn   = document.getElementById('btn-toggle-view');
+  if (!lastRawData) return;
+  if (!jsonViewActive) {
+    // Switch to JSON view
+    lastReadableHTML = panel.innerHTML;
+    const json = JSON.stringify(lastRawData, null, 2)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      // Colorize
+      .replace(/"([^"]+)":/g, '<span style="color:#A78BFA">"$1"</span>:')
+      .replace(/: "([^"]*)"/g, ': <span style="color:#86EFAC">"$1"</span>')
+      .replace(/: (\d+\.?\d*)/g, ': <span style="color:#67E8F9">$1</span>')
+      .replace(/: (true|false|null)/g, ': <span style="color:#FCD34D">$1</span>');
+    panel.innerHTML = `<pre style="font-size:10px;line-height:1.6;white-space:pre-wrap;word-break:break-all">${json}</pre>`;
+    btn.textContent = 'Vista legible';
+    btn.style.color = '#A78BFA';
+    btn.style.borderColor = 'rgba(124,58,237,0.4)';
+    jsonViewActive = true;
+  } else {
+    // Switch back to readable
+    panel.innerHTML = lastReadableHTML;
+    btn.textContent = 'Ver JSON';
+    btn.style.color = '';
+    btn.style.borderColor = '';
+    jsonViewActive = false;
+  }
+}
+
+function ts() {
+  return new Date().toLocaleTimeString('es', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+
+function addLog(html) {
+  document.getElementById('log-panel').innerHTML += html;
+  document.getElementById('log-panel').scrollTop = 9999;
+}
+
+function startLog(agentName) {
+  document.getElementById('log-panel').innerHTML = '';
+  logTitle('Ejecutando: ' + agentName, '#A78BFA');
+  addLog(`<div style="color:#64748B;font-size:10px;margin-bottom:12px">[${ts()}] Iniciando ${agentName}...</div>`);
+}
+
+function renderResult(data) {
+  lastRawData = data;
+  jsonViewActive = false;
+  const panel = document.getElementById('log-panel');
+  panel.innerHTML = '';
+  logTitle('Resultado listo', '#34D399');
+  addLog(`<div style="color:#34D399;margin-bottom:16px;font-size:10px">[${ts()}] Completado exitosamente</div>`);
+  if (data.agent === 'market_research' && !data.apify_used) {
+    const note = data.scrape_note || 'Sin scraping — configurá APIFY_API_TOKEN en .env';
+    addLog(`<div style="margin-bottom:14px;padding:10px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.35);font-size:11px;color:#FCA5A5">
+      <span class="log-tag tag-err">SIN SCRAPE</span> ${escHtml(note)}
+      ${data.profiles_count != null ? `<br><span style="color:#94A3B8">Perfiles enviados: ${data.profiles_count}</span>` : ''}
+    </div>`);
+  }
+
+  if (data.agent === 'market_research' && (data.posts || []).length) {
+    renderMarketTable(data);
+    document.getElementById('btn-delete-scraped').classList.remove('hidden');
+  } else {
+    document.getElementById('btn-delete-scraped').classList.add('hidden');
+    renderObject(data, 0);
+  }
+}
+
+function renderMarketTable(data) {
+  const posts = (data.top_posts || data.posts || []).slice().sort((a,b) =>
+    ((b.metrics||{}).score_ventas||0) - ((a.metrics||{}).score_ventas||0)
+  );
+  const rows = posts.map(p => {
+    const m = p.metrics || {};
+    const cap = (p.caption || '').slice(0, 60).replace(/</g,'');
+    const url = p.url || '';
+    const sv = m.score_ventas != null ? Number(m.score_ventas).toFixed(1) : '—';
+    return `<tr>
+      <td>${escHtml(p.owner||'')}</td>
+      <td class="x-num">${sv}</td>
+      <td class="x-num">${fmtNum(p.views)}</td>
+      <td class="x-num">${fmtNum(p.comments)}</td>
+      <td class="x-num">${m.fuerza != null ? (m.fuerza*100).toFixed(1)+'%' : '—'}</td>
+      <td class="x-num">${m.relevancia ?? '—'}</td>
+      <td class="x-num">${m.engagement != null ? (m.engagement*100).toFixed(2)+'%' : '—'}</td>
+      <td class="x-num">${m.ratio_conversacion != null ? m.ratio_conversacion.toFixed(2)+'%' : '—'}</td>
+      <td class="x-num">${p.modelabilidad ?? '—'}</td>
+      <td title="${escHtml(p.caption||'')}">${escHtml(cap)}${(p.caption||'').length>60?'…':''}</td>
+      <td>${url ? `<a class="x-link" href="${escHtml(url)}" target="_blank" rel="noopener">link</a>` : '—'}</td>
+    </tr>`;
+  }).join('');
+
+  addLog(`<div style="margin-bottom:12px;font-size:10px;color:#94A3B8">
+    <span class="log-tag tag-ok">RESUMEN</span>
+    Posts: <span class="log-num">${data.posts_analyzed||posts.length}</span>
+    · Métricas actualizadas: <span class="log-num">${data.metrics_updated ?? '—'}</span>
+    · Viral spikes: <span class="log-num">${data.viral_spikes ?? 0}</span>
+    · Análisis profundo: <span class="log-num">${data.deep_analyzed ?? 0}${data.deep_analysis_budget ? ' / '+data.deep_analysis_budget.total : ''}</span>
+    · Parseados Gemini: <span class="log-num">${data.deep_analysis_parsed ?? '—'}</span>
+    ${data.deep_analysis_budget ? `<br><span style="color:#64748B;margin-left:4px">Cuotas: ventas ${data.deep_analysis_budget.quotas.ventas} · educ ${data.deep_analysis_budget.quotas.educacion} · conex ${data.deep_analysis_budget.quotas.conexion} (plan ${data.deep_analysis_budget.plan}, ${data.deep_analysis_budget.reels_semana} reels/sem)</span>` : ''}
+    · Semana: <span class="log-str">${data.week||'—'}</span>
+    · Apify: <span class="log-str">${data.apify_used ? 'sí' : 'no'}</span>
+  </div>`);
+
+  if (data.analysis) {
+    addLog(`<div style="margin-bottom:14px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);font-size:10px;color:#CBD5E1;max-height:120px;overflow-y:auto;white-space:pre-wrap">${escHtml((data.analysis||'').slice(0,800))}</div>`);
+  }
+
+  addLog(`<div class="x-table-wrap"><table class="x-table">
+    <thead><tr>
+      <th>Cuenta</th><th>Score V.</th><th>Vistas</th><th>Coments</th>
+      <th>Fuerza</th><th>Relev.</th><th>Engage</th><th>Conv.%</th><th>Model.</th><th>Caption</th><th>URL</th>
+    </tr></thead>
+    <tbody>${rows || '<tr><td colspan="10" style="text-align:center;color:#64748B">Sin posts</td></tr>'}</tbody>
+  </table></div>`);
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+function fmtNum(n){ return n==null||n===''?'—':Number(n).toLocaleString('es'); }
+
+async function deleteScraped() {
+  if (!confirm('¿Borrar toda la data de estudio de mercado?\n(JSON, snapshots y SQLite referentes)')) return;
+  const btn = document.getElementById('btn-clear-market-data');
+  if (btn) { btn.disabled = true; btn.textContent = 'Borrando…'; }
+  try {
+    const res = await fetch('/api/market-research/scraped', { method:'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || 'Error al borrar');
+    lastRawData = null;
+    clearLog();
+    document.getElementById('btn-delete-scraped').classList.add('hidden');
+    document.getElementById('last-market').textContent = 'Data borrada · ' + ts();
+    setStatus('market', 'idle');
+    const c = data.cleared || {};
+    alert(`Listo.\nJSON latest: ${c.latest ? 'sí' : 'no'}\nSQLite referentes: ${c.sqlite_referentes ?? 0} filas\nSnapshots: ${c.snapshots ?? 0}`);
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/></svg> Borrar data recopilada`;
+    }
+  }
+}
+
+function renderError(msg) {
+  document.getElementById('log-panel').innerHTML = '';
+  logTitle('Error', '#F87171');
+  addLog(`<div style="color:#F87171;font-size:11px"><span class="log-tag tag-err">ERROR</span>${msg}</div>`);
+}
+
+function renderObject(obj, depth) {
+  if (typeof obj === 'string') {
+    addLog(`<span class="log-str">"${obj}"</span>`);
+    return;
+  }
+  if (typeof obj === 'number') {
+    addLog(`<span class="log-num">${obj}</span>`);
+    return;
+  }
+  if (obj === null || obj === undefined) {
+    addLog(`<span style="color:#475569">null</span>`);
+    return;
+  }
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) { addLog(`<span style="color:#475569">[]</span>`); return; }
+    addLog(`<div class="log-section">`);
+    addLog(`<div class="log-header"><span>${obj.length} items</span></div>`);
+    addLog(`<div class="log-body">`);
+    obj.slice(0, 5).forEach((item, i) => {
+      addLog(`<div style="margin-bottom:${i < obj.length - 1 ? '10px' : '0'};padding-bottom:${i < obj.length - 1 ? '10px' : '0'};${i < obj.length - 1 ? 'border-bottom:1px solid rgba(255,255,255,0.04)' : ''}">`);
+      if (typeof item === 'object' && item !== null) renderFlat(item);
+      else addLog(`<span class="log-str">"${item}"</span>`);
+      addLog(`</div>`);
+    });
+    if (obj.length > 5) addLog(`<div style="color:#475569;font-size:10px;margin-top:8px">... y ${obj.length - 5} mas</div>`);
+    addLog(`</div></div>`);
+    return;
+  }
+  // Object
+  addLog(`<div class="log-section">`);
+  addLog(`<div class="log-header"><span>${Object.keys(obj).length} campos</span></div>`);
+  addLog(`<div class="log-body">`);
+  renderFlat(obj);
+  addLog(`</div></div>`);
+}
+
+function renderFlat(obj) {
+  const SKIP_LONG = ['ideas', 'calendar', 'stories_calendar'];
+  Object.entries(obj).forEach(([k, v]) => {
+    if (SKIP_LONG.includes(k) && Array.isArray(v)) {
+      addLog(`<div style="display:flex;gap:8px;margin-bottom:5px;align-items:flex-start">
+        <span class="log-key" style="min-width:120px;flex-shrink:0">${k}</span>
+        <span style="color:#475569">[Array de ${v.length} elementos — ver JSON completo]</span>
+      </div>`);
+      return;
+    }
+    let valHtml = '';
+    if (typeof v === 'string') valHtml = `<span class="log-str">"${v.slice(0,120)}${v.length > 120 ? '...' : ''}"</span>`;
+    else if (typeof v === 'number') valHtml = `<span class="log-num">${v}</span>`;
+    else if (typeof v === 'boolean') valHtml = `<span class="log-num">${v}</span>`;
+    else if (v === null) valHtml = `<span style="color:#475569">null</span>`;
+    else if (Array.isArray(v)) valHtml = `<span style="color:#475569">[${v.length} items]</span>`;
+    else if (typeof v === 'object') valHtml = renderInlineObj(v);
+    addLog(`<div style="display:flex;gap:8px;margin-bottom:5px;align-items:flex-start;flex-wrap:wrap">
+      <span class="log-key" style="min-width:120px;flex-shrink:0">${k}</span>
+      <span>${valHtml}</span>
+    </div>`);
+  });
+}
+
+function renderInlineObj(obj) {
+  return Object.entries(obj).map(([k,v]) =>
+    `<span class="log-key">${k}:</span> <span class="log-str">${typeof v === 'string' ? v.slice(0,40) : v}</span>`
+  ).join(' &nbsp;·&nbsp; ');
+}
+
+// ── Plan del cliente ──────────────────────────────────────────────────────────
+function resolveEnfoqueDefault(enf) {
+  const rec = { ventas: 60, educacion: 30, conexion: 10 };
+  if (!enf) return rec;
+  const v = parseInt(enf.ventas, 10), e = parseInt(enf.educacion, 10), c = parseInt(enf.conexion, 10);
+  if (v === 70 && e === 20 && c === 10) return rec;
+  if (isNaN(v) || isNaN(e) || isNaN(c)) return rec;
+  return { ventas: v, educacion: e, conexion: c };
+}
+
+async function loadPlan() {
+  try {
+    const res = await fetch('/api/brand');
+    if (!res.ok) return;
+    const brand = await res.json();
+    const plan = (brand.plan || 'pro').toLowerCase();
+    const sel = document.getElementById('cfg-plan');
+    if (sel && ['basico','basic','pro','max'].includes(plan)) {
+      sel.value = (plan === 'basic') ? 'basico' : plan;
+    }
+    const enf = resolveEnfoqueDefault(brand.enfoque_default);
+    document.getElementById('cfg-v').value = enf.ventas;
+    document.getElementById('cfg-e').value = enf.educacion;
+    document.getElementById('cfg-c').value = enf.conexion;
+  } catch (_) {}
+}
+
+async function savePlan() {
+  const plan = document.getElementById('cfg-plan').value;
+  try {
+    await fetch('/api/brand', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ plan })
+    });
+  } catch (_) {}
+}
+
+loadPlan();
+
+// ── Monthly Planner ───────────────────────────────────────────────────────────
+async function clearPlanned() {
+  if (!confirm('¿Borrar piezas planificadas sin aprobaciones ni contenido cargado en la ventana de 30 días?')) return;
+
+  const btn = document.getElementById('btn-clear-planned');
+  const lbl = document.getElementById('lbl-clear-planned');
+  btn.disabled = true;
+  lbl.textContent = 'Borrando...';
+  startLog('Limpiar planificado');
+  addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-warn">CLEAR</span>Ventana: <span class="log-str">30 días desde mañana</span> — solo slots sin avance</div>`);
+
+  try {
+    const res = await fetch('/api/agent/content/clear-planned', { method: 'POST' });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    addLog(`<div style="margin-bottom:12px">
+      <span class="log-tag tag-ok">OK</span>
+      <span class="log-num">${data.deleted ?? 0}</span> piezas borradas
+      &nbsp;·&nbsp; <span class="log-str">${data.starts_on || '?'}</span> → <span class="log-str">${data.ends_on || '?'}</span>
+    </div>`);
+    document.getElementById('last-monthly').textContent = `Clear · ${data.deleted ?? 0} borradas · ` + ts();
+    renderResult(data);
+  } catch(e) {
+    renderError(e.message);
+  } finally {
+    btn.disabled = false;
+    lbl.textContent = 'Borrar planificado';
+  }
+}
+
+async function runMonthly() {
+  const ventas = parseInt(document.getElementById('cfg-v').value) || 60;
+  const educa  = parseInt(document.getElementById('cfg-e').value) || 30;
+  const conex  = parseInt(document.getElementById('cfg-c').value) || 10;
+
+  setStatus('monthly', 'running');
+  setBtn('monthly', true);
+  startLog('Planificador Mensual');
+  addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-info">CONFIG</span>Ventana: <span class="log-str">30 días desde mañana</span> &nbsp; Ventas: <span class="log-num">${ventas}%</span> &nbsp; Educacion: <span class="log-num">${educa}%</span> &nbsp; Conexion: <span class="log-num">${conex}%</span></div>`);
+
+  const enfoque = { ventas, educacion: educa, conexion: conex };
+  try {
+    await fetch('/api/brand', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ enfoque_default: enfoque })
+    });
+    const res = await fetch('/api/agent/content/run', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ enfoque })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+
+    setStatus('monthly', 'done');
+    const lim = data.limites_semanales || {};
+    document.getElementById('last-monthly').textContent =
+      `OK · ${data.total_piezas ?? '?'} piezas · ${data.starts_on || '?'} → ${data.ends_on || '?'} · ` + ts();
+
+    // Summary
+    const cleared = data.deleted_slots ? ` &nbsp;·&nbsp; <span class="log-num">${data.deleted_slots}</span> anteriores borradas` : '';
+    addLog(`<div style="margin-bottom:12px">
+      <span class="log-tag tag-ok">OK</span>
+      <span class="log-num">${data.total_piezas ?? '?'}</span> piezas planificadas
+      &nbsp;·&nbsp; <span class="log-str">${data.starts_on || '?'}</span> → <span class="log-str">${data.ends_on || '?'}</span>${cleared}
+      <br><span style="font-size:10px;color:#64748B;margin-top:4px;display:inline-block">
+        Plan <span class="log-key">${data.plan_tier || '?'}</span>
+        · límites/sem: <span class="log-num">${lim.reels ?? '?'}</span> reels,
+        <span class="log-num">${lim.carruseles ?? '?'}</span> carruseles,
+        <span class="log-num">${lim.historias ?? '?'}</span> historias
+      </span>
+    </div>`);
+    renderResult(data);
+  } catch(e) {
+    setStatus('monthly', 'error');
+    document.getElementById('last-monthly').textContent = 'Error · ' + ts();
+    renderError(e.message);
+  } finally {
+    setBtn('monthly', false);
+  }
+}
+
+// ── Market Research ───────────────────────────────────────────────────────────
+async function runMarket() {
+  const refs = document.getElementById('cfg-market-refs').value
+    .split(',').map(r => r.trim()).filter(Boolean);
+
+  setStatus('market', 'running');
+  setBtn('market', true);
+  startLog('Estudio de Mercado');
+  const refLabel = refs.length
+    ? refs.map(r=>`<span class="log-str">"${r}"</span>`).join(', ')
+    : '<span class="log-str">perfiles guardados en Referencias</span>';
+  addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-info">CONFIG</span>Referentes: ${refLabel}</div>`);
+
+  try {
+    const res = await fetch('/api/agent/market-research', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ competitor_profiles: refs, hashtags: [] })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    setStatus('market', 'done');
+    document.getElementById('last-market').textContent = 'OK · ' + ts();
+    renderResult(data);
+  } catch(e) {
+    setStatus('market', 'error');
+    document.getElementById('last-market').textContent = 'Error · ' + ts();
+    renderError(e.message);
+  } finally {
+    setBtn('market', false);
+  }
+}
+
+// ── Weekly ────────────────────────────────────────────────────────────────────
+async function runWeekly() {
+  setStatus('weekly', 'running');
+  setBtn('weekly', true);
+  startLog('Orquestador Semanal');
+  try {
+    const res = await fetch('/api/agent/weekly/start', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    setStatus('weekly', 'done');
+    document.getElementById('last-weekly').textContent = 'OK · ' + ts();
+    renderResult(data);
+  } catch(e) {
+    setStatus('weekly', 'error');
+    document.getElementById('last-weekly').textContent = 'Error · ' + ts();
+    renderError(e.message);
+  } finally {
+    setBtn('weekly', false);
+  }
+}
+
+// ── Reel Copy ─────────────────────────────────────────────────────────────────
+async function runReelCopy() {
+  const idea = document.getElementById('cfg-reel-idea').value;
+  if (!idea.trim()) { alert('Ingresa una idea o angulo'); return; }
+
+  const btnEl  = document.getElementById('btn-reel-copy');
+  const lblEl  = document.getElementById('lbl-reel-copy');
+  setStatus('reel-copy', 'running');
+  btnEl.disabled = true; lblEl.textContent = 'Ejecutando...';
+  startLog('Copy de Reel');
+
+  try {
+    const res = await fetch('/api/agent/script', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ idea: { titulo: idea, hook: '', development: '', cta: '' }, brand_brief: {}, tone_notes: '' })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    setStatus('reel-copy', 'done');
+    document.getElementById('last-reel-copy').textContent = 'OK · ' + ts();
+    renderResult(data);
+  } catch(e) {
+    setStatus('reel-copy', 'error');
+    document.getElementById('last-reel-copy').textContent = 'Error · ' + ts();
+    renderError(e.message);
+  } finally {
+    btnEl.disabled = false; lblEl.textContent = 'Ejecutar';
+  }
+}
+
+// ── Story Copy ────────────────────────────────────────────────────────────────
+async function runStoryCopy() {
+  const tipo = document.getElementById('cfg-story-tipo').value;
+  setStatus('story-copy', 'running');
+  const btnEl = document.getElementById('btn-story-copy');
+  const lblEl = document.getElementById('lbl-story-copy');
+  btnEl.disabled = true; lblEl.textContent = 'Ejecutando...';
+  startLog('Copy de Historias');
+  addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-info">CONFIG</span>Tipo: <span class="log-str">"${tipo}"</span></div>`);
+
+  try {
+    const res = await fetch('/api/agent/weekly/next-carousel', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ story_type: tipo })
+    });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    setStatus('story-copy', 'done');
+    document.getElementById('last-story-copy').textContent = 'OK · ' + ts();
+    renderResult(data);
+  } catch(e) {
+    setStatus('story-copy', 'error');
+    document.getElementById('last-story-copy').textContent = 'Error · ' + ts();
+    renderError(e.message);
+  } finally {
+    btnEl.disabled = false; lblEl.textContent = 'Ejecutar';
+  }
+}
+
+// Cargar último scrape al abrir Lab
+fetch('/api/market-research/latest').then(r=>r.json()).then(data=>{
+  if (data && (data.posts||[]).length) {
+    renderResult({ agent:'market_research', posts:data.posts, top_posts:data.top_posts,
+      posts_analyzed:(data.posts||[]).length, analysis:data.analysis, week:data.week });
+    setStatus('market','done');
+    document.getElementById('last-market').textContent = 'Cargado · ' + ts();
+  }
+}).catch(()=>{});
+</script>
+</body>
+</html>
