@@ -147,7 +147,7 @@ class ContentAgent:
         caen en el pasado y no dependen de un "mes calendario" ni de "semana 1".
         """
         try:
-            from core.db import create_or_update_cliente, create_publicacion, update_publicacion_field, init_db
+            from core.db import create_or_update_cliente, create_publicacion, update_publicacion_field, init_db, get_publicaciones
             from datetime import timedelta
 
             init_db(cliente_id)
@@ -175,6 +175,30 @@ class ContentAgent:
                 return f.strftime("%Y-%m-%d"), mes_str, dia_nombre, semana
 
             created = 0
+            batch_week_counts: dict[tuple[str, str, str], int] = {}
+
+            def _week_key(fecha_str: str) -> tuple[str, str]:
+                from core.week_quota import week_bounds_for_date
+                ws, we = week_bounds_for_date(fecha_str)
+                return ws, we
+
+            def _puede_crear(fecha_str: str, tipo_slot: str) -> bool:
+                from core.week_quota import can_create_slot
+                ws, we = _week_key(fecha_str)
+                week_pubs = [
+                    p for p in get_publicaciones(cliente_id)
+                    if ws <= (p.get("fecha") or "") <= we
+                ]
+                batch = {}
+                for (bws, bwe, bt), n in batch_week_counts.items():
+                    if bws == ws and bwe == we and bt == tipo_slot:
+                        batch[tipo_slot] = batch.get(tipo_slot, 0) + n
+                return can_create_slot(plan_db, week_pubs, tipo_slot, batch)
+
+            def _registrar_creado(fecha_str: str, tipo_slot: str) -> None:
+                ws, we = _week_key(fecha_str)
+                k = (ws, we, tipo_slot)
+                batch_week_counts[k] = batch_week_counts.get(k, 0) + 1
 
             # Reels y carruseles — estrategia, sin copy
             for slot in calendar:
@@ -182,6 +206,8 @@ class ContentAgent:
                 fecha_str, mes_str, dia_nombre, semana = datos_de(offset)
 
                 tipo_slot = slot.get("formato", slot.get("tipo_formato", "reel"))
+                if not _puede_crear(fecha_str, tipo_slot):
+                    continue
                 tematica = slot.get("tipo_contenido", slot.get("tipo", "Problema"))
                 enfoque_pieza = slot.get("enfoque", "Ventas")
                 angulo = slot.get("angulo_estrategico", "")
@@ -202,12 +228,16 @@ class ContentAgent:
                     # (no es copy final — es contexto para que arme el contenido con datos de mercado)
                     update_publicacion_field(cliente_id, pub["id"], "propuesta_json",
                                               {"angulo_estrategico": angulo, "fuente": "monthly_planner"})
+                _registrar_creado(fecha_str, tipo_slot)
                 created += 1
 
             # Historias — también estratégicas, sin copy desarrollado
             for slot in historias:
                 offset = slot.get("dia_offset", slot.get("offset", 0))
                 fecha_str, mes_str, dia_nombre, semana = datos_de(offset)
+
+                if not _puede_crear(fecha_str, "historia"):
+                    continue
 
                 create_publicacion(cliente_id, {
                     "fecha": fecha_str,
@@ -220,7 +250,17 @@ class ContentAgent:
                     "status": "planificado",
                     "agente_origen": "monthly",
                 })
+                _registrar_creado(fecha_str, "historia")
                 created += 1
+
+            from core.week_quota import trim_excess_planificado
+            trimmed = trim_excess_planificado(
+                cliente_id, plan_db,
+                start_date=start_date.strftime("%Y-%m-%d"),
+                end_date=(start_date + timedelta(days=PLAN_DAYS - 1)).strftime("%Y-%m-%d"),
+            )
+            if trimmed:
+                print(f"[ContentAgent] Recortados {trimmed} slots planificado sobrantes por cuota semanal")
 
             print(f"[ContentAgent] Guardados {created} slots en DB para {cliente_id} — ventana {start_date} +{PLAN_DAYS}d")
         except Exception as e:

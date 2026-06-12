@@ -335,6 +335,15 @@ def load_weekly_state(brand: str, week: str) -> dict:
     return {"week": week, "stage": "not_started", "items": []}
 
 
+def clear_weekly_state(brand: str, week: str) -> bool:
+    """Elimina el estado del orquestador semanal para una semana."""
+    path = client_path(brand) / "weekly" / f"{week}.json"
+    if path.exists():
+        path.unlink()
+        return True
+    return False
+
+
 # ─── Generic save ─────────────────────────────────────────────────────────────
 
 def save_agent_output(brand: str, agent: str, data: dict, filename: str = None) -> str:

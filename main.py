@@ -44,7 +44,7 @@ from agents.reel_copy.agent import reel_copy_agent
 from agents.weekly.agent import weekly_agent
 from core.client_store import (
     save_brief, load_brief, load_memory, update_memory,
-    ensure_client_dirs, load_weekly_state, save_weekly_state,
+    ensure_client_dirs, load_weekly_state, save_weekly_state, clear_weekly_state,
     load_latest_market_research, clear_market_research,
 )
 from core.referentes_store import (
@@ -1868,6 +1868,8 @@ def api_referentes_scrape(user: dict = Depends(get_current_user)):
             "ok": True,
             "manual_remaining": remaining,
             "posts_analyzed": result.get("posts_analyzed", 0),
+            "transcripts_ok": result.get("transcripts_ok", 0),
+            "deep_analyzed": result.get("deep_analyzed", 0),
             "analysis_preview": (result.get("analysis") or "")[:300],
         }
     except Exception as e:
@@ -1961,12 +1963,19 @@ def _get_cliente_id(user: dict) -> str:
 
 @app.get("/api/publicaciones")
 def api_get_publicaciones(mes: str = None, status: str = None,
-                           tipo: str = None, user: dict = Depends(get_current_user)):
+                           tipo: str = None, desde: str = None, hasta: str = None,
+                           user: dict = Depends(get_current_user)):
     from core.db import get_publicaciones, init_db
     cid = _get_cliente_id(user)
     try:
         init_db(cid)
         pubs = get_publicaciones(cid, mes=mes, status=status, tipo=tipo)
+        if desde or hasta:
+            pubs = [
+                p for p in pubs
+                if (not desde or (p.get("fecha") or "") >= desde)
+                and (not hasta or (p.get("fecha") or "") <= hasta)
+            ]
         return {"publicaciones": pubs, "total": len(pubs)}
     except Exception as e:
         raise HTTPException(500, str(e))
@@ -1992,7 +2001,8 @@ def api_update_status(pub_id: str, payload: dict, user: dict = Depends(get_curre
 
 @app.patch("/api/publicaciones/{pub_id}/aprobar")
 def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_user)):
-    from core.db import update_publicacion_field, get_publicacion
+    from core.db import update_publicacion_field, update_publicacion_status, get_publicacion
+    from core.weekly_helpers import sync_weekly_state_from_db
     cid = _get_cliente_id(user)
     campo = payload.get("campo")  # tematica | copy | visual
     if campo not in ("tematica", "copy", "visual"):
@@ -2003,7 +2013,19 @@ def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_use
     aprobaciones = pub.get("aprobaciones_json") or {}
     aprobaciones[campo] = True
     update_publicacion_field(cid, pub_id, "aprobaciones_json", aprobaciones)
-    return {"ok": True, "aprobaciones": aprobaciones}
+
+    # Transiciones de estado: aprobar copy/visual avanza el pipeline E2E.
+    status = pub.get("status")
+    new_status = status
+    if campo == "copy" and status in ("copy_generado", "copy_enviado"):
+        new_status = "copy_aprobado"
+    elif campo == "visual" and status in ("en_produccion", "produccion_enviada"):
+        new_status = "produccion_aprobada"
+    if new_status != status:
+        update_publicacion_status(cid, pub_id, new_status)
+        brand_name = get_user_brand(load_data(), user.get("email", "")).get("brand_name") or "default"
+        sync_weekly_state_from_db(cid, brand_name, pub.get("fecha"))
+    return {"ok": True, "aprobaciones": aprobaciones, "status": new_status}
 
 @app.get("/api/referentes/top")
 def api_top_referentes(tipo: str = None, limit: int = 10,
@@ -2113,10 +2135,16 @@ Mensaje de seguimiento si no responde en 48h
 # ── Weekly Workflow Models ──
 
 class WeeklyStartRequest(BaseModel):
-    brand: str
+    brand: str = ""
     week_label: str = ""
     month: str = ""
     competitor_profiles: List[str] = []
+    skip_scrape: bool = True
+
+
+class WeeklyClearRequest(BaseModel):
+    week_start: str = ""   # lunes YYYY-MM-DD; vacío = semana actual
+    restart: bool = False  # regenerar propuestas con el agente semanal
 
 
 class WeeklyApprovalRequest(BaseModel):
@@ -2140,13 +2168,211 @@ class MemoryUpdateRequest(BaseModel):
 @app.post("/api/agent/weekly/start")
 def weekly_start(req: WeeklyStartRequest, user: dict = Depends(get_current_user)):
     try:
+        data = load_data()
+        email = user.get("email", "")
+        brand_dict = get_user_brand(data, email)
+        brand_name = req.brand or brand_dict.get("brand_name") or "default"
+        cid = _get_cliente_id(user)
+        brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
         result = weekly_agent.start_week(
-            brand=req.brand,
+            brand=brand_name,
             week_label=req.week_label or None,
             month=req.month or None,
             competitor_profiles=req.competitor_profiles,
+            cliente_id=cid,
+            skip_scrape=req.skip_scrape,
+            brand_brief=brief,
         )
         return JSONResponse(content=result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/agent/weekly/clear-week")
+def weekly_clear_week(req: WeeklyClearRequest = WeeklyClearRequest(),
+                      user: dict = Depends(get_current_user)):
+    """Reinicia propuesta/copy de una semana sin borrar slots del plan mensual ni el estudio de mercado."""
+    from datetime import datetime as dt
+    from core.db import reset_weekly_work, init_db
+    from core.weekly_helpers import week_bounds
+    data = load_data()
+    email = user.get("email", "")
+    brand_dict = get_user_brand(data, email)
+    brand_name = brand_dict.get("brand_name") or "default"
+    cid = _get_cliente_id(user)
+    try:
+        init_db(cid)
+        if req.week_start:
+            ref = dt.strptime(req.week_start, "%Y-%m-%d").date()
+            start, end, week = week_bounds(ref)
+        else:
+            start, end, week = week_bounds()
+        reset = reset_weekly_work(cid, start, end)
+        state_cleared = clear_weekly_state(brand_name, week)
+        result = {
+            "ok": True,
+            "week": week,
+            "week_start": start,
+            "week_end": end,
+            "reset": reset,
+            "weekly_state_cleared": state_cleared,
+        }
+        if req.restart:
+            brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
+            started = weekly_agent.start_week(
+                brand=brand_name,
+                week_label=week,
+                cliente_id=cid,
+                skip_scrape=True,
+                brand_brief=brief,
+                week_start=start,
+            )
+            result["restarted"] = True
+            result["propuestas_generadas"] = started.get("propuestas_generadas", 0)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ElegirReferenteRequest(BaseModel):
+    alternativa_index: int = 0
+    generar_copy: bool = True
+
+
+@app.post("/api/publicaciones/{pub_id}/refresh-propuesta")
+def refresh_propuesta(pub_id: str, user: dict = Depends(get_current_user)):
+    """Descarta las 2 alternativas actuales y muestra las siguientes del pool."""
+    from core.client_store import load_latest_market_research
+    from core.weekly_helpers import refresh_propuesta_for_pub
+    cid = _get_cliente_id(user)
+    market = load_latest_market_research(cid) or {}
+    try:
+        result = refresh_propuesta_for_pub(cid, pub_id, market)
+        if not result.get("ok"):
+            raise HTTPException(400, result.get("error") or "No se pudo refrescar")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+@app.post("/api/publicaciones/{pub_id}/elegir-referente")
+def elegir_referente(pub_id: str, req: ElegirReferenteRequest,
+                     user: dict = Depends(get_current_user)):
+    """El cliente elige qué referente modelar (etapa Propuesta) y opcionalmente genera copy."""
+    data = load_data()
+    email = user.get("email", "")
+    brand_dict = get_user_brand(data, email)
+    brand_name = brand_dict.get("brand_name", "default")
+    cid = _get_cliente_id(user)
+    brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
+    try:
+        if req.generar_copy:
+            result = weekly_agent.generate_copy_for_publicacion(
+                cid, brand_name, pub_id, req.alternativa_index, brand_brief=brief,
+            )
+        else:
+            from core.db import get_publicacion, update_publicacion_field, update_publicacion_status
+            pub = get_publicacion(cid, pub_id)
+            if not pub:
+                raise HTTPException(404, "Publicación no encontrada")
+            prop = pub.get("propuesta_json") or {}
+            alts = (prop if isinstance(prop, dict) else {}).get("alternativas") or []
+            if req.alternativa_index >= len(alts):
+                raise HTTPException(400, "Índice de alternativa inválido")
+            elegida = alts[req.alternativa_index]
+            prop["elegida"] = elegida
+            prop["alternativa_index"] = req.alternativa_index
+            update_publicacion_field(cid, pub_id, "propuesta_json", prop)
+            update_publicacion_field(cid, pub_id, "referente_id", elegida.get("referente_id") or "")
+            update_publicacion_status(cid, pub_id, "propuesta_aprobada")
+            refreshed = weekly_agent._refresh_sibling_propuestas(
+                cid, pub.get("fecha"), skip_pub_id=pub_id, tipo=pub.get("tipo"),
+            )
+            result = {
+                "pub_id": pub_id,
+                "referente": elegida,
+                "status": "propuesta_aprobada",
+                "propuestas_actualizadas": refreshed,
+            }
+        if result.get("error"):
+            raise HTTPException(400, result["error"])
+        return JSONResponse(content=result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/publicaciones/{pub_id}/producir")
+def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
+    """Etapa 3: producción tras copy_aprobado.
+
+    Reel → script_agent (guion teleprompter A/B).
+    Carrusel/Historia → gancho a image_analysis (composición visual = Sprint B).
+    """
+    from core.db import (
+        get_publicacion, update_publicacion_field, update_publicacion_status,
+        get_imagenes_para,
+    )
+    from core.weekly_helpers import sync_weekly_state_from_db
+    data = load_data()
+    email = user.get("email", "")
+    brand_dict = get_user_brand(data, email)
+    brand_name = brand_dict.get("brand_name") or "default"
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    if pub.get("status") != "copy_aprobado":
+        raise HTTPException(400, "La publicación debe estar en copy_aprobado para pasar a producción")
+    copy_j = pub.get("copy_json") or {}
+    if isinstance(copy_j, str):
+        try:
+            copy_j = json.loads(copy_j)
+        except Exception:
+            copy_j = {}
+    tipo = pub.get("tipo", "reel")
+    try:
+        if tipo == "reel":
+            brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
+            idea = copy_j.get("idea") or {
+                "hook": copy_j.get("hook", ""),
+                "development": copy_j.get("desarrollo", ""),
+                "cta": copy_j.get("cta", ""),
+                "content_type": pub.get("tematica", ""),
+            }
+            script = script_agent.run(idea=idea, brand_brief=brief)
+            produccion = {
+                "etapa": "produccion",
+                "tipo": "guion",
+                "script_principal": script.get("script_principal", ""),
+                "script_variante_b": script.get("script_variante_b", ""),
+                "recording_tips": script.get("recording_tips", {}),
+                "estimated_duration": script.get("estimated_duration", ""),
+                "generated_at": script.get("timestamp", ""),
+            }
+        else:
+            try:
+                imagenes = get_imagenes_para(cid, tipo) or []
+            except Exception:
+                imagenes = []
+            produccion = {
+                "etapa": "produccion",
+                "tipo": "visual",
+                "pendiente": "image_analysis",
+                "imagenes_candidatas": [i.get("id") for i in imagenes][:10],
+                "nota": "Gancho de producción visual — la composición de slides se completa en Sprint B.",
+                "generated_at": datetime.now().isoformat(),
+            }
+        update_publicacion_field(cid, pub_id, "produccion_json", produccion)
+        update_publicacion_status(cid, pub_id, "en_produccion")
+        sync_weekly_state_from_db(cid, brand_name, pub.get("fecha"))
+        return {"ok": True, "pub_id": pub_id, "tipo": tipo,
+                "status": "en_produccion", "produccion": produccion}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -2492,20 +2718,11 @@ def api_calendar_generate(payload: dict, user: dict = Depends(get_current_user))
     — no por un "mes calendario", que el plan ya no usa como ancla.
     """
     data = load_data()
-    brand = data.get("brand", {})
-    brand_brief = {
-        "business_name": brand.get("brand_name", "Mi Negocio"),
-        "service": brand.get("brand_service", ""),
-        "ideal_client": brand.get("brand_ideal_client", ""),
-        "problem": brand.get("brand_problem", ""),
-        "main_result": brand.get("brand_result", ""),
-        "price": brand.get("brand_price", ""),
-        "success_cases": brand.get("brand_success_cases", ""),
-        "ig_avg_views": brand.get("ig_avg_views", 0),
-        "plan": brand.get("plan", "pro"),
-    }
+    email = user.get("email", "")
+    brand = get_user_brand(data, email)
+    brand_brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
     enfoque = normalize_enfoque_default(payload.get("enfoque") or brand.get("enfoque_default"))
-    cid = brand.get("brand_name", "default").lower().replace(" ", "_")
+    cid = cliente_id_from_brand(brand)
 
     try:
         result = content_agent.run(

@@ -213,6 +213,9 @@
           </svg>
           <span id="lbl-weekly">Ejecutar agente</span>
         </button>
+        <button class="clear-btn w-full justify-center mt-2" id="btn-weekly-clear" onclick="clearWeekly()" title="Reinicia propuesta/copy de la semana actual">
+          <span id="lbl-weekly-clear">Borrar semana (propuesta/copy)</span>
+        </button>
         <p class="text-[9px] text-slate-600 mt-2" id="last-weekly">Sin ejecutar</p>
       </div>
 
@@ -714,16 +717,25 @@ async function runWeekly() {
   setStatus('weekly', 'running');
   setBtn('weekly', true);
   startLog('Orquestador Semanal');
+  addLog('<div style="margin-bottom:12px"><span class="log-tag tag-info">CONFIG</span>Semana actual · sin re-scrape (usa estudio de mercado guardado)</div>');
   try {
     const res = await fetch('/api/agent/weekly/start', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({})
+      body: JSON.stringify({ skip_scrape: true })
     });
     if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
     const data = await res.json();
     setStatus('weekly', 'done');
-    document.getElementById('last-weekly').textContent = 'OK · ' + ts();
+    document.getElementById('last-weekly').textContent =
+      `OK · ${data.propuestas_generadas ?? 0} propuestas · ${data.week_start || ''} → ${data.week_end || ''} · ` + ts();
+    addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-ok">OK</span>
+      <span class="log-num">${data.propuestas_generadas ?? 0}</span> propuestas nuevas
+      &nbsp;·&nbsp; <span class="log-str">${data.week_start || '?'}</span> → <span class="log-str">${data.week_end || '?'}</span>
+      ${data.cuota ? `<br><span style="font-size:10px;color:#64748B">Cupo: reels ${data.cuota.used?.reel}/${data.cuota.limits?.reel} · carruseles ${data.cuota.used?.carrusel}/${data.cuota.limits?.carrusel} · historias ${data.cuota.used?.historia}/${data.cuota.limits?.historia}</span>` : ''}
+      ${(data.omitidas_cupo||[]).length ? `<br><span style="font-size:10px;color:#FBBF24">${data.omitidas_cupo.length} omitidas por cupo lleno</span>` : ''}
+      ${data.recortadas_planificado ? `<br><span style="font-size:10px;color:#94A3B8">${data.recortadas_planificado} planificado sobrante recortadas</span>` : ''}
+      <br><span style="font-size:10px;color:#64748B">Revisá y elegí referentes en <strong>/contenido</strong></span></div>`);
     renderResult(data);
   } catch(e) {
     setStatus('weekly', 'error');
@@ -731,6 +743,25 @@ async function runWeekly() {
     renderError(e.message);
   } finally {
     setBtn('weekly', false);
+  }
+}
+
+async function clearWeekly() {
+  const btn = document.getElementById('btn-weekly-clear');
+  const lbl = document.getElementById('lbl-weekly-clear');
+  btn.disabled = true; lbl.textContent = 'Borrando...';
+  startLog('Reiniciar semana');
+  try {
+    const res = await fetch('/api/agent/weekly/clear-week', { method: 'POST' });
+    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
+    const data = await res.json();
+    document.getElementById('last-weekly').textContent = `Reset · ${data.reset ?? 0} piezas · ` + ts();
+    addLog(`<div><span class="log-tag tag-ok">OK</span> Reiniciadas <span class="log-num">${data.reset ?? 0}</span> piezas (${data.week_start} → ${data.week_end})</div>`);
+    renderResult(data);
+  } catch(e) {
+    renderError(e.message);
+  } finally {
+    btn.disabled = false; lbl.textContent = 'Borrar semana (propuesta/copy)';
   }
 }
 

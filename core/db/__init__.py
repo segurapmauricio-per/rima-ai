@@ -9,6 +9,7 @@ from .database import (
     get_publicaciones_regenerables,
     publicacion_es_protegida,
     delete_publicaciones_regenerables,
+    reset_weekly_work,
     update_publicacion_status,
     update_publicacion_field,
     add_version_to_publicacion,

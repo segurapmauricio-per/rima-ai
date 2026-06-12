@@ -4,7 +4,120 @@ Métricas compuestas para estudio de mercado — prioriza contenido modelable de
 from __future__ import annotations
 
 import math
+import re
 from typing import Any
+
+TEMATICA_RANK_KEYS = ("problema", "solucion", "resultado", "proceso", "mentalidad")
+
+
+def _norm_tematica_key(val: str) -> str:
+    v = (val or "").lower().strip()
+    v = v.replace("ó", "o").replace("ú", "u").replace("í", "i").replace("á", "a").replace("é", "e")
+    for key in TEMATICA_RANK_KEYS:
+        if key in v:
+            return key
+    aliases = {
+        "problema": ("problem", "pain", "dolor"),
+        "solucion": ("solution", "solucion", "como"),
+        "resultado": ("result", "testimonio", "transform"),
+        "proceso": ("process", "metodo", "rutina", "sistema"),
+        "mentalidad": ("mindset", "creencia", "actitud"),
+    }
+    for key, syns in aliases.items():
+        if any(s in v for s in syns):
+            return key
+    return "problema" if v else "problema"
+
+
+def infer_scores_tematica(post: dict) -> dict[str, float]:
+    """
+    Score 0–100 de qué tan modelable es el post para cada temática RIMA.
+    Usa scores_tematica de Gemini si existen; si no, infiere desde tipo_angulo + texto.
+    """
+    analisis = post.get("analisis_json") or {}
+    if isinstance(analisis, str):
+        try:
+            import json
+            analisis = json.loads(analisis)
+        except Exception:
+            analisis = {}
+
+    raw = analisis.get("scores_tematica") or {}
+    if isinstance(raw, dict) and len(raw) >= 3:
+        out = {}
+        for k, v in raw.items():
+            try:
+                out[_norm_tematica_key(k)] = max(0.0, min(100.0, float(v)))
+            except (TypeError, ValueError):
+                continue
+        for key in TEMATICA_RANK_KEYS:
+            out.setdefault(key, 15.0)
+        return out
+
+    try:
+        mod = max(1, min(10, int(post.get("modelabilidad") or 5)))
+    except (TypeError, ValueError):
+        mod = 5
+    base = 38.0 + mod * 5.5
+
+    scores = {k: 18.0 for k in TEMATICA_RANK_KEYS}
+    primary = _norm_tematica_key(
+        analisis.get("tipo_angulo") or analisis.get("tematica") or "",
+    )
+    scores[primary] = base
+
+    blob = " ".join(
+        str(analisis.get(k) or "") for k in (
+            "tematica", "tipo_angulo", "que_modelar", "problema_resuelto",
+            "estructura_guion", "como_adaptar",
+        )
+    ).lower()
+    blob += " " + (post.get("caption") or "")[:400].lower()
+
+    keyword_map = {
+        "problema": ("problema", "dolor", "excusa", "friccion", "pain", "struggle"),
+        "solucion": ("solucion", "solución", "como ", "tutorial", "paso", "guia"),
+        "resultado": ("resultado", "transform", "antes", "despues", "testimonio"),
+        "proceso": ("proceso", "rutina", "metodo", "sistema", "workflow", "habito"),
+        "mentalidad": ("mentalidad", "mindset", "creencia", "actitud", "motivacion"),
+    }
+    secondary_cap = max(28.0, base - 18.0)
+    for key, words in keyword_map.items():
+        if not any(w in blob for w in words):
+            continue
+        boost = 32.0 + mod * 2
+        if key == primary:
+            scores[key] = max(scores[key], boost)
+        else:
+            scores[key] = max(scores[key], min(boost, secondary_cap))
+
+    ventas = float((post.get("metrics") or {}).get("score_ventas") or 0)
+    if ventas > 0:
+        scores[primary] = min(100.0, scores[primary] + ventas * 0.06)
+
+    return scores
+
+
+def score_tematica_for_slot(post: dict, slot_tematica: str) -> float:
+    """Puntaje de encaje del post con la temática del slot."""
+    key = _norm_tematica_key(slot_tematica)
+    return float(infer_scores_tematica(post).get(key, 0.0))
+
+
+def attach_scores_tematica(post: dict) -> dict[str, float]:
+    """Calcula y persiste scores_tematica en analisis_json."""
+    scores = infer_scores_tematica(post)
+    analisis = post.setdefault("analisis_json", {})
+    if isinstance(analisis, str):
+        try:
+            import json
+            analisis = json.loads(analisis)
+            post["analisis_json"] = analisis
+        except Exception:
+            analisis = {}
+            post["analisis_json"] = analisis
+    analisis["scores_tematica"] = {k: round(scores[k], 1) for k in TEMATICA_RANK_KEYS}
+    return scores
 
 
 def infer_categoria(post: dict) -> str:

@@ -235,7 +235,7 @@ def publicacion_es_protegida(pub: dict) -> bool:
         return True
 
     prop = _json_field(pub, "propuesta_json")
-    if prop.get("hook_idea") or prop.get("angulo"):
+    if prop.get("hook_idea") or prop.get("angulo") or prop.get("alternativas"):
         return True
 
     return False
@@ -267,6 +267,32 @@ def delete_publicaciones_regenerables(cliente_id: str, start_date: str = None,
     return len(to_delete)
 
 
+def reset_weekly_work(cliente_id: str, start_date: str, end_date: str) -> int:
+    """Reinicia propuesta/copy/aprobaciones semanal sin borrar slots del plan mensual."""
+    protected = {
+        "copy_aprobado", "en_produccion", "produccion_enviada",
+        "produccion_aprobada", "programado", "publicado",
+    }
+    aprobaciones_limpias = {"tematica": False, "copy": False, "visual": False}
+    count = 0
+    for pub in get_publicaciones(cliente_id):
+        fecha = pub.get("fecha") or ""
+        if fecha < start_date or fecha > end_date:
+            continue
+        if pub.get("status") in protected:
+            continue
+        pid = pub["id"]
+        update_publicacion_field(cliente_id, pid, "propuesta_json", {})
+        update_publicacion_field(cliente_id, pid, "copy_json", {})
+        update_publicacion_field(cliente_id, pid, "aprobaciones_json", aprobaciones_limpias)
+        update_publicacion_field(cliente_id, pid, "archivos_json", {})
+        update_publicacion_field(cliente_id, pid, "produccion_json", {})
+        update_publicacion_field(cliente_id, pid, "referente_id", "")
+        update_publicacion_status(cliente_id, pid, "planificado")
+        count += 1
+    return count
+
+
 # ── CRUD: Referentes ──────────────────────────────────────────────────────────
 
 def upsert_referente(cliente_id: str, data: dict) -> dict:
@@ -282,25 +308,46 @@ def upsert_referente(cliente_id: str, data: dict) -> dict:
             existing = row["id"] if row else None
 
     if existing:
-        # Solo actualiza metricas — no toca el analisis
-        with db(cliente_id) as conn:
-            conn.execute("""
-                UPDATE referentes_contenido SET
-                    vistas = ?, likes = ?, comentarios = ?, guardados = ?,
-                    seguidores_al_scrape = ?,
-                    fuerza = ?, relevancia = ?, engagement = ?, ratio_conversacion = ?,
-                    score_ventas = ?,
-                    updated_at = ?
-                WHERE id = ? AND cliente_id = ?
-            """, (
-                data.get("vistas", 0), data.get("likes", 0),
-                data.get("comentarios", 0), data.get("guardados", 0),
-                data.get("seguidores_al_scrape", 0),
-                data.get("fuerza"), data.get("relevancia"),
-                data.get("engagement"), data.get("ratio_conversacion"),
-                data.get("score_ventas"),
-                now(), existing, cliente_id
-            ))
+        # Actualiza métricas; transcripción solo si viene del scrape capa 2
+        trans = data.get("transcripcion")
+        if trans:
+            with db(cliente_id) as conn:
+                conn.execute("""
+                    UPDATE referentes_contenido SET
+                        vistas = ?, likes = ?, comentarios = ?, guardados = ?,
+                        seguidores_al_scrape = ?,
+                        fuerza = ?, relevancia = ?, engagement = ?, ratio_conversacion = ?,
+                        score_ventas = ?, transcripcion = ?,
+                        updated_at = ?
+                    WHERE id = ? AND cliente_id = ?
+                """, (
+                    data.get("vistas", 0), data.get("likes", 0),
+                    data.get("comentarios", 0), data.get("guardados", 0),
+                    data.get("seguidores_al_scrape", 0),
+                    data.get("fuerza"), data.get("relevancia"),
+                    data.get("engagement"), data.get("ratio_conversacion"),
+                    data.get("score_ventas"), trans,
+                    now(), existing, cliente_id
+                ))
+        else:
+            with db(cliente_id) as conn:
+                conn.execute("""
+                    UPDATE referentes_contenido SET
+                        vistas = ?, likes = ?, comentarios = ?, guardados = ?,
+                        seguidores_al_scrape = ?,
+                        fuerza = ?, relevancia = ?, engagement = ?, ratio_conversacion = ?,
+                        score_ventas = ?,
+                        updated_at = ?
+                    WHERE id = ? AND cliente_id = ?
+                """, (
+                    data.get("vistas", 0), data.get("likes", 0),
+                    data.get("comentarios", 0), data.get("guardados", 0),
+                    data.get("seguidores_al_scrape", 0),
+                    data.get("fuerza"), data.get("relevancia"),
+                    data.get("engagement"), data.get("ratio_conversacion"),
+                    data.get("score_ventas"),
+                    now(), existing, cliente_id
+                ))
         return get_referente(cliente_id, existing)
     else:
         ref_id = data.get("id") or new_id()
@@ -396,6 +443,7 @@ def referente_row_to_post(row: dict) -> dict:
         "views": row.get("vistas", 0),
         "url": row.get("url", ""),
         "modelabilidad": row.get("modelabilidad"),
+        "transcripcion": row.get("transcripcion") or "",
         "analisis_json": row.get("analisis_json") or {},
         "metrics": {
             "fuerza": row.get("fuerza", 0),
@@ -415,14 +463,22 @@ def referente_row_to_post(row: dict) -> dict:
 
 
 def set_referente_analisis(cliente_id: str, ref_id: str, analisis: dict,
-                            modelabilidad: int) -> None:
+                            modelabilidad: int, transcripcion: str = None) -> None:
     """Guarda el analisis del ContentAnalyzer. Solo corre una vez."""
     with db(cliente_id) as conn:
-        conn.execute("""
-            UPDATE referentes_contenido SET
-                analisis_json = ?, modelabilidad = ?, analizado_at = ?, updated_at = ?
-            WHERE id = ? AND cliente_id = ?
-        """, (to_json(analisis), modelabilidad, now(), now(), ref_id, cliente_id))
+        if transcripcion:
+            conn.execute("""
+                UPDATE referentes_contenido SET
+                    analisis_json = ?, modelabilidad = ?, transcripcion = ?,
+                    analizado_at = ?, updated_at = ?
+                WHERE id = ? AND cliente_id = ?
+            """, (to_json(analisis), modelabilidad, transcripcion, now(), now(), ref_id, cliente_id))
+        else:
+            conn.execute("""
+                UPDATE referentes_contenido SET
+                    analisis_json = ?, modelabilidad = ?, analizado_at = ?, updated_at = ?
+                WHERE id = ? AND cliente_id = ?
+            """, (to_json(analisis), modelabilidad, now(), now(), ref_id, cliente_id))
 
 
 def clear_referentes_contenido(cliente_id: str) -> int:

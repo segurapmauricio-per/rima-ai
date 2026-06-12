@@ -6,6 +6,7 @@ Una historia a la vez, en secuencia (el weekly orchestrator lo llama iterativame
 from core.gemini_client import gemini
 from core.brand_knowledge import K_STORY_COPY
 from core.client_store import load_memory, update_memory
+from core.weekly_helpers import format_slot_context_for_copy
 import json
 from datetime import datetime
 
@@ -62,7 +63,9 @@ class StoryCopyAgent:
 
         research_context = ""
         if market_research:
-            research_context = f"\nREFERENTES RELEVANTES ESTA SEMANA:\n{market_research[:1500]}\n"
+            research_context = f"\n{market_research[:1500]}\n"
+
+        slot_context = format_slot_context_for_copy(slot)
 
         prompt = f"""
 Genera 2 propuestas de copy para esta historia de Instagram.
@@ -72,6 +75,8 @@ SERVICIO: {brief.get('service')}
 CLIENTE IDEAL: {brief.get('ideal_client')}
 RESULTADO PRINCIPAL: {brief.get('main_result')}
 CASOS DE ÉXITO: {brief.get('success_cases', '')}
+
+{slot_context}
 
 HISTORIA A CREAR:
 - Fecha: {date}

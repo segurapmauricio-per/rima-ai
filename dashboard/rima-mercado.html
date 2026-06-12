@@ -300,13 +300,26 @@
         <p class="text-[9px] uppercase tracking-widest text-violet-400 font-semibold mb-1">Hook</p>
         <p class="text-slate-200 leading-relaxed" id="modal-hook">—</p>
       </div>
-      <div>
-        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Copy</p>
-        <p class="text-slate-300 leading-relaxed whitespace-pre-wrap" id="modal-copy">—</p>
+      <div id="modal-guion-wrap" class="hidden">
+        <p class="text-[9px] uppercase tracking-widest text-amber-400 font-semibold mb-1">Guión hablado</p>
+        <p class="text-slate-300 leading-relaxed whitespace-pre-wrap" id="modal-guion">—</p>
       </div>
       <div>
-        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Descripción / formato</p>
+        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Caption</p>
+        <p class="text-slate-300 leading-relaxed whitespace-pre-wrap" id="modal-copy">—</p>
+      </div>
+      <div id="modal-modelar-wrap" class="hidden">
+        <p class="text-[9px] uppercase tracking-widest text-emerald-400 font-semibold mb-1">Qué modelar</p>
+        <p class="text-slate-200 leading-relaxed" id="modal-que-modelar">—</p>
+        <p class="text-slate-400 leading-relaxed mt-2" id="modal-por-que-modelar">—</p>
+      </div>
+      <div>
+        <p class="text-[9px] uppercase tracking-widest text-slate-500 font-semibold mb-1">Formato / estructura</p>
         <p class="text-slate-400 leading-relaxed" id="modal-desc">—</p>
+      </div>
+      <div id="modal-adaptar-wrap" class="hidden">
+        <p class="text-[9px] uppercase tracking-widest text-sky-400 font-semibold mb-1">Cómo adaptar el guión</p>
+        <p class="text-slate-300 leading-relaxed whitespace-pre-wrap" id="modal-adaptar-guion">—</p>
       </div>
     </div>
     <div class="flex gap-2 mt-5 pt-4 border-t border-white/5">
@@ -355,7 +368,7 @@ async function runScraping() {
     const data = await res.json().catch(() => ({ detail: 'Error' }));
     if (!res.ok) throw new Error(data.detail || res.statusText);
     await loadMercado();
-    alert(`Análisis listo · ${data.posts_analyzed || 0} posts analizados`);
+    alert(`Análisis listo · ${data.posts_analyzed || 0} posts · ${data.transcripts_ok ?? 0} con guión transcrito`);
   } catch (e) {
     alert(e.message);
     await loadMercado();
@@ -505,7 +518,10 @@ function buildProfileInsightsFallback(owner, allRefPosts, profileMeta) {
   return {
     resumen,
     para_nicho: `${posts.length} posts · Enfoque dominante: ${dom} · Model. media ${avgMod}/10 · Top ventas ${fmtScoreVentas(postScoreVentas(top))}.`,
-    considerar: (top.analisis_json || {}).como_adaptar || 'Adapta el hook y formato a tu oferta; no copies el tema literal si el nicho difiere.',
+    considerar: (top.analisis_json || {}).por_que_modelar
+      || (top.analisis_json || {}).que_modelar
+      || (top.analisis_json || {}).como_adaptar
+      || 'Adapta el hook y formato a tu oferta; no copies el tema literal si el nicho difiere.',
   };
 }
 
@@ -525,8 +541,9 @@ function renderPostAnalysisList(owner, posts) {
     const m = p.metrics || {};
     const aj = p.analisis_json || {};
     const enf = aj.enfoque_contenido || '';
-    const hook = (aj.hook || p.caption || '').slice(0, 72);
+    const hook = (aj.hook_hablado || aj.hook || p.caption || '').slice(0, 72);
     const mod = p.modelabilidad != null ? `${p.modelabilidad}/10` : '—';
+    const guionBadge = p.transcripcion ? '<span class="text-[9px] px-1.5 py-0.5 rounded font-medium bg-amber-500/15 text-amber-300">Guión</span>' : '';
     return `<div class="post-row rounded-xl px-3 py-2.5 flex items-center gap-3">
       <div class="flex-1 min-w-0">
         <p class="text-[11px] text-white font-medium truncate">${esc(hook)}${hook.length >= 72 ? '…' : ''}</p>
@@ -536,6 +553,7 @@ function renderPostAnalysisList(owner, posts) {
           <span class="text-[9px] text-cyan-400">Vir. ${fmtVirality(m.relevancia)}</span>
           <span class="text-[9px] text-violet-300">Fuerza ${fmtFuerza(m.fuerza)}</span>
           <span class="text-[9px] text-emerald-400">Model. ${mod}</span>
+          ${guionBadge}
         </div>
       </div>
       <button type="button" onclick="openPostModal(${i})" class="flex-shrink-0 px-2.5 py-1.5 rounded-lg text-[9px] font-semibold text-white cursor-pointer border-0 btn-primary">Ver copy</button>
@@ -549,14 +567,48 @@ function openPostModal(idx) {
   if (!p) return;
   const aj = p.analisis_json || {};
   setTxt('modal-owner', '@' + (p.owner || ''));
-  setTxt('modal-hook', aj.hook || (p.caption || '').split('\n')[0] || '—');
+  setTxt('modal-hook', aj.hook_hablado || aj.hook || (p.caption || '').split('\n')[0] || '—');
+  const guionWrap = document.getElementById('modal-guion-wrap');
+  const trans = (p.transcripcion || '').trim();
+  if (guionWrap) {
+    if (trans) {
+      guionWrap.classList.remove('hidden');
+      setTxt('modal-guion', trans);
+    } else {
+      guionWrap.classList.add('hidden');
+    }
+  }
   setTxt('modal-copy', p.caption || '—');
-  const desc = [
+  const modelarWrap = document.getElementById('modal-modelar-wrap');
+  const queModelar = (aj.que_modelar || '').trim();
+  const porQue = (aj.por_que_modelar || '').trim();
+  if (modelarWrap) {
+    if (queModelar || porQue) {
+      modelarWrap.classList.remove('hidden');
+      setTxt('modal-que-modelar', queModelar || '—');
+      setTxt('modal-por-que-modelar', porQue || '');
+    } else {
+      modelarWrap.classList.add('hidden');
+    }
+  }
+  const descParts = [
+    aj.plantilla_detectada ? `Plantilla: ${aj.plantilla_detectada}` : '',
+    aj.estructura_guion,
     aj.formato_descripcion,
     aj.por_que_funciona,
     aj.como_adaptar,
-  ].filter(Boolean).join('\n\n');
-  setTxt('modal-desc', desc || '—');
+  ].filter(Boolean);
+  setTxt('modal-desc', descParts.join('\n\n') || '—');
+  const adaptWrap = document.getElementById('modal-adaptar-wrap');
+  const adaptGuion = (aj.como_adaptar_guion || '').trim();
+  if (adaptWrap) {
+    if (adaptGuion) {
+      adaptWrap.classList.remove('hidden');
+      setTxt('modal-adaptar-guion', adaptGuion);
+    } else {
+      adaptWrap.classList.add('hidden');
+    }
+  }
   const link = document.getElementById('modal-link');
   if (link) {
     link.href = p.url || '#';

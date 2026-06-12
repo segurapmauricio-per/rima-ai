@@ -8,6 +8,7 @@ Para cada reel del calendario semanal:
 from core.gemini_client import gemini
 from core.brand_knowledge import K_REEL_COPY
 from core.client_store import load_memory, load_referents_db, load_content_calendar, update_memory
+from core.weekly_helpers import format_slot_context_for_copy
 import json
 from datetime import datetime
 
@@ -117,6 +118,7 @@ class ReelCopyAgent:
     def _generate_idea(self, slot: dict, brief: dict, referent: dict,
                        tone_notes: str, disliked: str, preferred_formats: list) -> dict:
         referent_context = ""
+        slot_context = format_slot_context_for_copy(slot, referent)
         if referent:
             referent_context = f"""
 REFERENTE A MODELAR:
@@ -124,7 +126,10 @@ REFERENTE A MODELAR:
 - Caption: {referent.get('caption_preview', referent.get('caption', ''))[:300]}
 - Fuerza: {referent.get('fuerza', 0)}, Tracción: {referent.get('traccion_pct', 0)}%
 - URL: {referent.get('url', '')}
-Modelá la DINÁMICA — estructura del hook, ritmo, tipo de gancho y CTA. NO el texto.
+- Qué modelar: {referent.get('que_modelar', '')}
+- Hook hablado: {referent.get('hook_hablado', '')}
+- Cómo adaptar guión: {referent.get('como_adaptar_guion', '')}
+Modelá la DINÁMICA — estructura del hook, ritmo, tipo de gancho y CTA. NO el texto literal.
 """
 
         formats_hint = ", ".join(preferred_formats) if preferred_formats else "Talking head, B-roll con texto"
@@ -137,6 +142,8 @@ SERVICIO: {brief.get('service')}
 CLIENTE IDEAL: {brief.get('ideal_client')}
 RESULTADO: {brief.get('main_result')}
 CASOS DE ÉXITO: {brief.get('success_cases', '')}
+
+{slot_context}
 
 REEL:
 - Fecha: {slot.get('date', '')}

@@ -19,7 +19,15 @@ from agents.carousel_copy.agent import carousel_copy_agent
 from agents.reel_copy.agent import reel_copy_agent
 from core.client_store import (
     load_brief, load_memory, load_content_calendar,
-    save_weekly_state, load_weekly_state, update_memory
+    save_weekly_state, load_weekly_state, update_memory,
+    load_latest_market_research,
+)
+from core.weekly_helpers import (
+    week_bounds, pub_to_slot, get_week_publicaciones,
+    assign_propuestas_rotating, build_propuesta_json,
+    collect_used_referente_urls, collect_used_historia_angulos,
+    refresh_pending_propuestas, format_slot_context_for_copy,
+    sync_weekly_state_from_db,
 )
 from datetime import datetime, timedelta
 import json
@@ -43,58 +51,296 @@ class WeeklyAgent:
         self.name = "weekly"
 
     def start_week(self, brand: str, week_label: str = None,
-                   month: str = None, competitor_profiles: list = None) -> dict:
+                   month: str = None, competitor_profiles: list = None,
+                   cliente_id: str = None, skip_scrape: bool = True,
+                   brand_brief: dict = None, week_start: str = None) -> dict:
         """
-        Kick off the weekly workflow.
-        Called at 5 AM on recording_day - 1.
+        Arranca el flujo semanal: lee slots planificados de SQLite, genera
+        propuestas (2 referentes modelables por pieza) usando el estudio de mercado.
         """
-        week = week_label or datetime.now().strftime("W%W_%Y")
-        brief = load_brief(brand) or {}
+        from datetime import datetime as dt
+        from core.db import (
+            get_publicaciones, update_publicacion_field, update_publicacion_status, init_db,
+        )
+        from core.week_quota import (
+            remaining_week_quota, week_quota_summary, trim_excess_planificado,
+            pub_cuenta_cupo,
+        )
+
+        ref = dt.strptime(week_start, "%Y-%m-%d").date() if week_start else None
+        week_start, week_end, auto_week = week_bounds(ref)
+        week = week_label or auto_week
+        cid = cliente_id or brand.lower().replace(" ", "_")
+        init_db(cid)
+
+        brief = brand_brief or load_brief(brand) or {}
+        plan_tier = (brief.get("plan") or "pro").lower()
+        if plan_tier == "basic":
+            plan_tier = "basico"
         memory = load_memory(brand)
-        current_month = month or datetime.now().strftime("%B_%Y").lower()
 
-        # Load content calendar for this month to know what to create this week
-        calendar = load_content_calendar(brand, current_month)
-        week_slots = self._extract_week_slots(calendar, week) if calendar else []
+        market = load_latest_market_research(cid) or {}
+        if not skip_scrape and not market.get("posts"):
+            scrape = self._run_scraping(brand, brief, week, competitor_profiles or [])
+            market = load_latest_market_research(cid) or market
+            market["_scrape_summary"] = scrape.get("analysis", "")[:500]
 
-        # Initialize weekly state
+        all_week_pubs = get_week_publicaciones(get_publicaciones, cid, week_start, week_end)
+        trimmed = trim_excess_planificado(cid, plan_tier, week_start, week_end)
+        if trimmed:
+            all_week_pubs = get_week_publicaciones(get_publicaciones, cid, week_start, week_end)
+
+        quota = week_quota_summary(plan_tier, all_week_pubs)
+
+        PIPELINE_STATUSES = {
+            "propuesta_generada", "propuesta_enviada", "propuesta_aprobada",
+            "copy_generado", "copy_enviado", "copy_aprobado",
+            "en_produccion", "produccion_enviada", "produccion_aprobada",
+            "programado", "publicado",
+        }
+
+        piezas = []
+        omitidas = []
+        to_generate = []
+
+        for pub in sorted(all_week_pubs, key=lambda p: p.get("fecha", "")):
+            if pub.get("status") != "planificado":
+                if pub.get("status") in PIPELINE_STATUSES:
+                    piezas.append({
+                        "pub_id": pub["id"],
+                        "fecha": pub.get("fecha"),
+                        "tipo": pub.get("tipo"),
+                        "tematica": pub.get("tematica"),
+                        "status": pub.get("status"),
+                        "skipped": True,
+                        "reason": "Ya en validación — no se regenera",
+                    })
+                continue
+
+            # Slots del plan mensual siempre reciben propuesta; el cupo semanal
+            # solo limita cuántos slots nuevos crea el agente de contenido.
+            update_publicacion_status(cid, pub["id"], "propuesta_generada")
+            to_generate.append(pub)
+
+        pending = get_week_publicaciones(get_publicaciones, cid, week_start, week_end)
+        pending = [p for p in pending if p.get("status") == "propuesta_generada"]
+        used_urls = collect_used_referente_urls(all_week_pubs)
+        used_angulos = collect_used_historia_angulos(all_week_pubs)
+        assignments = assign_propuestas_rotating(
+            pending, market, exclude_urls=used_urls, exclude_angulos=used_angulos,
+        )
+
+        for pub in pending:
+            slot = pub_to_slot(pub)
+            alternativas = assignments.get(pub["id"]) or []
+            if not alternativas:
+                piezas.append({
+                    "pub_id": pub["id"],
+                    "fecha": pub.get("fecha"),
+                    "tipo": pub.get("tipo"),
+                    "tematica": pub.get("tematica"),
+                    "alternativas": [],
+                    "warning": "Sin referentes modelables para este slot",
+                })
+                continue
+
+            propuesta = build_propuesta_json(alternativas, slot)
+            update_publicacion_field(cid, pub["id"], "propuesta_json", propuesta)
+            piezas.append({
+                "pub_id": pub["id"],
+                "fecha": pub.get("fecha"),
+                "tipo": pub.get("tipo"),
+                "tematica": pub.get("tematica"),
+                "enfoque": pub.get("enfoque"),
+                "alternativas": alternativas,
+                "nueva": pub["id"] in {p["id"] for p in to_generate},
+            })
+
+        nuevas = [p for p in piezas if p.get("nueva")]
+        stories = [p for p in piezas if p.get("tipo") == "historia"]
+        carousels = [p for p in piezas if p.get("tipo") == "carrusel"]
+        reels = [p for p in piezas if p.get("tipo") == "reel"]
+
         state = {
             "week": week,
-            "month": current_month,
+            "week_start": week_start,
+            "week_end": week_end,
             "brand": brand,
-            "stage": "scraping",
+            "cliente_id": cid,
+            "stage": "propuesta" if nuevas else "complete",
             "recording_day": memory.get("recording_day", "martes"),
-            "slots": week_slots,
-            "stories": [s for s in week_slots if s.get("type") == "historia"],
-            "carousels": [s for s in week_slots if s.get("type") == "carrusel"],
-            "reels": [s for s in week_slots if s.get("type") == "reel"],
-            "story_approvals": {},
-            "carousel_approvals": {},
-            "reel_approvals": {},
-            "current_story_index": 0,
-            "current_carousel_index": 0,
-            "current_reel_index": 0,
-            "market_research_done": False,
+            "slots": [pub_to_slot(p) for p in all_week_pubs if pub_cuenta_cupo(p)],
+            "stories": stories,
+            "carousels": carousels,
+            "reels": reels,
+            "propuestas_generadas": len(nuevas),
+            "cuota": quota,
+            "omitidas_cupo": omitidas,
+            "recortadas_planificado": trimmed,
+            "market_research_done": bool(market.get("posts")),
             "copy_stage_done": False,
             "production_done": False,
         }
         save_weekly_state(brand, week, state)
 
-        # Step 1: Run market research (scraping)
-        result = self._run_scraping(brand, brief, week, competitor_profiles or [])
-        state["market_research_done"] = True
-        state["market_research_summary"] = result.get("analysis", "")[:500]
-        state["stage"] = "stories_copy"
-        save_weekly_state(brand, week, state)
-
         return {
             "agent": self.name,
             "brand": brand,
+            "cliente_id": cid,
             "week": week,
-            "stage": "stories_copy",
-            "message": "Scraping completado. Comenzando propuestas de historias.",
-            "next_action": "call /api/agent/weekly/next-story",
+            "week_start": week_start,
+            "week_end": week_end,
+            "stage": state["stage"],
+            "propuestas_generadas": state["propuestas_generadas"],
+            "total_piezas": len(piezas),
+            "piezas": piezas,
+            "cuota": quota,
+            "omitidas_cupo": omitidas,
+            "recortadas_planificado": trimmed,
+            "message": (
+                f"Propuestas nuevas: {state['propuestas_generadas']}. "
+                f"Cupo semanal — reels {quota['used']['reel']}/{quota['limits']['reel']}, "
+                f"carruseles {quota['used']['carrusel']}/{quota['limits']['carrusel']}, "
+                f"historias {quota['used']['historia']}/{quota['limits']['historia']}."
+            ),
+            "next_action": "Elegir referente por pieza en /contenido o POST /api/publicaciones/{id}/elegir-referente",
         }
+
+    def generate_copy_for_publicacion(self, cliente_id: str, brand: str,
+                                      pub_id: str, alternativa_index: int = 0,
+                                      brand_brief: dict = None) -> dict:
+        """Etapa Copy: genera texto adaptado tras elegir referente modelable."""
+        from core.db import (
+            get_publicacion, update_publicacion_field, update_publicacion_status,
+        )
+
+        pub = get_publicacion(cliente_id, pub_id)
+        if not pub:
+            return {"error": "Publicación no encontrada"}
+
+        brief = brand_brief or load_brief(brand) or {}
+        prop = pub.get("propuesta_json") or {}
+        if isinstance(prop, str):
+            try:
+                prop = json.loads(prop)
+            except Exception:
+                prop = {}
+
+        alternativas = prop.get("alternativas") or []
+        if not alternativas:
+            return {"error": "Sin propuestas — ejecutá el orquestador semanal primero"}
+        if alternativa_index < 0 or alternativa_index >= len(alternativas):
+            alternativa_index = 0
+
+        elegida = alternativas[alternativa_index]
+        slot = pub_to_slot(pub)
+        slot_ctx = format_slot_context_for_copy(slot)
+        referent = {
+            "owner": elegida.get("owner", ""),
+            "url": elegida.get("url", ""),
+            "caption_preview": elegida.get("caption_preview", ""),
+            "fuerza": elegida.get("fuerza", 0),
+            "que_modelar": elegida.get("que_modelar", ""),
+            "hook_hablado": elegida.get("hook_hablado", ""),
+            "como_adaptar_guion": elegida.get("como_adaptar_guion", ""),
+        }
+
+        research_ctx = slot_ctx + "\n\n"
+        if elegida.get("tipo_propuesta") == "estrategia":
+            research_ctx += (
+                f"TIPO DE HISTORIA (estrategia RIMA): {elegida.get('story_type', slot.get('tematica',''))}\n"
+                f"ÁNGULO: {elegida.get('titulo','')}\n"
+                f"Qué comunicar: {elegida.get('idea_principal','')}\n"
+                "Generá copy siguiendo la estructura de estrategia para este tipo. "
+                "NO modelar un referente externo del mercado.\n"
+            )
+        else:
+            research_ctx += (
+                f"REFERENTE: @{elegida.get('owner','')}\n"
+                f"Qué modelar: {elegida.get('que_modelar','')}\n"
+                f"Hook hablado: {elegida.get('hook_hablado','')}\n"
+                f"Cómo adaptar: {elegida.get('como_adaptar_guion','')}\n"
+            )
+
+        tipo = pub.get("tipo", "reel")
+        if tipo == "historia":
+            copy_result = story_copy_agent.run(slot, brief, brand, research_ctx)
+            copy_json = {
+                "etapa": "copy",
+                "referente_url": elegida.get("url") or "",
+                "referente_owner": elegida.get("owner") or "",
+                "story_type": elegida.get("story_type") or slot.get("tematica", ""),
+                "angulo_estrategico": elegida.get("titulo", ""),
+                "propuestas_copy": copy_result.get("proposals", []),
+                "copy_elegido": (copy_result.get("proposals") or [{}])[0],
+            }
+        elif tipo == "carrusel":
+            copy_result = carousel_copy_agent.run(slot, brief, brand, referent=referent)
+            copy_json = {
+                "etapa": "copy",
+                "referente_url": elegida.get("url"),
+                "referente_owner": elegida.get("owner"),
+                "slides": copy_result.get("slides", []),
+                "formato": "carrusel" if copy_result.get("slides") else "",
+            }
+        else:
+            copy_result = reel_copy_agent.run(slot, brief, brand, referent=referent)
+            idea = copy_result.get("idea") or {}
+            copy_json = {
+                "etapa": "copy",
+                "referente_url": elegida.get("url"),
+                "referente_owner": elegida.get("owner"),
+                "titulo": idea.get("titulo", ""),
+                "hook": idea.get("hook", ""),
+                "desarrollo": idea.get("development", ""),
+                "cta": idea.get("cta", ""),
+                "cta_keyword": idea.get("cta_keyword", ""),
+                "script_completo": idea.get("development", ""),
+                "recording_notes": idea.get("recording_notes", ""),
+                "idea": idea,
+            }
+
+        prop["elegida"] = elegida
+        prop["alternativa_index"] = alternativa_index
+        prop["etapa"] = "propuesta_aprobada"
+
+        update_publicacion_field(cliente_id, pub_id, "propuesta_json", prop)
+        update_publicacion_field(cliente_id, pub_id, "referente_id", elegida.get("referente_id") or "")
+        update_publicacion_field(cliente_id, pub_id, "copy_json", copy_json)
+        update_publicacion_status(cliente_id, pub_id, "copy_generado")
+        sync_weekly_state_from_db(cliente_id, brand, pub.get("fecha"))
+
+        refreshed = self._refresh_sibling_propuestas(
+            cliente_id, pub.get("fecha"), skip_pub_id=pub_id, tipo=tipo,
+        )
+
+        return {
+            "agent": self.name,
+            "pub_id": pub_id,
+            "tipo": tipo,
+            "referente": elegida,
+            "copy_json": copy_json,
+            "status": "copy_generado",
+            "propuestas_actualizadas": refreshed,
+        }
+
+    def _refresh_sibling_propuestas(self, cliente_id: str, pub_fecha: str,
+                                    skip_pub_id: str = None, tipo: str = None) -> list:
+        """Recalcula alternativas de otras piezas pendientes en la misma semana."""
+        from datetime import datetime as dt
+
+        if not pub_fecha:
+            return []
+        try:
+            ref = dt.strptime(pub_fecha, "%Y-%m-%d").date()
+        except ValueError:
+            return []
+        week_start, week_end, _ = week_bounds(ref)
+        market = load_latest_market_research(cliente_id) or {}
+        return refresh_pending_propuestas(
+            cliente_id, week_start, week_end, market,
+            skip_pub_id=skip_pub_id, tipo=tipo,
+        )
 
     def next_story(self, brand: str, week: str) -> dict:
         """Get the next story proposal. Called iteratively until all stories approved."""

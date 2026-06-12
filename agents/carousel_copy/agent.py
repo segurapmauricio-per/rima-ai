@@ -7,6 +7,7 @@ Para cada carrusel del calendario semanal:
 from core.gemini_client import gemini
 from core.brand_knowledge import K_CAROUSEL_COPY
 from core.client_store import load_memory, load_referents_db, update_memory
+from core.weekly_helpers import format_slot_context_for_copy
 import json
 from datetime import datetime
 
@@ -103,6 +104,7 @@ class CarouselCopyAgent:
     def _generate_slides(self, slot: dict, brief: dict, referent: dict,
                          tone_notes: str, disliked: str) -> list:
         referent_context = ""
+        slot_context = format_slot_context_for_copy(slot, referent)
         if referent:
             referent_context = f"""
 REFERENTE A MODELAR:
@@ -110,6 +112,8 @@ REFERENTE A MODELAR:
 - Caption: {referent.get('caption_preview', referent.get('caption', ''))[:300]}
 - Métricas: Fuerza {referent.get('fuerza', 0)}, Comentarios {referent.get('comments', 0)}
 - URL: {referent.get('url', '')}
+- Qué modelar: {referent.get('que_modelar', '')}
+- Cómo adaptar: {referent.get('como_adaptar_guion', '')}
 Modelá la DINÁMICA (estructura, ritmo, tipo de gancho) — NO el contenido textual.
 """
 
@@ -121,6 +125,8 @@ SERVICIO: {brief.get('service')}
 CLIENTE IDEAL: {brief.get('ideal_client')}
 RESULTADO: {brief.get('main_result')}
 CASOS DE ÉXITO: {brief.get('success_cases', '')}
+
+{slot_context}
 
 CARRUSEL:
 - Fecha: {slot.get('date', '')}

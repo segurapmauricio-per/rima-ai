@@ -9,11 +9,21 @@
     *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
     ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
     .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
-    .tab-btn{font-size:11px;font-weight:600;padding:6px 14px;border-radius:10px;cursor:pointer;transition:all .18s;border:1px solid transparent;color:#64748B;background:transparent}
-    .tab-btn.active{background:rgba(124,58,237,0.15);border-color:rgba(124,58,237,0.35);color:#A78BFA}
-    .tab-btn:hover:not(.active){color:#94A3B8;background:rgba(255,255,255,0.04)}
+    .tab-btn{
+      font-size:12px;font-weight:600;padding:10px 20px;border-radius:12px 12px 0 0;cursor:pointer;
+      transition:all .2s ease;border:1px solid rgba(255,255,255,0.07);border-bottom:none;
+      background:rgba(255,255,255,0.04);color:#fff;display:flex;align-items:center;gap:8px
+    }
+    .tab-btn.active{
+      background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));
+      border-color:rgba(124,58,237,0.45);color:#fff
+    }
+    .tab-btn:not(.active){color:#64748B;background:rgba(255,255,255,0.03)}
+    .tab-btn:not(.active):hover{background:rgba(255,255,255,0.05);color:#94A3B8}
+    .tab-count{font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;line-height:1.2}
     .piece-card{border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);padding:14px 16px;transition:all .18s}
     .piece-card:hover{border-color:rgba(124,58,237,0.3);background:rgba(124,58,237,0.04)}
+    .piece-card.focused{border-color:rgba(124,58,237,0.45)!important;background:rgba(124,58,237,0.08)!important;box-shadow:0 0 0 1px rgba(124,58,237,0.35)}
     .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em}
     .b-plan{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.15)}
     .b-aprobado{background:rgba(52,211,153,0.12);color:#34D399;border:1px solid rgba(52,211,153,0.2)}
@@ -27,54 +37,81 @@
       background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#34D399}
     .aprobar-btn:hover{background:rgba(52,211,153,0.2)}
     .aprobar-btn.done{background:rgba(52,211,153,0.18);color:#6EE7B7;cursor:default;border-color:rgba(52,211,153,0.3)}
+    .ver-video-btn{font-size:9px;font-weight:700;padding:3px 10px;border-radius:8px;cursor:pointer;transition:all .15s;
+      background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.28);color:#38BDF8;text-decoration:none;display:inline-block}
+    .ver-video-btn:hover{background:rgba(56,189,248,0.16);color:#7DD3FC}
     @keyframes fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     .fade-in{animation:fade-in .25s ease-out}
     .spinner{border:2px solid rgba(255,255,255,0.08);border-top-color:#7C3AED;border-radius:50%;width:16px;height:16px;animation:spin .7s linear infinite;display:inline-block}
     @keyframes spin{to{transform:rotate(360deg)}}
+    .contenido-topbar{
+      flex-shrink:0;z-index:50;
+      background:rgba(10,10,15,0.96);backdrop-filter:blur(14px);
+      border-bottom:1px solid rgba(255,255,255,0.05);
+    }
+    #contenido-scroll{
+      flex:1 1 0%;min-height:0;height:0;
+      overflow-y:auto;overflow-x:hidden;
+      -webkit-overflow-scrolling:touch;
+    }
+    .contenido-body{padding:1.25rem 1.5rem 8rem}
+    html,body{height:100%;min-height:0}
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden min-h-0">
 
 <aside id="rima-sidebar"></aside>
 
-<main class="flex-1 flex flex-col h-screen overflow-hidden">
+<main class="flex-1 flex flex-col min-h-0 overflow-hidden w-full min-w-0">
 
-  <!-- Topbar -->
-  <div class="flex items-center justify-between px-6 py-3 border-b border-white/5 flex-shrink-0"
-       style="background:rgba(10,10,15,0.85);backdrop-filter:blur(12px)">
-    <div class="flex items-center gap-3">
-      <div class="w-7 h-7 rounded-lg flex items-center justify-center"
-           style="background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.25)">
-        <svg class="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/>
-        </svg>
+  <!-- Topbar siempre visible (fuera del scroll) -->
+  <div class="contenido-topbar">
+    <div class="flex items-center justify-between px-6 pt-4 pb-2">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+             style="background:rgba(236,72,153,0.15);border:1px solid rgba(236,72,153,0.28)">
+          <svg class="w-3.5 h-3.5 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+          </svg>
+        </div>
+        <h1 class="text-sm font-semibold text-white whitespace-nowrap">Contenido</h1>
+        <select id="week-select" onchange="changeWeek(this.value)"
+          style="background:#111827;color:#F1F5F9;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:4px 10px;font-size:11px;font-family:'Inter',sans-serif;outline:none;cursor:pointer;max-width:180px">
+        </select>
       </div>
-      <div>
-        <h1 class="text-sm font-bold text-white">Contenido</h1>
-        <p class="text-[10px] text-slate-500 -mt-0.5" id="week-label">Cargando...</p>
-      </div>
+      <p class="text-[10px] text-slate-500 truncate ml-4" id="week-label">Cargando...</p>
+      <button type="button" id="btn-reset-week" onclick="resetWeeklyWeek()"
+        title="Borra propuestas y copy del agente semanal; mantiene el plan mensual y el estudio de mercado"
+        style="font-size:10px;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;flex-shrink:0;
+          background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#FBBF24">
+        Reiniciar semana
+      </button>
     </div>
-    <!-- Tabs -->
-    <div class="flex gap-1.5">
+
+    <!-- Tabs tipo pestaña (Reels → Carruseles → Historias) -->
+    <div class="flex gap-1 px-6 border-b border-white/5">
       <button class="tab-btn active" id="tab-reels" onclick="showTab('reels')">
-        Reels <span id="cnt-reels" class="ml-1 text-[9px] text-slate-600"></span>
+        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#A855F7)"></div>
+        Reels
+        <span id="cnt-reels" class="tab-count bg-violet-500/20 text-violet-400">0</span>
       </button>
-      <button class="tab-btn" id="tab-carruseles" onclick="showTab('carruseles')">
-        Carruseles <span id="cnt-carruseles" class="ml-1 text-[9px] text-slate-600"></span>
+      <button class="tab-btn text-slate-400" id="tab-carruseles" onclick="showTab('carruseles')">
+        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#06B6D4,#3B82F6)"></div>
+        Carruseles
+        <span id="cnt-carruseles" class="tab-count bg-cyan-500/20 text-cyan-400">0</span>
       </button>
-      <button class="tab-btn" id="tab-historias" onclick="showTab('historias')">
-        Historias <span id="cnt-historias" class="ml-1 text-[9px] text-slate-600"></span>
+      <button class="tab-btn text-slate-400" id="tab-historias" onclick="showTab('historias')">
+        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#F43F5E,#FB923C)"></div>
+        Historias
+        <span id="cnt-historias" class="tab-count bg-rose-500/20 text-rose-400">0</span>
       </button>
-    </div>
-    <div class="flex items-center gap-2">
-      <select id="week-select" onchange="changeWeek(this.value)"
-        style="background:#111827;color:#F1F5F9;border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:5px 10px;font-size:11px;font-family:'Inter',sans-serif;outline:none;cursor:pointer">
-      </select>
     </div>
   </div>
 
-  <!-- Content area -->
-  <div class="flex-1 overflow-y-auto px-6 py-5">
+  <!-- Área con scroll independiente -->
+  <div id="contenido-scroll">
+  <div class="contenido-body">
 
     <!-- Reels tab -->
     <div id="view-reels" class="fade-in">
@@ -119,6 +156,8 @@
     </div>
 
   </div>
+  </div><!-- /contenido-body -->
+  </div><!-- /contenido-scroll -->
 </main>
 
 <script>
@@ -131,6 +170,7 @@ var DAY_NAMES = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sá
 // Estado
 var allPubs = [];
 var curWeekStart = null;  // Date (lunes)
+var pendingFocusId = null;
 
 // Calcular lunes de la semana actual
 function getMondayOf(d) {
@@ -176,18 +216,191 @@ function buildWeekSelect() {
   }
 }
 
+function ensureWeekOption(monday) {
+  var sel = document.getElementById('week-select');
+  var ds = dateStr(monday);
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === ds) {
+      sel.value = ds;
+      return;
+    }
+  }
+  var opt = document.createElement('option');
+  opt.value = ds;
+  var sun = addDays(monday, 6);
+  opt.textContent = monday.getDate() + ' ' + MONTH_NAMES[monday.getMonth()].slice(0, 3) +
+    ' — ' + sun.getDate() + ' ' + MONTH_NAMES[sun.getMonth()].slice(0, 3);
+  sel.appendChild(opt);
+  sel.value = ds;
+}
+
+function tabForTipo(tipo) {
+  var map = { reel: 'reels', carrusel: 'carruseles', historia: 'historias' };
+  return map[tipo] || 'reels';
+}
+
+function focusItemCard(pubId) {
+  var el = document.getElementById('pub-' + pubId);
+  if (!el) return false;
+  var tab = tabForTipo(el.dataset.tipo || '');
+  showTab(tab, true);
+  el.classList.add('focused');
+  var scroller = document.getElementById('contenido-scroll');
+  if (scroller) {
+    var scRect = scroller.getBoundingClientRect();
+    var elRect = el.getBoundingClientRect();
+    var top = elRect.top - scRect.top + scroller.scrollTop - 16;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+  setTimeout(function(){ el.classList.remove('focused'); }, 3200);
+  return true;
+}
+
+async function navigateToItem(itemId) {
+  try {
+    var r = await fetch('/api/publicaciones/' + encodeURIComponent(itemId));
+    if (!r.ok) throw new Error('Pieza no encontrada');
+    var pub = await r.json();
+    var mon = getMondayOf(new Date(pub.fecha + 'T12:00:00'));
+    ensureWeekOption(mon);
+    curWeekStart = mon;
+    pendingFocusId = itemId;
+    showTab(tabForTipo(pub.tipo), true);
+    await fetchAndRender();
+  } catch (e) {
+    pendingFocusId = null;
+    window.rimaToast && rimaToast('No se pudo abrir la pieza en Contenido', 'error');
+    fetchAndRender();
+  }
+}
+window.navigateToItem = navigateToItem;
+
 function changeWeek(ds) {
   var parts = ds.split('-');
   curWeekStart = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   curWeekStart.setHours(0,0,0,0);
   fetchAndRender();
 }
+window.changeWeek = changeWeek;
+
+async function resetWeeklyWeek() {
+  if (!curWeekStart) return;
+  var startDs = dateStr(curWeekStart);
+  var ok = window.confirm(
+    '¿Reiniciar el trabajo del agente semanal para esta semana?\n\n'
+    + 'Se borran propuestas, copy y aprobaciones.\n'
+    + 'El plan mensual (fechas, temáticas, enfoques) y el estudio de mercado no se tocan.\n\n'
+    + 'Después se regeneran las propuestas automáticamente.'
+  );
+  if (!ok) return;
+  var btn = document.getElementById('btn-reset-week');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reiniciando...'; }
+  try {
+    var r = await fetch('/api/agent/weekly/clear-week', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ week_start: startDs, restart: true }),
+    });
+    if (!r.ok) {
+      var e = await r.json().catch(function(){ return { detail: r.statusText }; });
+      throw new Error(e.detail || r.statusText);
+    }
+    var data = await r.json();
+    window.rimaToast && rimaToast(
+      'Semana reiniciada · ' + (data.reset || 0) + ' piezas · '
+      + (data.propuestas_generadas || 0) + ' propuestas nuevas',
+      'success'
+    );
+    await fetchAndRender();
+  } catch (e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Reiniciar semana'; }
+  }
+}
+window.resetWeeklyWeek = resetWeeklyWeek;
 
 // Obtener mes y año de la semana activa para la query
 function getMesStr(monday) {
   // Usamos el jueves de la semana para determinar el mes (ISO week convention)
   var thu = addDays(monday, 3);
   return MONTH_NAMES[thu.getMonth()] + ' ' + thu.getFullYear();
+}
+
+function videoTituloFromPost(p) {
+  var a = p.analisis_json || {};
+  var adaptKeys = ['como_adaptar', 'como_adaptar_guion'];
+  for (var k = 0; k < adaptKeys.length; k++) {
+    var val = a[adaptKeys[k]];
+    if (val && _looksSpanishText(val)) {
+      var sent = String(val).split(/[.!?]/)[0].trim();
+      if (sent.length >= 12) return sent.slice(0, 100);
+    }
+  }
+  var cap = (p.caption || '').split('\n')[0].trim();
+  if (cap.length >= 12 && _looksSpanishText(cap)) return cap.slice(0, 100);
+  var que = a.que_modelar || '';
+  if (que && _looksSpanishText(que)) return que.slice(0, 100);
+  return '';
+}
+
+function _looksSpanishText(text) {
+  if (!text || String(text).length < 8) return false;
+  var lower = String(text).toLowerCase();
+  if (/\b(the|with|using|create|comment|your|for|from|what|how to)\b/.test(lower)) return false;
+  if (/[áéíóúñ]/.test(lower)) return true;
+  return /\b(que|qué|cómo|para|con|tu|estás|rutina|minutos|comentá|iniciar|sueñas|emprend|ventas|guía|gratis|mirá|podés)\b/.test(lower);
+}
+
+function _ideaFromPost(p) {
+  if (!p) return '';
+  var a = p.analisis_json || {};
+  var keys = ['que_modelar', 'por_que_modelar', 'problema_resuelto', 'estructura_guion', 'plantilla_detectada', 'por_que_funciona', 'como_adaptar', 'como_adaptar_guion'];
+  for (var i = 0; i < keys.length; i++) {
+    var val = a[keys[i]];
+    if (val && String(val).length >= 15 && _looksSpanishText(val)) return String(val).slice(0, 280);
+  }
+  var cap = (p.caption || '').split('\n')[0].trim();
+  if (cap.length >= 12 && _looksSpanishText(cap)) return cap.slice(0, 280);
+  return '';
+}
+
+function enrichAlternativas(prop) {
+  if (!prop || !prop.alternativas) return prop;
+  prop.alternativas = prop.alternativas.map(function(alt) {
+    var p = window._marketPostsByUrl && alt.url ? window._marketPostsByUrl[alt.url] : null;
+    var tituloEs = alt.titulo;
+    if ((!tituloEs || tituloEs === 'Referente modelable') && p) {
+      tituloEs = videoTituloFromPost(p) || tituloEs;
+    }
+    if (!tituloEs && alt.idea_principal) tituloEs = alt.idea_principal.slice(0, 100);
+    if (!p) {
+      return Object.assign({}, alt, {
+        titulo: tituloEs || alt.titulo || 'Sin título',
+        idea_principal: alt.idea_principal || alt.que_modelar || '',
+      });
+    }
+    return Object.assign({}, alt, {
+      titulo: tituloEs || alt.titulo || videoTituloFromPost(p),
+      views: alt.views != null ? alt.views : (p.views || 0),
+      comments: alt.comments != null ? alt.comments : (p.comments || 0),
+      seguidores: alt.seguidores != null ? alt.seguidores : (p.owner_followers || 0),
+      idea_principal: alt.idea_principal || alt.que_modelar || (p && _ideaFromPost(p)) || '',
+      url: alt.url || p.url || ''
+    });
+  });
+  return prop;
+}
+
+function normalizePub(pub) {
+  var p = Object.assign({}, pub);
+  if (typeof p.propuesta_json === 'string') {
+    try { p.propuesta_json = JSON.parse(p.propuesta_json); } catch(e) { p.propuesta_json = {}; }
+  }
+  if (p.propuesta_json && p.propuesta_json.alternativas) {
+    p.propuesta_json = enrichAlternativas(Object.assign({}, p.propuesta_json));
+  }
+  return p;
 }
 
 async function fetchAndRender() {
@@ -203,15 +416,13 @@ async function fetchAndRender() {
   document.getElementById('week-label').textContent = rangeLabel;
 
   try {
-    // Cargar todos los del mes (filtramos por semana en el cliente)
-    var r = await fetch('/api/publicaciones?mes=' + encodeURIComponent(mes));
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    var data = await r.json();
-    allPubs = data.publicaciones || [];
-
-    // Filtrar por semana activa
     var startDs = dateStr(curWeekStart);
     var endDs   = dateStr(sun);
+    var r = await fetch('/api/publicaciones?desde=' + encodeURIComponent(startDs) + '&hasta=' + encodeURIComponent(endDs));
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var data = await r.json();
+    allPubs = (data.publicaciones || []).map(normalizePub);
+
     var weekPubs = allPubs.filter(function(p){
       return p.fecha >= startDs && p.fecha <= endDs;
     });
@@ -221,9 +432,24 @@ async function fetchAndRender() {
     renderList('historias',  weekPubs.filter(function(p){ return p.tipo === 'historia'; }));
 
     // Contadores en tabs
-    document.getElementById('cnt-reels').textContent       = '(' + weekPubs.filter(function(p){ return p.tipo==='reel'; }).length + ')';
-    document.getElementById('cnt-carruseles').textContent  = '(' + weekPubs.filter(function(p){ return p.tipo==='carrusel'; }).length + ')';
-    document.getElementById('cnt-historias').textContent   = '(' + weekPubs.filter(function(p){ return p.tipo==='historia'; }).length + ')';
+    document.getElementById('cnt-reels').textContent       = weekPubs.filter(function(p){ return p.tipo==='reel'; }).length;
+    document.getElementById('cnt-carruseles').textContent  = weekPubs.filter(function(p){ return p.tipo==='carrusel'; }).length;
+    document.getElementById('cnt-historias').textContent   = weekPubs.filter(function(p){ return p.tipo==='historia'; }).length;
+
+    if (pendingFocusId) {
+      var focusId = pendingFocusId;
+      pendingFocusId = null;
+      setTimeout(function() {
+        if (!focusItemCard(focusId)) {
+          window.rimaToast && rimaToast('Pieza no visible en esta semana', 'error');
+        }
+        if (window.history.replaceState) {
+          var u = new URL(window.location.href);
+          u.searchParams.delete('item');
+          window.history.replaceState({}, '', u.pathname + u.search);
+        }
+      }, 80);
+    }
 
   } catch(e) {
     ['reels','carruseles','historias'].forEach(function(t){
@@ -244,6 +470,8 @@ function statusBadge(pub) {
     copy_enviado:       {cls:'b-validacion', label:'Copy enviado'},
     copy_aprobado:      {cls:'b-aprobado', label:'Copy aprobado'},
     en_produccion:      {cls:'b-validacion', label:'En producción'},
+    produccion_enviada: {cls:'b-validacion', label:'Producción enviada'},
+    produccion_aprobada:{cls:'b-aprobado', label:'Producción aprobada'},
     programado:         {cls:'b-programado', label:'Programado'},
     publicado:          {cls:'b-publicado', label:'Publicado'},
     cancelado:          {cls:'b-plan',    label:'Cancelado'},
@@ -267,17 +495,274 @@ function aprobacionesBadges(pub) {
   return html;
 }
 
+function etapaLabel(pub) {
+  var s = pub.status || 'planificado';
+  var map = {
+    planificado: 'Plan mensual',
+    propuesta_generada: 'Etapa 1 · Propuesta',
+    propuesta_aprobada: 'Propuesta aprobada',
+    copy_generado: 'Etapa 2 · Copy listo',
+    copy_aprobado: 'Copy aprobado',
+    en_produccion: 'Etapa 3 · Producción',
+    produccion_aprobada: 'Producción aprobada',
+    programado: 'Programado',
+    publicado: 'Publicado',
+  };
+  return map[s] || s;
+}
+
+function fmtNum(n) {
+  if (n == null || n === '') return '—';
+  n = Number(n);
+  if (isNaN(n)) return '—';
+  if (n >= 1000000) return (n / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+  return String(n);
+}
+
+function verReferenteLabel(tipo, alt) {
+  if (alt && alt.tipo_propuesta === 'estrategia') return null;
+  if (tipo === 'carrusel') return 'Ver carrusel';
+  if (tipo === 'historia') return 'Ver historia';
+  return 'Ver video';
+}
+
+function propuestaSection(pub) {
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  var alts = prop.alternativas || [];
+  if (!alts.length || pub.status === 'planificado') return '';
+  if (pub.status === 'copy_generado' || pub.status === 'copy_aprobado' || (pub.copy_json && pub.copy_json.hook)) {
+    return '';
+  }
+  var pubTipo = pub.tipo || 'reel';
+  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">';
+  html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 8px">';
+  html += pubTipo === 'historia'
+    ? 'Elegí el ángulo estratégico para esta historia'
+    : 'Elegí qué referente modelar';
+    html += '</p>';
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
+  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:#94A3B8" '
+    + 'onclick="refreshPropuesta(\'' + pub.id + '\',this)">↻ Otras opciones</button>';
+  html += '</div>';
+  alts.forEach(function(alt, idx) {
+    var esEstrategia = alt.tipo_propuesta === 'estrategia';
+    var titulo = alt.titulo || alt.caption_preview || 'Sin título';
+    var idea = alt.idea_principal || alt.que_modelar || _ideaFromPost(window._marketPostsByUrl && alt.url ? window._marketPostsByUrl[alt.url] : null) || '';
+    var views = fmtNum(alt.views);
+    var comments = fmtNum(alt.comments);
+    var seguidores = fmtNum(alt.seguidores);
+    var videoUrl = alt.url || '';
+    var verLabel = verReferenteLabel(pubTipo, alt);
+    html += '<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05)">';
+    if (esEstrategia) {
+      html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
+        + 'Opción ' + (idx + 1) + ' · ' + esc(titulo) + '</p>';
+    } else {
+      html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
+        + 'Opción ' + (idx + 1) + ' · @' + esc(alt.owner || '') + ' · ' + esc(titulo)
+        + ' · score ' + (alt.score_ventas != null ? alt.score_ventas : '—') + '</p>';
+      html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">'
+        + views + ' visualizaciones · ' + comments + ' comentarios · ' + seguidores + ' seguidores</p>';
+    }
+    if (idea) {
+      html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
+        + '<span style="color:#475569;font-weight:600">Idea principal:</span> ' + esc(idea) + '</p>';
+    }
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
+    html += '<button type="button" class="aprobar-btn" onclick="elegirReferente(\'' + pub.id + '\',' + idx + ',this)">Modelar esta</button>';
+    if (verLabel && videoUrl) {
+      html += '<a class="ver-video-btn" href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer">' + verLabel + '</a>';
+    }
+    html += '</div></div>';
+  });
+  html += '</div>';
+  return html;
+}
+
+window.elegirReferente = async function(pubId, idx, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Generando copy...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/elegir-referente', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ alternativa_index: idx, generar_copy: true })
+    });
+    if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Modelar esta';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.aprobarCopy = async function(pubId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Aprobando...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/aprobar', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ campo: 'copy' })
+    });
+    if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
+    window.rimaToast && rimaToast('Copy aprobado', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Aprobar copy';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.producirPub = async function(pubId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Generando...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/producir', { method: 'POST' });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || data.error || r.statusText);
+    window.rimaToast && rimaToast('Producción lista', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Reintentar';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.aprobarVisual = async function(pubId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Aprobando...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/aprobar', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ campo: 'visual' })
+    });
+    if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
+    window.rimaToast && rimaToast('Producción aprobada', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Aprobar producción';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.refreshPropuesta = async function(pubId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Buscando...'; }
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/refresh-propuesta', { method: 'POST' });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || data.error || r.statusText);
+    window.rimaToast && rimaToast('Nuevas opciones listas', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    window.rimaToast && rimaToast(e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = '↻ Otras opciones'; }
+  }
+};
+
+function referenteVideoUrl(pub) {
+  var copy = pub.copy_json || {};
+  if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  if (copy.referente_url) return copy.referente_url;
+  if (prop.elegida && prop.elegida.url) return prop.elegida.url;
+  var altIdx = prop.alternativa_index;
+  if (altIdx != null && prop.alternativas && prop.alternativas[altIdx]) {
+    return prop.alternativas[altIdx].url || '';
+  }
+  return '';
+}
+
+function referenteOwner(pub) {
+  var copy = pub.copy_json || {};
+  if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  return copy.referente_owner || (prop.elegida && prop.elegida.owner) || '';
+}
+
 function copySection(pub) {
   var copy = pub.copy_json || {};
+  if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
   var prop = pub.propuesta_json || {};
-  var hook = copy.hook || prop.hook_idea || '';
-  var dev  = copy.desarrollo || prop.angulo || '';
-  var cta  = copy.cta || '';
-  if (!hook && !dev && !cta) return '';
-  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.05)">';
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  var elegido = copy.copy_elegido || {};
+  var hook = copy.hook || elegido.hook_text || prop.hook_idea || '';
+  var dev  = copy.desarrollo || copy.script_completo || (copy.idea && copy.idea.development)
+          || (elegido.body_texts || []).join('\n') || prop.angulo_estrategico || '';
+  var cta  = copy.cta || (copy.idea && copy.idea.cta) || elegido.cta_text || '';
+  var keyword = copy.cta_keyword || (copy.idea && copy.idea.cta_keyword) || elegido.keyword || '';
+  if (!hook && !dev && !cta && !(copy.slides && copy.slides.length)) return '';
+  var videoUrl = referenteVideoUrl(pub);
+  var owner = referenteOwner(pub);
+  var ideaModelada = (prop.elegida && (prop.elegida.idea_principal || prop.elegida.que_modelar)) || '';
+  var pubTipo = pub.tipo || 'reel';
+  var verLabel = videoUrl ? verReferenteLabel(pubTipo, prop.elegida || {}) : null;
+  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)">';
+  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 6px">Copy adaptado</p>';
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px">';
+  if (owner) {
+    html += '<p style="font-size:9px;color:#64748B;margin:0">Modelando @' + esc(owner) + '</p>';
+  } else if (copy.angulo_estrategico || (prop.elegida && prop.elegida.titulo)) {
+    html += '<p style="font-size:9px;color:#64748B;margin:0">Ángulo: ' + esc(copy.angulo_estrategico || prop.elegida.titulo) + '</p>';
+  }
+  if (verLabel && videoUrl) {
+    html += '<a class="ver-video-btn" href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer">' + verLabel + '</a>';
+  }
+  html += '</div>';
+  if (ideaModelada) {
+    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
+      + '<span style="color:#475569;font-weight:600">Idea modelada:</span> ' + esc(ideaModelada) + '</p>';
+  }
   if (hook) html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 3px">Hook</p><p style="font-size:11px;color:#CBD5E1;margin:0 0 8px;line-height:1.5">' + esc(hook) + '</p>';
-  if (dev)  html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:#94A3B8;margin:0 0 8px;line-height:1.5">' + esc(dev) + '</p>';
+  if (dev)  html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:#94A3B8;margin:0 0 8px;line-height:1.5;white-space:pre-line">' + esc(dev) + '</p>';
   if (cta)  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 3px">CTA</p><p style="font-size:11px;color:#6EE7B7;margin:0;line-height:1.5">' + esc(cta) + '</p>';
+  if (keyword) html += '<p style="font-size:9px;color:#64748B;margin:4px 0 0">Palabra clave: <span style="color:#94A3B8;font-weight:600">' + esc(keyword) + '</span></p>';
+  if (copy.slides && copy.slides.length) {
+    html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:8px 0 4px">Slides (' + copy.slides.length + ')</p>';
+    copy.slides.slice(0,3).forEach(function(s,i){
+      html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 4px">' + (i+1) + '. ' + esc(s.main_text || s.raw || '') + '</p>';
+    });
+  }
+  if (pub.status === 'copy_generado') {
+    html += '<div style="margin-top:10px"><button type="button" class="aprobar-btn" onclick="aprobarCopy(\'' + pub.id + '\',this)">Aprobar copy</button></div>';
+  } else if (pub.status === 'copy_aprobado') {
+    var prodLabel = pub.tipo === 'reel' ? 'Generar guion' : 'Preparar visual';
+    html += '<div style="margin-top:10px"><button type="button" class="aprobar-btn" onclick="producirPub(\'' + pub.id + '\',this)">' + prodLabel + '</button></div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function produccionSection(pub) {
+  var prod = pub.produccion_json || {};
+  if (typeof prod === 'string') { try { prod = JSON.parse(prod); } catch(e) { prod = {}; } }
+  if (!prod.etapa) return '';
+  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">';
+  html += '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">Producción</p>';
+  if (prod.tipo === 'guion') {
+    if (prod.script_principal) {
+      html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5;white-space:pre-line">'
+        + esc(String(prod.script_principal).slice(0, 1500)) + '</p>';
+    }
+    if (prod.script_variante_b) {
+      html += '<p style="font-size:9px;color:#64748B;margin:6px 0 0">Variante B disponible</p>';
+    }
+  } else {
+    html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5">Visual pendiente de composición · '
+      + ((prod.imagenes_candidatas || []).length) + ' imágenes candidatas del cliente</p>';
+  }
+  if (pub.status === 'en_produccion') {
+    html += '<div style="margin-top:8px"><button type="button" class="aprobar-btn" onclick="aprobarVisual(\'' + pub.id + '\',this)">Aprobar producción</button></div>';
+  }
   html += '</div>';
   return html;
 }
@@ -312,6 +797,8 @@ function renderList(tipo, pubs) {
 
     var div = document.createElement('div');
     div.className = 'piece-card';
+    div.id = 'pub-' + pub.id;
+    div.dataset.tipo = pub.tipo || tipo.replace(/s$/, '');
     div.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:12px">'
       + '<div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:'+typeColor.bg+';border:1px solid '+typeColor.border+'">'
@@ -320,6 +807,7 @@ function renderList(tipo, pubs) {
       + '<div style="flex:1;min-width:0">'
       + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">'
       + statusBadge(pub) + ' ' + typeBadge(pub.tipo) + ' ' + aprobacionesBadges(pub)
+      + '<span class="badge" style="background:rgba(124,58,237,0.1);color:#C4B5FD;border:1px solid rgba(124,58,237,0.2)">' + esc(etapaLabel(pub)) + '</span>'
       + '</div>'
       + '<p style="font-size:13px;font-weight:600;color:#F1F5F9;margin:0 0 4px;line-height:1.4">' + esc(tematica || 'Sin temática asignada') + '</p>'
       + (tematica ? '' : '<p style="font-size:10px;color:#475569;font-style:italic;margin:0">Esperando agente semanal</p>')
@@ -327,7 +815,9 @@ function renderList(tipo, pubs) {
           + (tematica ? '<span>Tematica: <span style="color:#64748B">'+esc(tematica)+'</span></span>' : '')
           + (enfoque  ? '<span>·</span><span>Enfoque: <span style="color:#64748B">'+esc(enfoque)+'</span></span>' : '')
           + '</div>' : '')
+      + propuestaSection(pub)
       + copySection(pub)
+      + produccionSection(pub)
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'
       + (tematica && !tematicaAprobada
@@ -361,18 +851,33 @@ window.aprobarTematica = async function(pubId, btn) {
   }
 };
 
-function showTab(tab) {
+function showTab(tab, keepScroll) {
   ['reels','carruseles','historias'].forEach(function(t) {
-    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
-    document.getElementById('view-' + t).style.display = t === tab ? 'block' : 'none';
+    var btn = document.getElementById('tab-' + t);
+    var active = t === tab;
+    btn.classList.toggle('active', active);
+    btn.classList.toggle('text-slate-400', !active);
+    document.getElementById('view-' + t).style.display = active ? 'block' : 'none';
   });
+  if (!keepScroll) {
+    var scroller = document.getElementById('contenido-scroll');
+    if (scroller) scroller.scrollTop = 0;
+  }
 }
 window.showTab = showTab;
 
 // Init
 buildWeekSelect();
 curWeekStart = getMondayOf(new Date());
-fetchAndRender();
+fetch('/api/market-research/latest').then(function(r){ return r.ok ? r.json() : {}; }).then(function(data){
+  var map = {};
+  (data.posts || []).forEach(function(p){ if (p.url) map[p.url] = p; });
+  window._marketPostsByUrl = map;
+}).catch(function(){ window._marketPostsByUrl = {}; }).finally(function(){
+  var _itemParam = new URLSearchParams(window.location.search).get('item');
+  if (_itemParam) navigateToItem(_itemParam);
+  else fetchAndRender();
+});
 
 })();
 </script>

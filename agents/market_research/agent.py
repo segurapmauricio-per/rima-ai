@@ -1,7 +1,8 @@
 """
 Market Research Agent v3
 - Capa 1: Scrape Apify (20 posts/referente) → actualiza métricas siempre
-- Capa 2: Análisis Gemini solo en posts nuevos (top 20) o viral spike detectado
+- Capa 1.5: Transcripción Gemini solo en posts de la cola capa 2 (reels con video)
+- Capa 2: Análisis Gemini con caption + transcripción → guión modelable
 - Métricas: fuerza, relevancia, engagement, ratio_conversacion, engagement_score
 """
 
@@ -9,7 +10,10 @@ from core.gemini_client import gemini
 from core.brand_knowledge import K_MARKET_RESEARCH
 from core.client_store import save_market_research
 from core.plan_limits import get_deep_analysis_budget
-from core.market_scores import infer_categoria, attach_score_ventas, calculate_score_ventas
+from core.market_scores import (
+    infer_categoria, attach_score_ventas, attach_scores_tematica,
+    calculate_score_ventas, infer_scores_tematica, TEMATICA_RANK_KEYS,
+)
 import json
 import os
 import re
@@ -44,6 +48,8 @@ Reglas de análisis:
 - Relevancia mide si el post supera el benchmark propio del creador
 - Modelabilidad (1-10): ¿qué tan fácil es adaptar este contenido al negocio?
   10 = estructura directamente replicable; 1 = viral por factores no replicables
+- Cuando hay transcripción del audio: modelá el GUION HABLADO (hook, estructura, CTA en voz),
+  no solo el caption — muchos reels virales repiten plantillas de guión
 - Distinguir viral genérico de contenido nicheado que convierte
 - Escribe en español LATAM"""
 
@@ -122,11 +128,15 @@ def detect_viral_spike(new_metrics: dict, old_row: dict, new_views: int = 0) -> 
 VIRAL_SPIKE_RESERVE = 3
 # Posts por llamada Gemini en capa 2 (evita truncar JSON con muchos items)
 DEEP_ANALYSIS_BATCH = 8
+# Límite de descarga de video CDN (bytes)
+MAX_VIDEO_BYTES = 25_000_000
 
 ANALISIS_JSON_KEYS = (
-    "tematica", "tipo_angulo", "hook", "cta", "lead_magnet",
-    "problema_resuelto", "aspecto_vida", "formato_descripcion",
-    "por_que_funciona", "como_adaptar", "enfoque_contenido",
+    "tematica", "tipo_angulo", "hook", "hook_hablado", "cta", "cta_hablado",
+    "lead_magnet", "problema_resuelto", "aspecto_vida", "formato_descripcion",
+    "estructura_guion", "plantilla_detectada", "que_modelar", "por_que_modelar",
+    "por_que_funciona", "como_adaptar", "como_adaptar_guion", "enfoque_contenido",
+    "scores_tematica",
 )
 
 
@@ -188,33 +198,98 @@ def _analysis_from_gemini_item(item: dict) -> tuple[int, dict]:
 
 
 def _fallback_analisis(post: dict) -> dict:
-    """Mínimo útil si Gemini no parseó — hook = primera línea del caption."""
+    """Mínimo útil si Gemini no parseó."""
+    trans = (post.get("transcripcion") or "").strip()
     cap = (post.get("caption") or "").strip()
-    hook = cap.split("\n")[0][:200] if cap else ""
+    hook_h = trans.split(".")[0][:200].strip() if trans else ""
+    hook = hook_h or (cap.split("\n")[0][:200] if cap else "")
     cat = infer_categoria(post)
     enfoque = {"ventas": "Ventas", "educacion": "Educación", "conexion": "Conexión"}.get(cat, "Educación")
     return {
         "hook": hook,
+        "hook_hablado": hook_h or hook,
         "tipo_angulo": "Problema" if cat == "ventas" else ("Mentalidad" if cat == "conexion" else "Resultado"),
         "enfoque_contenido": enfoque,
         "cta": "Sin CTA explícito",
         "como_adaptar": "",
+        "como_adaptar_guion": "",
         "por_que_funciona": "",
+        "que_modelar": "Estructura del hook y formato visual" if trans else "Hook del caption",
+        "por_que_modelar": "",
     }
+
+
+def _is_video_post(post: dict) -> bool:
+    t = (post.get("type") or "").lower()
+    if t in ("video", "reel", "clips"):
+        return True
+    return bool(post.get("views") or post.get("_video_url"))
+
+
+def _download_video(url: str) -> bytes | None:
+    """Descarga MP4 desde CDN de Instagram (URL temporal del scrape)."""
+    if not url:
+        return None
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; RIMA/1.0)"},
+        )
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = resp.read(MAX_VIDEO_BYTES + 1)
+            if len(data) > MAX_VIDEO_BYTES:
+                print(f"[MarketResearchAgent] Video omitido (> {MAX_VIDEO_BYTES} bytes)")
+                return None
+            return data
+    except Exception as e:
+        print(f"[MarketResearchAgent] Warning descarga video: {e}")
+        return None
+
+
+def _needs_deep_analysis(post: dict) -> bool:
+    analisis = post.get("analisis_json") or {}
+    if isinstance(analisis, str):
+        try:
+            analisis = json.loads(analisis)
+        except Exception:
+            analisis = {}
+    return not (analisis.get("hook") or analisis.get("como_adaptar"))
+
+
+def _primary_tematica_key(post: dict) -> str:
+    scores = infer_scores_tematica(post)
+    return max(TEMATICA_RANK_KEYS, key=lambda k: float(scores.get(k, 0)))
+
+
+def _deep_priority_key(post: dict) -> tuple:
+    """
+    Prioriza re-análisis y posts modelables (no solo sensacionalistas).
+    Tupla ordenable: (needs_analysis, maturation_score).
+    """
+    needs = 1 if _needs_deep_analysis(post) else 0
+    try:
+        mod = float(post.get("modelabilidad") or 5)
+    except (TypeError, ValueError):
+        mod = 5.0
+    metrics = post.get("metrics") or {}
+    sv = float(metrics.get("score_ventas") or 0)
+    eng = float(metrics.get("engagement_score") or 0)
+    maturation = mod * 10.0 + sv * 0.35 - min(eng, 90.0) * 0.08
+    return (needs, maturation)
 
 
 def select_deep_queue(posts: list, budget: dict) -> list:
     """
-    Arma la cola capa 2 con cuotas por categoría (ventas/educación/conexión).
-    Candidatos: posts nuevos en el pool top + viral spikes (prioridad).
+    Cola capa 2: cuotas por temática RIMA + enfoque, re-analiza posts ya scrapeados
+    (prioriza los sin análisis profundo y piezas modelables no solo virales).
     """
     total = budget["total"]
     pool_size = budget["candidate_pool"]
-    quotas = dict(budget["quotas"])
+    tematica_quotas = dict(budget.get("tematica_quotas") or {})
 
     ranked = sorted(
         posts,
-        key=lambda p: p.get("metrics", {}).get("engagement_score", 0),
+        key=lambda p: _deep_priority_key(p),
         reverse=True,
     )
     pool_urls = {p.get("url") for p in ranked[:pool_size] if p.get("url")}
@@ -230,28 +305,32 @@ def select_deep_queue(posts: list, budget: dict) -> list:
         if len(viral) >= VIRAL_SPIKE_RESERVE:
             break
 
-    buckets: dict = {"ventas": [], "educacion": [], "conexion": []}
+    def in_pool(p: dict) -> bool:
+        url = p.get("url")
+        return bool(url and url in pool_urls)
+
+    tematica_buckets: dict[str, list] = {k: [] for k in TEMATICA_RANK_KEYS}
+
     for p in ranked:
+        if not in_pool(p):
+            continue
         url = p.get("url")
         if not url or url in seen:
             continue
-        if not p.get("_is_new") or url not in pool_urls:
-            continue
-        cat = infer_categoria(p)
-        buckets[cat].append(p)
+        tema = _primary_tematica_key(p)
+        tematica_buckets.setdefault(tema, []).append(p)
 
-    for cat in buckets:
-        buckets[cat].sort(
-            key=lambda p: p.get("metrics", {}).get("score_ventas", 0),
-            reverse=True,
-        )
+    for bucket in tematica_buckets.values():
+        bucket.sort(key=_deep_priority_key, reverse=True)
 
     selected = list(viral)
     seen.update(p.get("url") for p in selected if p.get("url"))
 
-    for cat, quota in quotas.items():
+    for tema, quota in tematica_quotas.items():
         taken = 0
-        for p in buckets.get(cat, []):
+        for p in tematica_buckets.get(tema, []):
+            if len(selected) >= total:
+                break
             url = p.get("url")
             if not url or url in seen:
                 continue
@@ -265,19 +344,16 @@ def select_deep_queue(posts: list, budget: dict) -> list:
         if len(selected) >= total:
             break
         url = p.get("url")
-        if not url or url in seen:
+        if not url or url in seen or not in_pool(p):
             continue
-        if p.get("_is_new") and url in pool_urls or p.get("_viral_spike"):
-            selected.append(p)
-            seen.add(url)
+        selected.append(p)
+        seen.add(url)
 
-    selected.sort(
-        key=lambda p: p.get("metrics", {}).get("engagement_score", 0), reverse=True
-    )
+    selected.sort(key=_deep_priority_key, reverse=True)
     return selected[:total]
 
 
-_INTERNAL_KEYS = ("_is_new", "_viral_spike", "_deep_analyzed", "creator_avg_views_10")
+_INTERNAL_KEYS = ("_is_new", "_viral_spike", "_deep_analyzed", "creator_avg_views_10", "_video_url")
 
 
 def _strip_internal(post: dict) -> dict:
@@ -330,13 +406,14 @@ class MarketResearchAgent:
         metrics_updated = 0
         viral_spikes = 0
         for post in posts:
+            url = post.get("url")
+            old = existing_by_url.get(url) if url else None
             owner = post.get("owner", "")
             avg10 = creator_avg_10.get(owner, 0)
             post["metrics"] = calculate_metrics(post, avg10)
             post["creator_avg_views_10"] = avg10
             attach_score_ventas(post)
-
-            old = existing_by_url.get(post.get("url", ""))
+            attach_scores_tematica(post)
             post["_is_new"] = old is None
             post["_viral_spike"] = detect_viral_spike(
                 post["metrics"], old, post.get("views", 0)
@@ -346,6 +423,8 @@ class MarketResearchAgent:
                 if not post["_viral_spike"]:
                     post["modelabilidad"] = old.get("modelabilidad")
                     post["analisis_json"] = old.get("analisis_json") or {}
+                    if old.get("transcripcion"):
+                        post["transcripcion"] = old["transcripcion"]
             if post["_viral_spike"]:
                 viral_spikes += 1
 
@@ -354,9 +433,11 @@ class MarketResearchAgent:
             brand_brief.get("enfoque"),
         )
 
-        # Capa 2 — cuotas ventas/educación/conexión + viral spikes
+        # Capa 2 — cuotas temática RIMA + enfoque + re-análisis de posts maduros
         deep_queue = select_deep_queue(posts, deep_budget)
+        transcripts_ok = 0
         if deep_queue:
+            transcripts_ok = self._transcribe_deep_queue(deep_queue)
             self._analyze_posts_individually(deep_queue, brand_brief)
             analyzed_urls = {p.get("url"): p for p in deep_queue if p.get("url")}
             for post in posts:
@@ -365,6 +446,8 @@ class MarketResearchAgent:
                     src = analyzed_urls[url]
                     post["modelabilidad"] = src.get("modelabilidad", post.get("modelabilidad"))
                     post["analisis_json"] = src.get("analisis_json") or post.get("analisis_json")
+                    if src.get("transcripcion"):
+                        post["transcripcion"] = src["transcripcion"]
                     if src.get("_deep_analyzed"):
                         post["_deep_analyzed"] = True
 
@@ -376,8 +459,7 @@ class MarketResearchAgent:
         # Recalcular score_ventas tras análisis Gemini / fallback
         for post in posts:
             attach_score_ventas(post)
-
-        # Rankear por score_ventas (modelado comercial) para top posts
+            attach_scores_tematica(post)
         posts.sort(key=lambda p: p.get("metrics", {}).get("score_ventas", 0), reverse=True)
         top_posts = posts[:20]
 
@@ -391,7 +473,7 @@ class MarketResearchAgent:
 
         # 7. Persistir en SQLite (métricas siempre; análisis solo capa 2)
         if cliente_id:
-            self._save_to_sqlite(cliente_id, posts, top_posts)
+            self._save_to_sqlite(cliente_id, posts, top_posts, brand_brief)
 
         # 8. Backup JSON (compatibilidad con sistema anterior)
         posts_clean = [_strip_internal(p) for p in posts]
@@ -411,6 +493,7 @@ class MarketResearchAgent:
             "viral_spikes": viral_spikes,
             "deep_analyzed": len(deep_queue),
             "deep_analysis_parsed": deep_parsed,
+            "transcripts_ok": transcripts_ok,
             "deep_analysis_budget": deep_budget,
             "profile_meta": profile_meta,
             "profile_insights": profile_insights,
@@ -433,6 +516,7 @@ class MarketResearchAgent:
             "viral_spikes": viral_spikes,
             "deep_analyzed": len(deep_queue),
             "deep_analysis_parsed": deep_parsed,
+            "transcripts_ok": transcripts_ok,
             "deep_analysis_budget": deep_budget,
             "profile_meta": profile_meta,
             "profile_insights": profile_insights,
@@ -544,6 +628,7 @@ class MarketResearchAgent:
                 "timestamp": item.get("timestamp", ""),
                 "url": item.get("url", ""),
                 "shortCode": item.get("shortCode", ""),
+                "_video_url": item.get("videoUrl") or item.get("video_url") or "",
             })
 
         return {"posts": posts}
@@ -574,6 +659,29 @@ class MarketResearchAgent:
 
     # ── Análisis Gemini ────────────────────────────────────────────────────────
 
+    def _transcribe_deep_queue(self, posts: list) -> int:
+        """Capa 1.5 — transcribe reels de la cola capa 2 vía Gemini multimodal."""
+        ok = 0
+        for post in posts:
+            if not _is_video_post(post):
+                continue
+            url = post.get("_video_url") or ""
+            if not url:
+                continue
+            video_bytes = _download_video(url)
+            if not video_bytes:
+                continue
+            try:
+                text = gemini.transcribe_video(video_bytes)
+                if text:
+                    post["transcripcion"] = text[:8000]
+                    ok += 1
+                    print(f"[MarketResearchAgent] Transcripción OK @{post.get('owner')} ({len(text)} chars)")
+            except Exception as e:
+                print(f"[MarketResearchAgent] Warning transcripción @{post.get('owner')}: {e}")
+        print(f"[MarketResearchAgent] Capa 1.5: {ok}/{len(posts)} transcripciones")
+        return ok
+
     def _analyze_posts_individually(self, posts: list, brand_brief: dict) -> list:
         """
         Capa 2 — Gemini: modelabilidad + analisis_json estructurado.
@@ -596,7 +704,7 @@ class MarketResearchAgent:
                 if not item:
                     continue
                 model, analisis = _analysis_from_gemini_item(item)
-                if analisis.get("hook") or analisis.get("tipo_angulo"):
+                if analisis.get("hook") or analisis.get("hook_hablado") or analisis.get("tipo_angulo"):
                     post["modelabilidad"] = model
                     post["analisis_json"] = analisis
                     post["_deep_analyzed"] = True
@@ -619,10 +727,13 @@ class MarketResearchAgent:
         posts_for_prompt = []
         for local_i, p in enumerate(batch):
             m = p.get("metrics", {})
+            trans = (p.get("transcripcion") or "").strip()
             posts_for_prompt.append({
                 "idx": batch_start + local_i,
                 "owner": p.get("owner", ""),
                 "caption": (p.get("caption") or "")[:300],
+                "transcripcion": trans[:1200] if trans else None,
+                "tiene_guion_hablado": bool(trans),
                 "views": p.get("views", 0),
                 "comments": p.get("comments", 0),
                 "saves": p.get("saves", 0),
@@ -640,8 +751,13 @@ SERVICIO: {brand_brief.get('service')}
 CLIENTE IDEAL: {brand_brief.get('ideal_client')}
 RESULTADO PRINCIPAL: {brand_brief.get('main_result')}
 
-POSTS:
+POSTS (caption + transcripcion del audio cuando existe):
 {json.dumps(posts_for_prompt, ensure_ascii=False, indent=2)}
+
+IMPORTANTE — modelar el GUION HABLADO, no solo el caption:
+- Si hay transcripcion: el valor está en lo que SE DICE en cámara (estructura, plantilla, CTA hablado).
+- Muchos reels virales repiten la misma plantilla de guión; detectala si aplica.
+- El caption suele ser complemento; priorizá hook_hablado y estructura_guion sobre el caption.
 
 Cada objeto del array debe tener EXACTAMENTE estos campos (usa el mismo idx del post):
 {{
@@ -650,21 +766,38 @@ Cada objeto del array debe tener EXACTAMENTE estos campos (usa el mismo idx del 
   "tematica": "Problema del cliente",
   "tipo_angulo": "Problema",
   "enfoque_contenido": "Ventas",
-  "hook": "Texto exacto del hook del caption o descripción del hook visual",
-  "cta": "Texto del CTA o Sin CTA explícito",
+  "hook": "Hook principal (hablado si hay transcripcion, si no del caption)",
+  "hook_hablado": "Primera frase o pregunta que abre el reel en voz (null si no hay transcripcion)",
+  "cta": "CTA del caption o Sin CTA explícito",
+  "cta_hablado": "CTA dicho en voz al cierre (null si no aplica)",
   "lead_magnet": null,
   "problema_resuelto": "Descripción en 1 línea",
   "aspecto_vida": "dinero",
   "formato_descripcion": "Talking head directo a cámara",
-  "por_que_funciona": "1 línea",
-  "como_adaptar": "1 línea adaptada al negocio del cliente"
+  "estructura_guion": "Hook → desarrollo → CTA en 1-2 líneas (ej: pregunta provocadora → 3 puntos → invitación a DM)",
+  "plantilla_detectada": "Nombre corto si es plantilla repetible (ej: '3 errores que te cuestan X') o null",
+  "por_que_funciona": "1 línea — por qué engancha (métricas + psicología del guión)",
+  "que_modelar": "Qué copiar/adaptar: estructura del guión, tipo de hook, formato visual — concreto",
+  "por_que_modelar": "Por qué conviene modelarlo para ESTE negocio del cliente (1-2 líneas)",
+  "como_adaptar": "1 línea — adaptación general al negocio",
+  "como_adaptar_guion": "Borrador de guión adaptado al negocio (2-4 frases habladas, tono del cliente)",
+  "scores_tematica": {{
+    "problema": 75,
+    "solucion": 40,
+    "resultado": 30,
+    "proceso": 55,
+    "mentalidad": 20
+  }}
 }}
+
+scores_tematica: para CADA temática RIMA, 0–100 = qué tan modelable es ESTE video para grabar contenido de ese tipo (estructura + mensaje), independiente del score comercial global.
 
 tipo_angulo: Problema | Solución | Resultado | Proceso | Mentalidad
 enfoque_contenido: Ventas | Educación | Conexión
 
 Modelabilidad 1-10:
-9-10 replicable al nicho | 7-8 adaptable | 5-6 inspiración | 3-4 difícil | 1-2 no replicable
+9-10 = plantilla de guión directamente replicable al nicho | 7-8 = adaptable con cambios menores
+5-6 = inspiración de formato | 3-4 = difícil de adaptar | 1-2 = viral por factores no replicables
 
 Devolvé SOLO el array JSON, sin markdown ni texto extra.
 """
@@ -740,6 +873,11 @@ Devolvé SOLO el array JSON, sin markdown ni texto extra.
             )
 
             tips = []
+            top_aj = top.get("analisis_json") or {}
+            if top_aj.get("que_modelar"):
+                tips.append(f"Modelar: {top_aj['que_modelar']}")
+            if top_aj.get("por_que_modelar"):
+                tips.append(top_aj["por_que_modelar"])
             if avg_mod and avg_mod >= 7:
                 tips.append("Alta modelabilidad — estructura fácil de adaptar.")
             elif avg_mod and avg_mod < 5:
@@ -837,15 +975,27 @@ Por idea:
 
     # ── Persistencia SQLite ───────────────────────────────────────────────────
 
-    def _save_to_sqlite(self, cliente_id: str, all_posts: list, top_posts: list) -> None:
+    def _save_to_sqlite(
+        self, cliente_id: str, all_posts: list, top_posts: list, brand_brief: dict = None
+    ) -> None:
         """
         Capa 1: upsert métricas de todos los posts scrapeados.
         Capa 2: set_referente_analisis solo en posts marcados _deep_analyzed.
         """
         try:
-            from core.db import upsert_referente, set_referente_analisis, init_db
+            from core.db import (
+                upsert_referente, set_referente_analisis, init_db, create_or_update_cliente,
+            )
 
             init_db(cliente_id)
+            brief = brand_brief or {}
+            create_or_update_cliente(
+                cliente_id,
+                nombre=brief.get("business_name") or cliente_id,
+                plan=brief.get("plan", "basico"),
+                ig_username=brief.get("ig_username"),
+                brief=brief,
+            )
 
             saved = 0
             analyzed = 0
@@ -859,6 +1009,7 @@ Por idea:
                     "tipo": "reel" if post.get("views", 0) > 0 else "carrusel",
                     "fecha_publicacion": post.get("timestamp", ""),
                     "descripcion": post.get("caption", ""),
+                    "transcripcion": post.get("transcripcion") or "",
                     "vistas": post.get("views", 0),
                     "likes": post.get("likes", 0),
                     "comentarios": post.get("comments", 0),
@@ -877,6 +1028,7 @@ Por idea:
                         ref["id"],
                         post.get("analisis_json") or {},
                         post.get("modelabilidad", 5),
+                        transcripcion=post.get("transcripcion") or None,
                     )
                     analyzed += 1
                 saved += 1
@@ -886,7 +1038,9 @@ Por idea:
                 f"{saved} métricas actualizadas, {analyzed} análisis profundos"
             )
         except Exception as e:
+            import traceback
             print(f"[MarketResearchAgent] Warning SQLite: {e}")
+            traceback.print_exc()
 
 
 market_research_agent = MarketResearchAgent()

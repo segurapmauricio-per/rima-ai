@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es" class="dark">
 <head>
   <meta charset="UTF-8" />
@@ -911,6 +911,7 @@ function renderDetail(id) {
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-shrink:0">'
     + '<button type="button" onclick="openEditModal(\''+item.id+'\')" style="padding:6px 12px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);color:#94A3B8;font-size:11px;cursor:pointer">Editar</button>'
+    + '<button type="button" onclick="window.location.href=\'/contenido?item='+item.id+'\'" style="padding:6px 12px;border-radius:8px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.28);color:#A78BFA;font-size:11px;cursor:pointer">Ver en Contenido →</button>'
     + '<button type="button" onclick="confirmDelete(\''+item.id+'\')" style="padding:6px 12px;border-radius:8px;background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);color:#F87171;font-size:11px;cursor:pointer">Eliminar</button>'
     + '</div>'
     + '</div>'

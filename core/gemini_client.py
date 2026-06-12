@@ -50,6 +50,33 @@ class GeminiClient:
         self._log(prompt, text)
         return text
 
+    def transcribe_video(self, video_bytes: bytes, mime_type: str = "video/mp4") -> str:
+        """Transcribe diálogo hablado de un reel (Vertex multimodal)."""
+        from google.genai import types
+
+        if not video_bytes:
+            return ""
+        prompt = (
+            "Transcribe ONLY the spoken words in this Instagram reel. "
+            "Use the original language of the speaker. "
+            "Ignore music and sound effects. "
+            "Return plain text only — no markdown, no timestamps. "
+            "If there is no speech, return an empty string."
+        )
+        response = client.models.generate_content(
+            model=self.model_name,
+            contents=types.Content(
+                role="user",
+                parts=[
+                    types.Part.from_bytes(data=video_bytes, mime_type=mime_type),
+                    types.Part.from_text(text=prompt),
+                ],
+            ),
+        )
+        text = (response.text or "").strip()
+        self._log("[transcribe_video]", text[:200])
+        return text
+
     def _log(self, prompt: str, response: str):
         log_entry = {
             "timestamp": datetime.now().isoformat(),
