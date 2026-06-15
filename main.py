@@ -12,15 +12,19 @@ import shutil
 import time
 import hmac
 import hashlib
+import secrets
 import uuid
 import calendar as cal_module
 import re
 import urllib.request
+import asyncio
+import smtplib
+from email.message import EmailMessage
 from datetime import datetime
 
 from core.auth import (
     verify_login, create_token, require_auth, get_current_user, COOKIE_NAME,
-    get_or_create_google_user, decode_token,
+    get_or_create_google_user, decode_token, _hash_password,
 )
 
 from dotenv import load_dotenv
@@ -1630,6 +1634,138 @@ async def lemon_webhook(
     return {"status": "ok"}
 
 
+# ── Webhook Gumroad (piloto) ──
+
+GUMROAD_SELLER_ID = os.getenv("GUMROAD_SELLER_ID", "")
+
+def _verify_gumroad_seller(seller_id: str) -> bool:
+    return bool(GUMROAD_SELLER_ID) and seller_id == GUMROAD_SELLER_ID
+
+
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USER)
+APP_LOGIN_URL = os.getenv("APP_LOGIN_URL", "https://rima.n8n-ghl.com/login")
+
+
+def _send_email_sync(to_email: str, subject: str, body: str) -> None:
+    msg = EmailMessage()
+    msg["From"] = EMAIL_FROM
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(body)
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)
+
+
+async def send_welcome_email(to_email: str, name: str, temp_password: str) -> None:
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD):
+        print(f"[RIMA] SMTP no configurado, omitiendo correo de bienvenida a {to_email}")
+        return
+
+    subject = "Tu cuenta RIMA AI está lista"
+    body = (
+        f"Hola {name},\n\n"
+        f"Tu cuenta de RIMA AI ya está activa.\n\n"
+        f"Email: {to_email}\n"
+        f"Contraseña temporal: {temp_password}\n\n"
+        f"Inicia sesión aquí: {APP_LOGIN_URL}\n"
+        f"Te recomendamos cambiar tu contraseña luego de tu primer ingreso.\n\n"
+        f"Equipo RIMA AI"
+    )
+
+    try:
+        await asyncio.to_thread(_send_email_sync, to_email, subject, body)
+        print(f"[RIMA] Correo de bienvenida enviado a {to_email}")
+    except Exception as e:
+        print(f"[RIMA] Error enviando correo de bienvenida a {to_email}: {e}")
+
+
+async def _provision_user_from_payment(email: str, name: str, plan: str, brand_name: str = None) -> str:
+    """Crea/actualiza usuario completamente provisionado: plan, password, brand inicial y SQLite.
+
+    A diferencia de _create_user_from_payment (Lemon, legacy), deja al usuario
+    con password utilizable y un cliente_id derivado (evita caer en "default").
+    """
+    from core.db import init_db
+
+    email = (email or "").strip().lower()
+    plan_norm = normalize_plan(plan)
+    brand_name = (brand_name or name or email.split("@")[0] or "Mi Negocio").strip()
+    cliente_id = cliente_id_from_brand({"brand_name": brand_name})
+
+    d = load_data()
+    users = d.setdefault("users", {})
+    if email not in users:
+        temp_password = secrets.token_urlsafe(8)
+        users[email] = {
+            "name": name or email,
+            "plan": plan_norm,
+            "password_hash": _hash_password(temp_password),
+            "status": "active",
+            "created_at": int(time.time()),
+            "brand": {"brand_name": brand_name, "plan": plan_norm},
+        }
+        save_data(d)
+        print(f"[RIMA] Usuario creado via Gumroad: {email} | Plan: {plan_norm} | cliente_id: {cliente_id}")
+        await send_welcome_email(email, users[email]["name"], temp_password)
+    else:
+        users[email]["plan"] = plan_norm
+        users[email]["status"] = "active"
+        existing_brand = users[email].setdefault("brand", {})
+        existing_brand.setdefault("brand_name", brand_name)
+        existing_brand["plan"] = plan_norm
+        save_data(d)
+        print(f"[RIMA] Usuario actualizado via Gumroad: {email} | Plan: {plan_norm}")
+
+    init_db(cliente_id)
+    return cliente_id
+
+
+@app.post("/api/webhooks/gumroad")
+async def gumroad_webhook(request: Request):
+    form = await request.form()
+    data = dict(form)
+
+    resource = data.get("resource_name", "sale")
+    is_test = data.get("test") == "true"
+    print(f"[RIMA] Gumroad ping recibido: resource={resource} test={is_test} email={data.get('email', '')}")
+
+    if not _verify_gumroad_seller(data.get("seller_id", "")):
+        raise HTTPException(status_code=401, detail="seller_id invalido")
+
+    if resource in ("sale", "") and data.get("email"):
+        email = data.get("email", "")
+        name = data.get("full_name", "") or email
+        plan = data.get("product_name", "")
+        if data.get("refunded") == "true" or data.get("disputed") == "true":
+            d = load_data()
+            email_norm = email.strip().lower()
+            if email_norm in d.get("users", {}):
+                d["users"][email_norm]["status"] = "cancelled"
+                save_data(d)
+                print(f"[RIMA] Venta reembolsada/disputada (Gumroad): {email_norm}")
+        else:
+            await _provision_user_from_payment(email=email, name=name, plan=plan)
+
+    elif resource in ("cancellation", "refund", "dispute"):
+        email = data.get("email", "")
+        if email:
+            d = load_data()
+            email_norm = email.strip().lower()
+            if email_norm in d.get("users", {}):
+                d["users"][email_norm]["status"] = "cancelled"
+                save_data(d)
+                print(f"[RIMA] Suscripcion cancelada (Gumroad): {email_norm}")
+
+    return {"status": "ok"}
+
+
 # ── Endpoint: análisis de imagen al subir ──
 
 @app.post("/api/images/analyze/{brand}/{category}/{filename}")
@@ -2310,12 +2446,13 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
     """Etapa 3: producción tras copy_aprobado.
 
     Reel → script_agent (guion teleprompter A/B).
-    Carrusel/Historia → gancho a image_analysis (composición visual = Sprint B).
+    Carrusel/Historia → visual_composer (slides + imágenes del cliente o
+    kie_pending con prompt sugerido). Determinístico, sin LLM.
     """
     from core.db import (
         get_publicacion, update_publicacion_field, update_publicacion_status,
-        get_imagenes_para,
     )
+    from agents.visual_composer import plan_slides, match_images_to_slides
     from core.weekly_helpers import sync_weekly_state_from_db
     data = load_data()
     email = user.get("email", "")
@@ -2354,16 +2491,18 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
                 "generated_at": script.get("timestamp", ""),
             }
         else:
-            try:
-                imagenes = get_imagenes_para(cid, tipo) or []
-            except Exception:
-                imagenes = []
+            slot_context = {
+                "tematica": pub.get("tematica", ""),
+                "enfoque": pub.get("enfoque", ""),
+                "fecha": pub.get("fecha", ""),
+            }
+            slides = plan_slides(copy_j, tipo, slot_context)
+            if not slides:
+                raise HTTPException(400, "El copy aprobado no tiene contenido para componer slides")
             produccion = {
                 "etapa": "produccion",
                 "tipo": "visual",
-                "pendiente": "image_analysis",
-                "imagenes_candidatas": [i.get("id") for i in imagenes][:10],
-                "nota": "Gancho de producción visual — la composición de slides se completa en Sprint B.",
+                "slides": match_images_to_slides(cid, tipo, slides, slot_context),
                 "generated_at": datetime.now().isoformat(),
             }
         update_publicacion_field(cid, pub_id, "produccion_json", produccion)
@@ -2375,6 +2514,75 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class GenerarImagenSlideRequest(BaseModel):
+    slide_index: int
+
+
+@app.post("/api/publicaciones/{pub_id}/generar-imagen-slide")
+def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
+                             user: dict = Depends(get_current_user)):
+    """Genera con KIE AI la imagen de UN slide kie_pending.
+
+    Acción explícita del usuario (botón) — nunca generación masiva. El rate
+    limit 20/10s lo garantiza core/kie_client.RateLimiter.
+    """
+    from core.db import get_publicacion, update_publicacion_field
+    from core import kie_client
+    from core.visual_spec import spec_a_prompt
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    prod = pub.get("produccion_json") or {}
+    if isinstance(prod, str):
+        try:
+            prod = json.loads(prod)
+        except Exception:
+            prod = {}
+    slides = prod.get("slides") or []
+    idx = req.slide_index
+    if not 0 <= idx < len(slides):
+        raise HTTPException(400, "slide_index fuera de rango")
+    slide = slides[idx]
+    if slide.get("image_source") != "kie_pending":
+        raise HTTPException(400, "El slide no está pendiente de generación IA")
+    spec = slide.get("spec_visual") or {}
+    prompt = slide.get("prompt_sugerido") or (spec_a_prompt(spec) if spec else "")
+    if not prompt:
+        raise HTTPException(400, "El slide no tiene prompt_sugerido ni spec_visual")
+    ratio = slide.get("ratio") or spec.get("ratio") or "1:1"
+
+    res = kie_client.generate_image(prompt, ratio)
+    if res.get("status") != "ok":
+        return {"ok": False, "status": res.get("status", "error"),
+                "reason": res.get("reason", "Error desconocido de KIE AI")}
+
+    nombre = (f"{pub_id[:8]}_slide{slide.get('slide_number', idx + 1)}"
+              f"_{int(datetime.now().timestamp())}.png")
+    destino = UPLOADS_DIR / "generadas" / cid / nombre
+    dl = kie_client.download_image(res["image_url"], destino)
+    if dl.get("status") != "ok":
+        # La imagen existe en el CDN de KIE — devolver URL y task para no
+        # perder el crédito si la descarga falla.
+        return {"ok": False, "status": "error",
+                "reason": f"Imagen generada pero falló la descarga: {dl.get('reason')}",
+                "task_id": res.get("task_id"), "image_url": res.get("image_url")}
+
+    slide.update({
+        "image_source": "generada_ia",
+        "archivo_url": f"/uploads/generadas/{cid}/{nombre}",
+        "text_zone": spec.get("zona_texto") or {"zone": "center"},
+        "spec_usada": spec,
+        "prompt_usado": prompt,
+        "kie_task_id": res.get("task_id"),
+        "generated_at": datetime.now().isoformat(),
+    })
+    update_publicacion_field(cid, pub_id, "produccion_json", prod)
+    return {"ok": True, "slide_index": idx, "slide": slide,
+            "credits_consumed": res.get("credits_consumed")}
 
 
 @app.get("/api/agent/weekly/status/{brand}/{week}")

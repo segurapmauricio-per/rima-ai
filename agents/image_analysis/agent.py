@@ -96,10 +96,20 @@ class ImageAnalysisAgent:
             "is_face_present": vision_analysis.get("is_face_present", False),
             "production_quality": vision_analysis.get("production_quality", "media"),
         }
+        meta["visual_spec"] = self.to_visual_spec(meta)
 
         # Save to client store
         save_image_meta(brand, path.name, category, meta)
         return meta
+
+    @staticmethod
+    def to_visual_spec(meta: dict) -> dict:
+        """Mapea el análisis al esquema común de spec visual (aditivo).
+
+        Sirve también para imágenes ya analizadas que no traen visual_spec.
+        """
+        from core.visual_spec import spec_desde_analisis
+        return spec_desde_analisis(meta)
 
     def _calc_safe_zone(self, w: int, h: int, safe: dict) -> dict:
         return {

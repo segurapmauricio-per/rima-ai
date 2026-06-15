@@ -65,11 +65,11 @@ def normalize_plan(plan: str) -> str:
         return "basico"
     if p in ("pro", "plan pro rima ai"):
         return "pro"
-    if p in ("max", "plan max rima ai"):
+    if p in ("max", "plan max rima ai", "plan agencia rima ai"):
         return "max"
     if "basico" in p or "básico" in p or "basic" in p:
         return "basico"
-    if "max" in p:
+    if "max" in p or "agencia" in p:
         return "max"
     return "pro"
 

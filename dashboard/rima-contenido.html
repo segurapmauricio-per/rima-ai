@@ -634,6 +634,27 @@ window.producirPub = async function(pubId, btn) {
   }
 };
 
+window.generarImagenSlide = async function(pubId, slideIndex, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Generando con IA...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/generar-imagen-slide', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ slide_index: slideIndex })
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    if (!data.ok) throw new Error(data.reason || 'KIE AI no disponible');
+    window.rimaToast && rimaToast('Imagen generada con IA', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Generar con IA';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
 window.aprobarVisual = async function(pubId, btn) {
   btn.disabled = true;
   btn.textContent = 'Aprobando...';
@@ -756,6 +777,46 @@ function produccionSection(pub) {
     if (prod.script_variante_b) {
       html += '<p style="font-size:9px;color:#64748B;margin:6px 0 0">Variante B disponible</p>';
     }
+  } else if (prod.slides && prod.slides.length) {
+    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 6px">Composición visual · ' + prod.slides.length + ' slides</p>';
+    prod.slides.forEach(function(s, idx) {
+      html += '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid rgba(245,158,11,0.1)">';
+      if ((s.image_source === 'cliente' || s.image_source === 'generada_ia') && s.archivo_url) {
+        html += '<img src="' + esc(s.archivo_url) + '" alt="" loading="lazy" '
+          + 'style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid rgba(245,158,11,0.25)">';
+      } else {
+        html += '<div style="width:44px;height:44px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;'
+          + 'background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.35)">'
+          + '<span style="font-size:8px;color:#FCD34D;font-weight:700;text-align:center;line-height:1.2">IA<br>pend.</span></div>';
+      }
+      html += '<div style="flex:1;min-width:0">';
+      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0">'
+        + esc(s.slide_number ? 'Slide ' + s.slide_number : '') + (s.role ? ' · ' + esc(s.role) : '') + '</p>';
+      if (s.main_text) {
+        html += '<p style="font-size:10px;color:#CBD5E1;margin:1px 0 0;line-height:1.4;white-space:pre-line">' + esc(s.main_text) + '</p>';
+      }
+      if (s.secondary_text) {
+        html += '<p style="font-size:9px;color:#94A3B8;margin:1px 0 0;line-height:1.4">' + esc(s.secondary_text) + '</p>';
+      }
+      if (s.image_source === 'cliente' || s.image_source === 'generada_ia') {
+        var tz = s.text_zone || {};
+        var origenImg = s.image_source === 'cliente' ? 'Imagen del cliente' : 'Generada con IA';
+        html += '<p style="font-size:8px;color:#64748B;margin:2px 0 0">' + origenImg
+          + (tz.zone ? ' · texto en ' + esc(tz.zone) : '') + '</p>';
+        if (s.image_source === 'generada_ia') {
+          html += '<span class="badge" style="display:inline-block;margin-top:3px;background:rgba(167,139,250,0.1);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25)">Generada con IA</span>';
+        }
+      } else {
+        html += '<span class="badge" style="display:inline-block;margin-top:3px;background:rgba(245,158,11,0.1);color:#FCD34D;border:1px solid rgba(245,158,11,0.25)">'
+          + 'Imagen IA pendiente</span>';
+        if (s.prompt_sugerido) {
+          html += '<p style="font-size:8px;color:#64748B;margin:3px 0 0;line-height:1.4">Prompt: ' + esc(s.prompt_sugerido) + '</p>';
+        }
+        html += '<div style="margin-top:4px"><button type="button" class="aprobar-btn" '
+          + 'onclick="generarImagenSlide(\'' + pub.id + '\',' + idx + ',this)">Generar con IA</button></div>';
+      }
+      html += '</div></div>';
+    });
   } else {
     html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5">Visual pendiente de composición · '
       + ((prod.imagenes_candidatas || []).length) + ' imágenes candidatas del cliente</p>';
