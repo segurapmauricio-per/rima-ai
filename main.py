@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ from datetime import datetime
 
 from core.auth import (
     verify_login, create_token, require_auth, get_current_user, COOKIE_NAME,
-    get_or_create_google_user, decode_token, _hash_password,
+    get_or_create_google_user, decode_token, _hash_password, _verify_password,
 )
 
 from dotenv import load_dotenv
@@ -58,6 +58,22 @@ from core.referentes_store import (
     active_ig_usernames, sync_ig_profiles_from_meta,
 )
 from core.plan_limits import get_ref_limits, normalize_plan, MANUAL_SCRAPE_CREDITS
+from core.onboarding import (
+    SKIP_ONBOARDING, LOCKED_UNTIL_BRIEF, get_onboarding_state, post_login_redirect,
+    sync_brand_storage, cancel_cliente_sqlite, is_brief_complete, brief_missing_fields,
+    apply_scrape_to_brand, ensure_user_onboarding_defaults, brief_gate_active,
+    onboarding_complete_missing, onboarding_assets_status, ONBOARDING_MAX_STEP,
+    min_photos_for_plan, face_profile_required,
+)
+from core.onboarding_scrape import run_client_scrape
+from core.face_profile import save_face_profile, load_face_profile, has_face_profile
+from core.imagenes_cliente import (
+    cliente_images_dir,
+    register_uploaded_image,
+    listar_archivos_cliente,
+    sync_todas_carpetas_cliente,
+    archivo_url,
+)
 
 app = FastAPI(title="RIMA AI", description="Marketing AI para LATAM")
 
@@ -89,6 +105,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 (UPLOADS_DIR / "carruseles").mkdir(exist_ok=True)
 (UPLOADS_DIR / "clips").mkdir(exist_ok=True)
 (UPLOADS_DIR / "finals").mkdir(exist_ok=True)
+(UPLOADS_DIR / "clientes").mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
@@ -235,6 +252,33 @@ SHARED_CSS = """
   #rima-user-menu.open { display: block !important; }
   #rima-user-menu a:hover { background: rgba(255,255,255,0.06); }
   #rima-user-bar.menu-open #rima-user-chevron { transform: rotate(180deg); }
+
+  /* Overlay bloqueo brief incompleto */
+  #rima-brief-gate {
+    position: fixed; inset: 0; z-index: 99990; display: none;
+    align-items: center; justify-content: center; padding: 24px;
+    background: rgba(5, 5, 12, 0.72); backdrop-filter: blur(8px);
+  }
+  #rima-brief-gate.show { display: flex; }
+  #rima-brief-gate .gate-card {
+    max-width: 420px; width: 100%; padding: 28px; border-radius: 20px;
+    background: #12121C; border: 1px solid rgba(124,58,237,0.35);
+    box-shadow: 0 24px 64px rgba(0,0,0,0.5); text-align: center;
+  }
+  #rima-brief-gate h3 { font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 8px; }
+  #rima-brief-gate p { font-size: 12px; color: #94A3B8; line-height: 1.55; margin: 0 0 18px; }
+  #rima-brief-gate a {
+    display: inline-block; padding: 11px 22px; border-radius: 12px; font-size: 12px;
+    font-weight: 600; color: #fff; text-decoration: none;
+    background: linear-gradient(135deg,#7C3AED,#6D28D9);
+  }
+  body.rima-gated > main, body.rima-gated > .flex-1 {
+    filter: blur(4px); pointer-events: none; user-select: none;
+  }
+  #rima-nav a[data-locked="1"] { opacity: 0.45; }
+  #rima-nav a[data-locked="1"]::after {
+    content: '🔒'; margin-left: auto; font-size: 10px;
+  }
 </style>
 """
 
@@ -423,7 +467,7 @@ SHARED_JS = """
   // â"€â"€ Toast helper â"€â"€
   window.rimaToast = function(msg, type) {
     var t = document.getElementById('rima-toast');
-    t.textContent = (type === 'error' ? 'âœ—  ' : 'âœ"  ') + msg;
+    t.textContent = msg;
     t.className = type === 'error' ? 'error show' : 'show';
     setTimeout(function() { t.className = ''; }, 3000);
   };
@@ -649,6 +693,60 @@ SHARED_JS = """
   window.addEventListener('DOMContentLoaded', bootSidebar);
   if (document.readyState !== 'loading') { bootSidebar(); }
 
+  // ── Bloqueo hasta completar brief ──
+  var LOCKED_PATHS = ['/contenido','/calendario','/lab','/mercado','/meta','/ventas','/landing','/referencias','/imagenes','/videos'];
+
+  function showBriefGate(msg) {
+    var g = document.getElementById('rima-brief-gate');
+    if (!g) {
+      g = document.createElement('div');
+      g.id = 'rima-brief-gate';
+      g.innerHTML = '<div class="gate-card"><h3>Completá tu brief de marca</h3><p id="rima-gate-msg">RIMA necesita conocer tu negocio antes de generar plan y contenido.</p><a href="/onboarding?step=3">Completar ahora</a></div>';
+      document.body.appendChild(g);
+    }
+    if (msg) {
+      var m = document.getElementById('rima-gate-msg');
+      if (m) m.textContent = msg;
+    }
+    g.classList.add('show');
+    document.body.classList.add('rima-gated');
+  }
+
+  function initBriefGate(u) {
+    if (!u || u.role === 'admin' || !u.brief_gate) return;
+    var path = window.location.pathname;
+    if (path === '/onboarding' || path === '/marca' || path === '/configuracion') return;
+
+    if (LOCKED_PATHS.indexOf(path) >= 0) {
+      window.location.href = '/onboarding?step=3&reason=brief';
+      return;
+    }
+
+    if (path === '/home') {
+      showBriefGate('Completá la información esencial de tu marca para desbloquear calendario, contenido y el resto del dashboard.');
+    }
+
+    document.querySelectorAll('#rima-nav a[href]').forEach(function(a) {
+      var href = a.getAttribute('href');
+      if (LOCKED_PATHS.indexOf(href) >= 0) {
+        a.setAttribute('data-locked', '1');
+        a.addEventListener('click', function(e) {
+          e.preventDefault();
+          window.location.href = '/onboarding?step=3&reason=brief';
+        });
+      }
+    });
+  }
+
+  var _origLoadUserSession = loadUserSession;
+  loadUserSession = async function() {
+    await _origLoadUserSession();
+    try {
+      var r = await fetch('/auth/me', { credentials: 'same-origin' });
+      if (r.ok) initBriefGate(await r.json());
+    } catch(e) {}
+  };
+
   // â"€â"€ Modal "Generar todo" â"€â"€
   function generarTodo() {
     var modal = document.getElementById('rima-modal');
@@ -837,6 +935,7 @@ def _session_from_request(request: Optional[Request]) -> Optional[dict]:
         "name": name,
         "plan": plan,
         "initials": _user_initials(name, email),
+        **get_onboarding_state(data, email),
     }
 
 
@@ -930,54 +1029,90 @@ def serve_html(filename: str, request: Optional[Request] = None) -> HTMLResponse
     return HTMLResponse(content=content)
 
 
+def _html_access_guard(request: Request, path: str) -> Optional[RedirectResponse]:
+    """Auth + redirect onboarding / brief incompleto."""
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    if SKIP_ONBOARDING or path == "/onboarding":
+        return None
+    token = request.cookies.get(COOKIE_NAME)
+    payload = decode_token(token) if token else None
+    if not payload:
+        return None
+    email = (payload.get("sub") or "").strip().lower()
+    data = load_data()
+    role = payload.get("role", "user")
+    if role == "admin" or SKIP_ONBOARDING:
+        return None
+    state = get_onboarding_state(data, email)
+    save_data(data)
+    if not state.get("onboarding_completed"):
+        if state.get("must_change_password") or state.get("onboarding_step", 1) < 3:
+            return RedirectResponse(url="/onboarding", status_code=302)
+    brand = get_user_brand(data, email)
+    if path in LOCKED_UNTIL_BRIEF and brief_gate_active(email, brand):
+        return RedirectResponse(url="/onboarding?step=3&reason=brief", status_code=302)
+    return None
+
+
+@app.get("/onboarding", response_class=HTMLResponse)
+def onboarding_page(request: Request):
+    redirect = require_auth(request)
+    if redirect:
+        return redirect
+    path = DASHBOARD / "onboarding.html"
+    return HTMLResponse(content=path.read_text(encoding="utf-8"))
+
+
 # â"€â"€ Rutas de pÃ¡ginas â"€â"€
 
 @app.get("/home", response_class=HTMLResponse)
 def home_dashboard(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/home")
     if redirect:
         return redirect
     return serve_html("rima-home.html", request)
 
 @app.get("/calendario", response_class=HTMLResponse)
 def calendario(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/calendario")
     if redirect: return redirect
     return serve_html("rima-calenadrio.html", request)
 
 @app.get("/contenido", response_class=HTMLResponse)
 def contenido(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/contenido")
     if redirect: return redirect
     return serve_html("rima-contenido.html", request)
 
 @app.get("/lab", response_class=HTMLResponse)
 def agent_lab(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/lab")
     if redirect: return redirect
     return serve_html("rima-lab.html", request)
 
 @app.get("/mercado", response_class=HTMLResponse)
 def mercado(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/mercado")
     if redirect: return redirect
     return serve_html("rima-mercado.html", request)
 
 @app.get("/meta", response_class=HTMLResponse)
 def meta(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/meta")
     if redirect: return redirect
     return serve_html("rima-meta.html", request)
 
 @app.get("/ventas", response_class=HTMLResponse)
 def ventas(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/ventas")
     if redirect: return redirect
     return serve_html("rima-ventas.html", request)
 
 @app.get("/landing", response_class=HTMLResponse)
 def landing(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/landing")
     if redirect: return redirect
     return serve_html("rima-landing.html", request)
 
@@ -989,19 +1124,19 @@ def marca(request: Request):
 
 @app.get("/referencias", response_class=HTMLResponse)
 def referencias(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/referencias")
     if redirect: return redirect
     return serve_html("rima-referencias.html", request)
 
 @app.get("/imagenes", response_class=HTMLResponse)
 def imagenes(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/imagenes")
     if redirect: return redirect
     return serve_html("rima-imagenes.html", request)
 
 @app.get("/videos", response_class=HTMLResponse)
 def videos(request: Request):
-    redirect = require_auth(request)
+    redirect = _html_access_guard(request, "/videos")
     if redirect: return redirect
     return serve_html("rima-videos.html", request)
 
@@ -1021,6 +1156,7 @@ def configuracion(request: Request):
 # â"€â"€ API: Datos de marca â"€â"€
 
 def _brand_brief_from_brand(brand: dict, user_plan: str = None) -> dict:
+    ig = brand.get("brand_ig") or brand.get("ig_username") or ""
     return {
         "business_name": brand.get("brand_name", "Mi Negocio"),
         "service": brand.get("brand_service", ""),
@@ -1031,6 +1167,8 @@ def _brand_brief_from_brand(brand: dict, user_plan: str = None) -> dict:
         "success_cases": brand.get("brand_success_cases", ""),
         "guarantee": brand.get("brand_guarantee", ""),
         "ig_avg_views": brand.get("ig_avg_views", 0),
+        "ig_username": ig.strip().lstrip("@") if ig else "",
+        "brand_ig": ig,
         "plan": normalize_plan(user_plan or brand.get("plan", "pro")),
         "enfoque": normalize_enfoque_default(brand.get("enfoque_default")),
     }
@@ -1058,8 +1196,55 @@ def post_brand(payload: dict, user: dict = Depends(get_current_user)):
     if "enfoque_default" in payload:
         existing["enfoque_default"] = normalize_enfoque_default(existing.get("enfoque_default"))
     set_user_brand(data, email, existing)
+    plan = get_user_plan(data, email)
+    try:
+        sync_brand_storage(data, email, existing, plan)
+    except Exception as e:
+        print(f"[RIMA] sync_brand_storage: {e}")
     save_data(data)
-    return {"status": "ok", "saved": len(existing)}
+
+    missing = brief_missing_fields(existing)
+    resp = {"status": "ok", "saved": len(existing), "brief_complete": len(missing) == 0}
+    if missing:
+        resp["missing"] = missing
+    scrape = data.get("users", {}).get(email, {}).get("onboarding_scrape") or {}
+    if scrape.get("insights"):
+        resp["scrape_insights"] = scrape["insights"]
+    return resp
+
+
+@app.get("/api/marca-visual")
+def api_get_marca_visual(user: dict = Depends(get_current_user)):
+    from core.db import init_db, get_marca_visual
+    from core.marca_visual import normalizar_marca
+    cid = _get_cliente_id(user)
+    init_db(cid)
+    return normalizar_marca(get_marca_visual(cid))
+
+
+@app.post("/api/marca-visual")
+def api_post_marca_visual(payload: dict, user: dict = Depends(get_current_user)):
+    from core.db import init_db, get_marca_visual, set_marca_visual
+    from core.marca_visual import normalizar_marca, merge_from_brand
+
+    data = load_data()
+    email = user.get("email", "")
+    brand = get_user_brand(data, email)
+    cid = _get_cliente_id(user)
+    init_db(cid)
+    prev = normalizar_marca(get_marca_visual(cid))
+    for key in ("comunicacion", "visual", "onboarding_scrape"):
+        if key in payload and isinstance(payload[key], dict):
+            prev.setdefault(key, {})
+            if isinstance(prev[key], dict):
+                prev[key].update(payload[key])
+            else:
+                prev[key] = payload[key]
+        elif key in payload:
+            prev[key] = payload[key]
+    prev = merge_from_brand(prev, brand)
+    set_marca_visual(cid, prev)
+    return {"status": "ok", "marca_visual": prev}
 
 # â"€â"€ API: Credenciales â"€â"€
 
@@ -1139,18 +1324,21 @@ def generate_prospecting(brief: BrandBrief, user: dict = Depends(get_current_use
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE_MB = 10
 
+ALLOWED_IMAGE_CATEGORIES = ("historias", "carruseles", "branding")
+
 @app.post("/api/images/upload")
 async def upload_images(
     files: List[UploadFile] = File(...),
     category: str = Form("historias"),
     user: dict = Depends(get_current_user),
 ):
-    if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
+    if category not in ALLOWED_IMAGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Categoría inválida")
 
+    cid = _get_cliente_id(user)
     saved = []
     errors = []
-    dest_dir = UPLOADS_DIR / category
+    dest_dir = cliente_images_dir(UPLOADS_DIR, cid, category)
 
     for f in files:
         if f.content_type not in ALLOWED_TYPES:
@@ -1163,18 +1351,20 @@ async def upload_images(
             errors.append({"name": f.filename, "error": f"Supera {MAX_SIZE_MB} MB"})
             continue
 
-        # Nombre Ãºnico para evitar colisiones
         stem = Path(f.filename).stem[:40].replace(" ", "_")
-        ext  = Path(f.filename).suffix.lower() or ".jpg"
+        ext = Path(f.filename).suffix.lower() or ".jpg"
         unique_name = f"{stem}_{int(time.time() * 1000)}{ext}"
         dest = dest_dir / unique_name
         dest.write_bytes(content)
+
+        url = archivo_url(cid, category, unique_name)
+        register_uploaded_image(cid, category, unique_name)
 
         saved.append({
             "name": unique_name,
             "original": f.filename,
             "size_mb": round(size_mb, 2),
-            "url": f"/uploads/{category}/{unique_name}",
+            "url": url,
             "category": category,
             "uploaded_at": int(time.time()),
         })
@@ -1184,32 +1374,23 @@ async def upload_images(
 
 @app.get("/api/images")
 def list_images(category: str = "historias", user: dict = Depends(get_current_user)):
-    if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
+    if category not in ALLOWED_IMAGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Categoría inválida")
 
-    folder = UPLOADS_DIR / category
-    images = []
-    for p in sorted(folder.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-        if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".gif"):
-            stat = p.stat()
-            images.append({
-                "name": p.name,
-                "url": f"/uploads/{category}/{p.name}",
-                "size_mb": round(stat.st_size / (1024 * 1024), 2),
-                "uploaded_at": int(stat.st_mtime),
-                "category": category,
-            })
-    return {"images": images, "total": len(images)}
+    cid = _get_cliente_id(user)
+    sync_todas_carpetas_cliente(UPLOADS_DIR, cid)
+    images = listar_archivos_cliente(UPLOADS_DIR, cid, category)
+    return {"images": images, "total": len(images), "cliente_id": cid}
 
 
 @app.delete("/api/images/{category}/{filename}")
 def delete_image(category: str, filename: str, user: dict = Depends(get_current_user)):
-    if category not in ("historias", "carruseles"):
-        raise HTTPException(status_code=400, detail="CategorÃ­a invÃ¡lida")
-    # Seguridad: no path traversal
+    if category not in ALLOWED_IMAGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail="Categoría inválida")
     if ".." in filename or "/" in filename:
-        raise HTTPException(status_code=400, detail="Nombre invÃ¡lido")
-    path = UPLOADS_DIR / category / filename
+        raise HTTPException(status_code=400, detail="Nombre inválido")
+    cid = _get_cliente_id(user)
+    path = cliente_images_dir(UPLOADS_DIR, cid, category) / filename
     if not path.exists():
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
     path.unlink()
@@ -1629,6 +1810,10 @@ async def lemon_webhook(
             if email in d.get("users", {}):
                 d["users"][email]["status"] = "cancelled"
                 save_data(d)
+                try:
+                    cancel_cliente_sqlite(d, email.strip().lower())
+                except Exception as e:
+                    print(f"[RIMA] cancel SQLite: {e}")
                 print(f"[RIMA] Suscripcion cancelada: {email}")
 
     return {"status": "ok"}
@@ -1709,6 +1894,10 @@ async def _provision_user_from_payment(email: str, name: str, plan: str, brand_n
             "password_hash": _hash_password(temp_password),
             "status": "active",
             "created_at": int(time.time()),
+            "must_change_password": True,
+            "onboarding_completed": False,
+            "onboarding_step": 1,
+            "onboarding_scrape": {"status": "idle"},
             "brand": {"brand_name": brand_name, "plan": plan_norm},
         }
         save_data(d)
@@ -1724,6 +1913,11 @@ async def _provision_user_from_payment(email: str, name: str, plan: str, brand_n
         print(f"[RIMA] Usuario actualizado via Gumroad: {email} | Plan: {plan_norm}")
 
     init_db(cliente_id)
+    try:
+        from core.db import create_or_update_cliente
+        create_or_update_cliente(cliente_id, nombre=brand_name, plan=plan_norm)
+    except Exception as e:
+        print(f"[RIMA] create_or_update_cliente: {e}")
     return cliente_id
 
 
@@ -1749,6 +1943,10 @@ async def gumroad_webhook(request: Request):
             if email_norm in d.get("users", {}):
                 d["users"][email_norm]["status"] = "cancelled"
                 save_data(d)
+                try:
+                    cancel_cliente_sqlite(d, email_norm)
+                except Exception as e:
+                    print(f"[RIMA] cancel SQLite: {e}")
                 print(f"[RIMA] Venta reembolsada/disputada (Gumroad): {email_norm}")
         else:
             await _provision_user_from_payment(email=email, name=name, plan=plan)
@@ -1761,6 +1959,10 @@ async def gumroad_webhook(request: Request):
             if email_norm in d.get("users", {}):
                 d["users"][email_norm]["status"] = "cancelled"
                 save_data(d)
+                try:
+                    cancel_cliente_sqlite(d, email_norm)
+                except Exception as e:
+                    print(f"[RIMA] cancel SQLite: {e}")
                 print(f"[RIMA] Suscripcion cancelada (Gumroad): {email_norm}")
 
     return {"status": "ok"}
@@ -1771,9 +1973,27 @@ async def gumroad_webhook(request: Request):
 @app.post("/api/images/analyze/{brand}/{category}/{filename}")
 def analyze_image(brand: str, category: str, filename: str, user: dict = Depends(get_current_user)):
     """Analyze an already-uploaded image with Gemini Vision."""
-    image_path = str(UPLOADS_DIR / category / filename)
+    cid = _get_cliente_id(user)
+    image_path = str(cliente_images_dir(UPLOADS_DIR, cid, category) / filename)
+    if not Path(image_path).exists():
+        legacy = UPLOADS_DIR / category / filename
+        image_path = str(legacy) if legacy.exists() else image_path
     try:
         result = image_analysis_agent.analyze(image_path, brand, category)
+        from core.db import set_imagen_analisis, get_imagen_por_url
+        from core.imagenes_cliente import usable_para_from_meta
+        url = archivo_url(cid, category, filename)
+        img = get_imagen_por_url(cid, url)
+        if not img and Path(image_path).exists():
+            register_uploaded_image(cid, category, filename)
+            img = get_imagen_por_url(cid, url)
+        if img:
+            uso = "historia" if category == "historias" else ("branding" if category == "branding" else "carrusel")
+            set_imagen_analisis(
+                cid, img["id"], result,
+                usable_para=usable_para_from_meta(uso, result),
+                tags=result.get("tags", []),
+            )
         return JSONResponse(content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1837,6 +2057,13 @@ def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_cur
         if email and result.get("profile_meta"):
             sync_ig_profiles_from_meta(data, email, result["profile_meta"])
             save_data(data)
+        try:
+            from core.db import init_db
+            from core.marca_visual import sync_from_market_research
+            init_db(brand_slug)
+            sync_from_market_research(brand_slug, result, brief)
+        except Exception:
+            pass
         return JSONResponse(content=result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -2066,24 +2293,28 @@ def run_content_dashboard(req: ContentRunRequest, user: dict = Depends(get_curre
 
 @app.post("/api/agent/content/clear-planned")
 def clear_planned_content(user: dict = Depends(get_current_user)):
-    """Borra piezas planificadas sin aprobaciones ni contenido cargado (ventana 30 días)."""
+    """Borra piezas planificadas sin aprobaciones ni contenido cargado (pasado + ventana 30d)."""
     from core.db import delete_publicaciones_regenerables, init_db
     from datetime import date, timedelta
     from agents.content.agent import PLAN_DAYS
     cid = _get_cliente_id(user)
     try:
         init_db(cid)
-        start = date.today() + timedelta(days=1)
-        end = start + timedelta(days=PLAN_DAYS - 1)
-        deleted = delete_publicaciones_regenerables(
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+        anchor = today - timedelta(days=today.weekday())
+        end = anchor + timedelta(days=PLAN_DAYS - 1)
+        deleted_past = delete_publicaciones_regenerables(cid, end_date=today.strftime("%Y-%m-%d"))
+        deleted_forward = delete_publicaciones_regenerables(
             cid,
-            start_date=start.strftime("%Y-%m-%d"),
+            start_date=tomorrow.strftime("%Y-%m-%d"),
             end_date=end.strftime("%Y-%m-%d"),
         )
+        deleted = deleted_past + deleted_forward
         return {
             "ok": True,
             "deleted": deleted,
-            "starts_on": start.strftime("%Y-%m-%d"),
+            "visible_from": tomorrow.strftime("%Y-%m-%d"),
             "ends_on": end.strftime("%Y-%m-%d"),
         }
     except Exception as e:
@@ -2102,9 +2333,12 @@ def api_get_publicaciones(mes: str = None, status: str = None,
                            tipo: str = None, desde: str = None, hasta: str = None,
                            user: dict = Depends(get_current_user)):
     from core.db import get_publicaciones, init_db
+    from core.weekly_helpers import ensure_week_propuestas
     cid = _get_cliente_id(user)
     try:
         init_db(cid)
+        if desde and hasta:
+            ensure_week_propuestas(cid, desde, hasta)
         pubs = get_publicaciones(cid, mes=mes, status=status, tipo=tipo)
         if desde or hasta:
             pubs = [
@@ -2161,7 +2395,220 @@ def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_use
         update_publicacion_status(cid, pub_id, new_status)
         brand_name = get_user_brand(load_data(), user.get("email", "")).get("brand_name") or "default"
         sync_weekly_state_from_db(cid, brand_name, pub.get("fecha"))
-    return {"ok": True, "aprobaciones": aprobaciones, "status": new_status}
+
+    render_info = None
+    if campo == "visual" and new_status == "produccion_aprobada":
+        tipo = (pub.get("tipo") or "").lower()
+        if tipo in ("carrusel", "historia"):
+            from core.db import get_marca_visual
+            from core.slide_renderer import render_publicacion_visual
+            pub_fresh = get_publicacion(cid, pub_id) or pub
+            try:
+                render_info = render_publicacion_visual(
+                    cid, pub_id, pub_fresh, UPLOADS_DIR, get_marca_visual(cid),
+                )
+                prod = pub_fresh.get("produccion_json") or {}
+                if isinstance(prod, str):
+                    try:
+                        prod = json.loads(prod)
+                    except Exception:
+                        prod = {}
+                prod["rendered"] = render_info
+                prod["etapa"] = "final"
+                update_publicacion_field(cid, pub_id, "produccion_json", prod)
+            except Exception as e:
+                render_info = {"error": str(e), "total": 0}
+
+    if campo == "copy" and new_status == "copy_aprobado":
+        tipo = (pub.get("tipo") or "").lower()
+        if tipo in ("carrusel", "historia"):
+            from agents.visual_composer import compose_produccion
+            prod = pub.get("produccion_json") or {}
+            if isinstance(prod, str):
+                try:
+                    prod = json.loads(prod)
+                except Exception:
+                    prod = {}
+            if not (prod.get("slides") or []):
+                copy_j = pub.get("copy_json") or {}
+                if isinstance(copy_j, str):
+                    try:
+                        copy_j = json.loads(copy_j)
+                    except Exception:
+                        copy_j = {}
+                slot_context = {
+                    "tematica": pub.get("tematica", ""),
+                    "enfoque": pub.get("enfoque", ""),
+                    "fecha": pub.get("fecha", ""),
+                }
+                previsual = compose_produccion(cid, copy_j, tipo, slot_context, "previsual")
+                if previsual:
+                    update_publicacion_field(cid, pub_id, "produccion_json", previsual)
+
+    return {"ok": True, "aprobaciones": aprobaciones, "status": new_status,
+            "rendered": render_info}
+
+
+@app.post("/api/publicaciones/{pub_id}/render-final")
+def api_render_final(pub_id: str, user: dict = Depends(get_current_user)):
+    """Compone PNG finales (imagen + copy) para descarga. Idempotente."""
+    from core.db import get_publicacion, update_publicacion_field, get_marca_visual
+    from core.slide_renderer import render_publicacion_visual
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    if pub.get("status") not in ("produccion_aprobada", "programado", "publicado"):
+        raise HTTPException(400, "La pieza debe tener producción aprobada")
+    tipo = (pub.get("tipo") or "").lower()
+    if tipo not in ("carrusel", "historia"):
+        raise HTTPException(400, "Solo aplica a carrusel o historia")
+    try:
+        render_info = render_publicacion_visual(
+            cid, pub_id, pub, UPLOADS_DIR, get_marca_visual(cid),
+        )
+        prod = pub.get("produccion_json") or {}
+        if isinstance(prod, str):
+            try:
+                prod = json.loads(prod)
+            except Exception:
+                prod = {}
+        prod["rendered"] = render_info
+        prod["etapa"] = "final"
+        update_publicacion_field(cid, pub_id, "produccion_json", prod)
+        return {"ok": True, "rendered": render_info}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+
+def _final_asset_path(cliente_id: str, pub_id: str, filename: str) -> Path:
+    """Ruta segura a un PNG/ZIP renderizado (sin traversal)."""
+    import re
+    if not re.fullmatch(r"(slide-\d{2}\.png|carrusel-[a-f0-9]{8}\.zip|historia-[a-f0-9]{8}\.zip)", filename):
+        raise HTTPException(400, "Nombre de archivo inválido")
+    path = UPLOADS_DIR / "renderizados" / pub_id / filename
+    if path.is_file():
+        return path
+    # Migración: rutas antiguas con cliente_id (p. ej. negocio_básico)
+    legacy = UPLOADS_DIR / "clientes" / cliente_id / "renderizados" / pub_id / filename
+    if legacy.is_file():
+        return legacy
+    return path
+
+
+@app.get("/api/publicaciones/{pub_id}/archivo-final/{filename}")
+def api_archivo_final(pub_id: str, filename: str, user: dict = Depends(get_current_user)):
+    """Sirve un slide PNG compuesto (preview o descarga)."""
+    cid = _get_cliente_id(user)
+    from core.db import get_publicacion
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    path = _final_asset_path(cid, pub_id, filename)
+    if not path.is_file():
+        from core.db import get_marca_visual, update_publicacion_field
+        from core.slide_renderer import render_publicacion_visual
+        try:
+            render_info = render_publicacion_visual(
+                cid, pub_id, pub, UPLOADS_DIR, get_marca_visual(cid),
+            )
+            prod = pub.get("produccion_json") or {}
+            if isinstance(prod, str):
+                try:
+                    prod = json.loads(prod)
+                except Exception:
+                    prod = {}
+            prod["rendered"] = render_info
+            update_publicacion_field(cid, pub_id, "produccion_json", prod)
+            path = _final_asset_path(cid, pub_id, filename)
+        except Exception:
+            pass
+    if not path.is_file():
+        raise HTTPException(404, "Archivo no encontrado — generá el visual primero")
+    return FileResponse(path, media_type="image/png", filename=filename)
+
+
+@app.get("/api/publicaciones/{pub_id}/descargar-carrusel")
+def api_descargar_carrusel(pub_id: str, user: dict = Depends(get_current_user)):
+    """Descarga ZIP con todos los slides del carrusel/historia."""
+    cid = _get_cliente_id(user)
+    from core.db import get_publicacion
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    prod = pub.get("produccion_json") or {}
+    if isinstance(prod, str):
+        try:
+            prod = json.loads(prod)
+        except Exception:
+            prod = {}
+    rendered = prod.get("rendered") or {}
+    zip_name = rendered.get("zip_filename") or f"carrusel-{pub_id[:8]}.zip"
+    path = _final_asset_path(cid, pub_id, zip_name)
+    if not path.is_file():
+        from core.db import get_marca_visual
+        from core.slide_renderer import render_publicacion_visual
+        render_info = render_publicacion_visual(cid, pub_id, pub, UPLOADS_DIR, get_marca_visual(cid))
+        prod["rendered"] = render_info
+        from core.db import update_publicacion_field
+        update_publicacion_field(cid, pub_id, "produccion_json", prod)
+        zip_name = render_info.get("zip_filename") or zip_name
+        path = _final_asset_path(cid, pub_id, zip_name)
+    if not path.is_file():
+        raise HTTPException(404, "ZIP no disponible")
+    return FileResponse(path, media_type="application/zip", filename=zip_name)
+
+
+@app.patch("/api/publicaciones/{pub_id}/editar-slides")
+def api_editar_slides(pub_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    from core.db import update_publicacion_field, get_publicacion
+    cid = _get_cliente_id(user)
+    slides_edits = payload.get("slides", [])  # [{index, main_text, secondary_text}, ...]
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicacion no encontrada")
+    copy_json = pub.get("copy_json") or {}
+    if isinstance(copy_json, str):
+        import json as _json
+        try:
+            copy_json = _json.loads(copy_json)
+        except Exception:
+            copy_json = {}
+    slides = copy_json.get("slides", [])
+    for edit in slides_edits:
+        idx = edit.get("index")
+        if idx is None or idx >= len(slides):
+            continue
+        if "main_text" in edit:
+            slides[idx]["main_text"] = edit["main_text"]
+        if "secondary_text" in edit:
+            slides[idx]["secondary_text"] = edit["secondary_text"]
+        if "bullets" in edit:
+            bullets = edit["bullets"]
+            if isinstance(bullets, str):
+                bullets = [b.strip() for b in bullets.replace("•", "\n").split("\n") if b.strip()]
+            slides[idx]["bullets"] = bullets if isinstance(bullets, list) else []
+    copy_json["slides"] = slides
+    if pub.get("tipo") == "historia":
+        elegido = copy_json.get("copy_elegido") or {}
+        elegido["slides"] = slides
+        copy_json["copy_elegido"] = elegido
+    update_publicacion_field(cid, pub_id, "copy_json", copy_json)
+
+    if pub.get("tipo") in ("carrusel", "historia") and slides:
+        from agents.visual_composer import compose_produccion
+        slot_context = {
+            "tematica": pub.get("tematica", ""),
+            "enfoque": pub.get("enfoque", ""),
+            "fecha": pub.get("fecha", ""),
+        }
+        copy_json["slides"] = slides
+        previsual = compose_produccion(cid, copy_json, pub.get("tipo"), slot_context, "previsual")
+        if previsual:
+            update_publicacion_field(cid, pub_id, "produccion_json", previsual)
+
+    return {"ok": True, "slides": len(slides)}
 
 @app.get("/api/referentes/top")
 def api_top_referentes(tipo: str = None, limit: int = 10,
@@ -2181,8 +2628,9 @@ def api_get_imagenes(uso: str = None, user: dict = Depends(get_current_user)):
     cid = _get_cliente_id(user)
     try:
         init_db(cid)
+        sync_todas_carpetas_cliente(UPLOADS_DIR, cid)
         imgs = get_imagenes_para(cid, uso or "")
-        return {"imagenes": imgs, "total": len(imgs)}
+        return {"imagenes": imgs, "total": len(imgs), "cliente_id": cid}
     except Exception as e:
         raise HTTPException(500, str(e))
 
@@ -2452,7 +2900,7 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
     from core.db import (
         get_publicacion, update_publicacion_field, update_publicacion_status,
     )
-    from agents.visual_composer import plan_slides, match_images_to_slides
+    from agents.visual_composer import plan_slides, compose_produccion
     from core.weekly_helpers import sync_weekly_state_from_db
     data = load_data()
     email = user.get("email", "")
@@ -2491,6 +2939,12 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
                 "generated_at": script.get("timestamp", ""),
             }
         else:
+            prod_existing = pub.get("produccion_json") or {}
+            if isinstance(prod_existing, str):
+                try:
+                    prod_existing = json.loads(prod_existing)
+                except Exception:
+                    prod_existing = {}
             slot_context = {
                 "tematica": pub.get("tematica", ""),
                 "enfoque": pub.get("enfoque", ""),
@@ -2499,12 +2953,17 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
             slides = plan_slides(copy_j, tipo, slot_context)
             if not slides:
                 raise HTTPException(400, "El copy aprobado no tiene contenido para componer slides")
-            produccion = {
-                "etapa": "produccion",
-                "tipo": "visual",
-                "slides": match_images_to_slides(cid, tipo, slides, slot_context),
-                "generated_at": datetime.now().isoformat(),
-            }
+            # Carrusel KIE: siempre imágenes nuevas (no reutilizar biblioteca ni prod anterior).
+            if tipo == "carrusel":
+                produccion = compose_produccion(cid, copy_j, tipo, slot_context, modo="produccion")
+            elif prod_existing.get("slides"):
+                produccion = dict(prod_existing)
+                produccion["etapa"] = "produccion"
+                produccion["modo"] = "produccion"
+            else:
+                produccion = compose_produccion(cid, copy_j, tipo, slot_context, modo="produccion")
+            if not produccion:
+                raise HTTPException(400, "No se pudo componer la producción visual")
         update_publicacion_field(cid, pub_id, "produccion_json", produccion)
         update_publicacion_status(cid, pub_id, "en_produccion")
         sync_weekly_state_from_db(cid, brand_name, pub.get("fecha"))
@@ -2518,19 +2977,98 @@ def api_producir(pub_id: str, user: dict = Depends(get_current_user)):
 
 class GenerarImagenSlideRequest(BaseModel):
     slide_index: int
+    prompt: Optional[str] = None
+
+
+class GenerarCarruselIARequest(BaseModel):
+    """Generación batch estilo skill /carrusel (KIE + coherencia visual)."""
+    confirmar_costo: bool = False
+    slide_indices: Optional[list[int]] = None
+    regenerar_todo: bool = False
+
+
+class GenerarHistoriaIARequest(BaseModel):
+    """Generación batch historias 9:16 — biblioteca + KIE para pendientes."""
+    confirmar_costo: bool = False
+    slide_indices: Optional[list[int]] = None
+    regenerar_todo: bool = False
+
+
+class ElegirCopyRequest(BaseModel):
+    proposal_index: int = 0
+
+
+class AsignarImagenSlideRequest(BaseModel):
+    slide_index: int
+    image_id: str
+
+
+@app.post("/api/publicaciones/{pub_id}/asignar-imagen-slide")
+def api_asignar_imagen_slide(pub_id: str, req: AsignarImagenSlideRequest,
+                             user: dict = Depends(get_current_user)):
+    """Asigna una imagen de la biblioteca del cliente a un slide."""
+    from core.db import get_publicacion, update_publicacion_field, get_imagen
+    from agents.visual_composer.agent import _text_zone
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    prod = pub.get("produccion_json") or {}
+    if isinstance(prod, str):
+        try:
+            prod = json.loads(prod)
+        except Exception:
+            prod = {}
+    slides = prod.get("slides") or []
+    idx = req.slide_index
+    if not 0 <= idx < len(slides):
+        raise HTTPException(400, "slide_index fuera de rango")
+    img = get_imagen(cid, req.image_id)
+    if not img or not img.get("analizado_at"):
+        raise HTTPException(400, "Imagen no encontrada o sin analizar")
+    analisis = img.get("analisis_json") or {}
+    slide = slides[idx]
+    slide.update({
+        "image_source": "cliente",
+        "image_id": img.get("id"),
+        "archivo_url": img.get("archivo_url"),
+        "text_zone": _text_zone(analisis),
+        "match_score": None,
+    })
+    for k in ("kie_task_id", "generated_at", "spec_usada", "prompt_usado"):
+        slide.pop(k, None)
+    if not slide.get("prompt_sugerido"):
+        from core.visual_spec import spec_desde_slide, spec_a_prompt
+        from agents.visual_composer.agent import _paleta_marca
+        slot_context = {
+            "tematica": pub.get("tematica", ""),
+            "enfoque": pub.get("enfoque", ""),
+            "fecha": pub.get("fecha", ""),
+        }
+        spec = spec_desde_slide(slide, pub.get("tipo", "carrusel"), slot_context,
+                                _paleta_marca(cid))
+        slide["spec_visual"] = spec
+        slide["prompt_sugerido"] = spec_a_prompt(spec)
+    update_publicacion_field(cid, pub_id, "produccion_json", prod)
+    return {"ok": True, "slide_index": idx, "slide": slide}
 
 
 @app.post("/api/publicaciones/{pub_id}/generar-imagen-slide")
 def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
                              user: dict = Depends(get_current_user)):
-    """Genera con KIE AI la imagen de UN slide kie_pending.
+    """Genera con KIE AI la imagen de UN slide.
 
-    Acción explícita del usuario (botón) — nunca generación masiva. El rate
-    limit 20/10s lo garantiza core/kie_client.RateLimiter.
+    Acción explícita del usuario (botón/modal) — nunca generación masiva.
+    Acepta prompt opcional editado por el usuario. Permite regenerar slides
+    que ya tienen imagen IA o de biblioteca.
     """
     from core.db import get_publicacion, update_publicacion_field
     from core import kie_client
-    from core.visual_spec import spec_a_prompt
+    from core.visual_spec import spec_a_prompt, spec_desde_slide
+    from core.imagenes_biblioteca import cliente_generadas_dir, registrar_imagen_generada
+    from core.marca_visual import paleta_colores
+    from core.db import get_marca_visual
 
     cid = _get_cliente_id(user)
     pub = get_publicacion(cid, pub_id)
@@ -2547,42 +3085,344 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
     if not 0 <= idx < len(slides):
         raise HTTPException(400, "slide_index fuera de rango")
     slide = slides[idx]
-    if slide.get("image_source") != "kie_pending":
-        raise HTTPException(400, "El slide no está pendiente de generación IA")
+    source = slide.get("image_source")
+    if source not in ("kie_pending", "generada_ia", "cliente"):
+        raise HTTPException(400, "El slide no admite generación IA")
     spec = slide.get("spec_visual") or {}
-    prompt = slide.get("prompt_sugerido") or (spec_a_prompt(spec) if spec else "")
+    prompt = (req.prompt or "").strip()
     if not prompt:
-        raise HTTPException(400, "El slide no tiene prompt_sugerido ni spec_visual")
+        prompt = (slide.get("prompt_sugerido") or slide.get("prompt_usado")
+                  or (spec_a_prompt(spec) if spec else ""))
+    if not prompt and pub.get("tipo") == "carrusel":
+        from agents.carousel_generator.agent import build_integrated_prompt, build_style_guide
+        copy_j = pub.get("copy_json") or {}
+        if isinstance(copy_j, str):
+            try:
+                copy_j = json.loads(copy_j)
+            except Exception:
+                copy_j = {}
+        marca = get_marca_visual(cid)
+        sg = build_style_guide(marca, {}, copy_j)
+        slot_context = {
+            "tematica": pub.get("tematica", ""),
+            "enfoque": pub.get("enfoque", ""),
+            "fecha": pub.get("fecha", ""),
+        }
+        prompt = build_integrated_prompt(slide, sg, idx, len(slides), slot_context)
+        slide["texto_en_imagen"] = True
+    if not prompt:
+        tipo = pub.get("tipo", "carrusel")
+        slot_context = {
+            "tematica": pub.get("tematica", ""),
+            "enfoque": pub.get("enfoque", ""),
+            "fecha": pub.get("fecha", ""),
+        }
+        from agents.visual_composer.agent import _paleta_marca
+        spec = spec_desde_slide(slide, tipo, slot_context, _paleta_marca(cid))
+        slide["spec_visual"] = spec
+        slide["prompt_sugerido"] = spec_a_prompt(spec)
+        prompt = slide["prompt_sugerido"]
+    if not prompt:
+        raise HTTPException(400, "No hay prompt para generar la imagen")
     ratio = slide.get("ratio") or spec.get("ratio") or "1:1"
+    modelo = slide.get("kie_model") or kie_client.model_imagen()
+    resolucion = slide.get("kie_resolution") or kie_client.default_resolution()
+    reference_url = None
+    if pub.get("tipo") in ("carrusel", "historia") and idx > 0:
+        for s in slides:
+            if s.get("kie_reference_url"):
+                reference_url = s["kie_reference_url"]
+                break
 
-    res = kie_client.generate_image(prompt, ratio)
+    res = kie_client.generate_image(
+        prompt, ratio,
+        reference_image=reference_url,
+        resolution=resolucion,
+        model=modelo,
+    )
     if res.get("status") != "ok":
         return {"ok": False, "status": res.get("status", "error"),
                 "reason": res.get("reason", "Error desconocido de KIE AI")}
 
     nombre = (f"{pub_id[:8]}_slide{slide.get('slide_number', idx + 1)}"
               f"_{int(datetime.now().timestamp())}.png")
-    destino = UPLOADS_DIR / "generadas" / cid / nombre
+    destino = cliente_generadas_dir(UPLOADS_DIR, cid) / nombre
     dl = kie_client.download_image(res["image_url"], destino)
     if dl.get("status") != "ok":
-        # La imagen existe en el CDN de KIE — devolver URL y task para no
-        # perder el crédito si la descarga falla.
         return {"ok": False, "status": "error",
                 "reason": f"Imagen generada pero falló la descarga: {dl.get('reason')}",
                 "task_id": res.get("task_id"), "image_url": res.get("image_url")}
 
+    paleta = paleta_colores(get_marca_visual(cid)) or (spec.get("paleta_colores") or [])
+    bib = registrar_imagen_generada(cid, destino, prompt=prompt, spec=spec, paleta=paleta)
+
     slide.update({
         "image_source": "generada_ia",
-        "archivo_url": f"/uploads/generadas/{cid}/{nombre}",
+        "archivo_url": bib.get("archivo_url") or f"/uploads/clientes/{cid}/generadas/{nombre}",
+        "image_id": bib.get("id"),
         "text_zone": spec.get("zona_texto") or {"zone": "center"},
         "spec_usada": spec,
         "prompt_usado": prompt,
         "kie_task_id": res.get("task_id"),
+        "kie_model": res.get("model") or modelo,
+        "kie_resolution": res.get("resolution") or resolucion,
+        "kie_reference_url": res.get("image_url"),
         "generated_at": datetime.now().isoformat(),
     })
+    if pub.get("tipo") == "carrusel":
+        slide["texto_en_imagen"] = True
+    slide.pop("match_score", None)
     update_publicacion_field(cid, pub_id, "produccion_json", prod)
     return {"ok": True, "slide_index": idx, "slide": slide,
-            "credits_consumed": res.get("credits_consumed")}
+            "credits_consumed": res.get("credits_consumed"),
+            "modelo_kie": res.get("model") or modelo}
+
+
+@app.post("/api/publicaciones/{pub_id}/generar-carrusel-ia")
+def api_generar_carrusel_ia(pub_id: str, req: GenerarCarruselIARequest,
+                            user: dict = Depends(get_current_user)):
+    """Genera todas las slides del carrusel con KIE (nano-banana-pro), estilo coherente.
+
+    Requiere confirmar_costo=true — cada slide ~$0.09 USD en créditos KIE.
+    Slide 1 define estilo; slides 2+ usan image_input con la portada como referencia.
+    """
+    from core.db import get_publicacion, update_publicacion_field
+    from agents.carousel_generator.agent import (
+        attach_carousel_plan,
+        build_style_guide,
+        generate_carousel_batch,
+        refresh_kie_prompts,
+    )
+    from core import kie_client
+
+    if not req.confirmar_costo:
+        raise HTTPException(
+            400,
+            "Confirmá el costo enviando confirmar_costo: true "
+            "(~$0.09 USD por slide en KIE AI)",
+        )
+    if not kie_client.is_configured():
+        return {"ok": False, "status": "not_configured",
+                "reason": "Falta KIE_API_KEY en .env"}
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    if pub.get("tipo") != "carrusel":
+        raise HTTPException(400, "Solo aplica a publicaciones tipo carrusel")
+
+    prod = pub.get("produccion_json") or {}
+    if isinstance(prod, str):
+        try:
+            prod = json.loads(prod)
+        except Exception:
+            prod = {}
+    slides = list(prod.get("slides") or [])
+    if not slides:
+        raise HTTPException(400, "No hay slides — aprobá el copy primero")
+
+    copy_j = pub.get("copy_json") or {}
+    if isinstance(copy_j, str):
+        try:
+            copy_j = json.loads(copy_j)
+        except Exception:
+            copy_j = {}
+
+    data = load_data()
+    email = user.get("email", "")
+    brand_dict = get_user_brand(data, email)
+    brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
+    from core.db import get_marca_visual
+    from core.marca_visual import normalizar_marca
+    marca = normalizar_marca(get_marca_visual(cid))
+    style_guide = build_style_guide(marca, brief, copy_j)
+
+    slot_context = {
+        "tematica": pub.get("tematica", ""),
+        "enfoque": pub.get("enfoque", ""),
+        "fecha": pub.get("fecha", ""),
+    }
+    slides = refresh_kie_prompts(slides, style_guide, slot_context)
+    attached = attach_carousel_plan(pub, copy_j, style_guide, slides, prod)
+    prod = attached["produccion"]
+    copy_j = attached["copy_json"]
+    slides = prod.get("slides") or slides
+
+    batch = generate_carousel_batch(
+        cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
+        slide_indices=req.slide_indices,
+        skip_existing=not req.regenerar_todo,
+        copy_json=copy_j,
+    )
+    prod["slides"] = batch.get("slides") or slides
+    prod["kie_batch_at"] = datetime.now().isoformat()
+    if batch.get("carousel_plan"):
+        prod["carousel_plan"] = batch["carousel_plan"]
+        copy_j["carousel_plan"] = batch["carousel_plan"]
+    prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
+    update_publicacion_field(cid, pub_id, "produccion_json", prod)
+    update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+
+    return {
+        "ok": batch.get("ok", False),
+        "generated": batch.get("generated", 0),
+        "total_targets": batch.get("total_targets", 0),
+        "results": batch.get("results", []),
+        "errors": batch.get("errors", []),
+        "modo_visual": "texto_integrado",
+        "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
+        "carousel_plan": prod.get("carousel_plan"),
+        "produccion": prod,
+    }
+
+
+@app.post("/api/publicaciones/{pub_id}/elegir-copy")
+def api_elegir_copy(pub_id: str, req: ElegirCopyRequest,
+                    user: dict = Depends(get_current_user)):
+    """El cliente elige entre las 2 propuestas de copy (historias)."""
+    from core.db import get_publicacion, update_publicacion_field
+    from agents.visual_composer import compose_produccion
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    if pub.get("tipo") != "historia":
+        raise HTTPException(400, "Solo aplica a historias")
+
+    copy_json = pub.get("copy_json") or {}
+    if isinstance(copy_json, str):
+        try:
+            copy_json = json.loads(copy_json)
+        except Exception:
+            copy_json = {}
+
+    proposals = copy_json.get("propuestas_copy") or []
+    idx = req.proposal_index
+    if idx < 0 or idx >= len(proposals):
+        raise HTTPException(400, "Índice de propuesta inválido")
+
+    elegido = proposals[idx]
+    copy_json["propuesta_copy_index"] = idx
+    copy_json["copy_elegido"] = elegido
+    copy_json["slides"] = elegido.get("slides") or []
+    copy_json["titulo"] = elegido.get("titulo", "")
+    copy_json["plan_resumen"] = elegido.get("plan_resumen", "")
+    copy_json["cta_keyword"] = elegido.get("cta_keyword") or elegido.get("keyword", "")
+    update_publicacion_field(cid, pub_id, "copy_json", copy_json)
+
+    if pub.get("status") in ("copy_generado", "copy_aprobado"):
+        slot_context = {
+            "tematica": pub.get("tematica", ""),
+            "enfoque": pub.get("enfoque", ""),
+            "fecha": pub.get("fecha", ""),
+        }
+        previsual = compose_produccion(
+            cid, copy_json, "historia", slot_context, "previsual",
+        )
+        if previsual:
+            update_publicacion_field(cid, pub_id, "produccion_json", previsual)
+
+    return {"ok": True, "proposal_index": idx, "copy_elegido": elegido}
+
+
+@app.post("/api/publicaciones/{pub_id}/generar-historia-ia")
+def api_generar_historia_ia(pub_id: str, req: GenerarHistoriaIARequest,
+                            user: dict = Depends(get_current_user)):
+    """Genera slides pendientes de historia con KIE (9:16, coherencia visual)."""
+    from core.db import get_publicacion, update_publicacion_field
+    from agents.story_generator.agent import (
+        build_style_guide,
+        generate_story_batch,
+        refresh_kie_prompts,
+    )
+    from core import kie_client
+
+    if not req.confirmar_costo:
+        raise HTTPException(
+            400,
+            "Confirmá el costo enviando confirmar_costo: true "
+            "(~$0.09 USD por slide en KIE AI)",
+        )
+    if not kie_client.is_configured():
+        return {"ok": False, "status": "not_configured",
+                "reason": "Falta KIE_API_KEY en .env"}
+
+    cid = _get_cliente_id(user)
+    pub = get_publicacion(cid, pub_id)
+    if not pub:
+        raise HTTPException(404, "Publicación no encontrada")
+    if pub.get("tipo") != "historia":
+        raise HTTPException(400, "Solo aplica a publicaciones tipo historia")
+
+    prod = pub.get("produccion_json") or {}
+    if isinstance(prod, str):
+        try:
+            prod = json.loads(prod)
+        except Exception:
+            prod = {}
+    slides = list(prod.get("slides") or [])
+    if not slides:
+        raise HTTPException(400, "No hay slides — aprobá el copy primero")
+
+    copy_j = pub.get("copy_json") or {}
+    if isinstance(copy_j, str):
+        try:
+            copy_j = json.loads(copy_j)
+        except Exception:
+            copy_j = {}
+
+    data = load_data()
+    email = user.get("email", "")
+    brand_dict = get_user_brand(data, email)
+    brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
+    from core.db import get_marca_visual
+    from core.marca_visual import normalizar_marca
+    marca = normalizar_marca(get_marca_visual(cid))
+    style_guide = build_style_guide(marca, brief, copy_j)
+
+    slot_context = {
+        "tematica": pub.get("tematica", ""),
+        "enfoque": pub.get("enfoque", ""),
+        "fecha": pub.get("fecha", ""),
+    }
+    slides = refresh_kie_prompts(slides, style_guide, slot_context)
+
+    if req.regenerar_todo:
+        for s in slides:
+            if s.get("image_source") != "cliente":
+                s["image_source"] = "kie_pending"
+                s.pop("archivo_url", None)
+                s.pop("image_id", None)
+
+    batch = generate_story_batch(
+        cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
+        slide_indices=req.slide_indices,
+        skip_existing=not req.regenerar_todo,
+        copy_json=copy_j,
+    )
+    prod["slides"] = batch.get("slides") or slides
+    prod["kie_batch_at"] = datetime.now().isoformat()
+    if batch.get("story_plan"):
+        prod["story_plan"] = batch["story_plan"]
+        copy_j["story_plan"] = batch["story_plan"]
+    prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
+    prod["modo_visual"] = "fondo_limpio"
+    update_publicacion_field(cid, pub_id, "produccion_json", prod)
+    update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+
+    return {
+        "ok": batch.get("ok", False),
+        "generated": batch.get("generated", 0),
+        "total_targets": batch.get("total_targets", 0),
+        "results": batch.get("results", []),
+        "errors": batch.get("errors", []),
+        "modo_visual": "fondo_limpio",
+        "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
+        "story_plan": prod.get("story_plan"),
+        "produccion": prod,
+    }
 
 
 @app.get("/api/agent/weekly/status/{brand}/{week}")
@@ -2715,6 +3555,201 @@ def setup_client(brand: str, brief: BrandBrief):
     return JSONResponse(content={"status": "ok", "brand": brand})
 
 
+# ── Onboarding ───────────────────────────────────────────────────────────────
+
+_scrape_running: set = set()
+
+
+async def _background_scrape(email: str, username: str) -> None:
+    if email in _scrape_running:
+        return
+    _scrape_running.add(email)
+    try:
+        d = load_data()
+        user = d.setdefault("users", {}).setdefault(email, {})
+        brand = get_user_brand(d, email)
+        cid = cliente_id_from_brand(brand)
+        user["onboarding_scrape"] = {
+            "status": "running",
+            "username": username,
+            "started_at": int(time.time()),
+            "error": "",
+        }
+        save_data(d)
+
+        result = await asyncio.to_thread(run_client_scrape, username, cid, brand)
+
+        d = load_data()
+        user = d.setdefault("users", {}).setdefault(email, {})
+        brand = get_user_brand(d, email)
+        plan = get_user_plan(d, email)
+        if result.get("ok"):
+            brand = apply_scrape_to_brand(brand, result)
+            set_user_brand(d, email, brand)
+            sync_brand_storage(d, email, brand, plan)
+            user["onboarding_scrape"] = {
+                "status": "done",
+                "username": username,
+                "finished_at": int(time.time()),
+                "posts_count": result.get("posts_count", 0),
+                "insights": result.get("insights"),
+                "marca_visual": result.get("marca_visual"),
+            }
+        else:
+            user["onboarding_scrape"] = {
+                "status": "error",
+                "username": username,
+                "error": result.get("error", "No se pudo analizar el perfil"),
+            }
+        save_data(d)
+    except Exception as e:
+        d = load_data()
+        user = d.setdefault("users", {}).setdefault(email, {})
+        user["onboarding_scrape"] = {"status": "error", "error": str(e)}
+        save_data(d)
+        print(f"[RIMA] onboarding scrape error: {e}")
+    finally:
+        _scrape_running.discard(email)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = ""
+    new_password: str
+
+
+@app.post("/api/auth/change-password")
+def api_change_password(body: ChangePasswordRequest, user: dict = Depends(get_current_user)):
+    email = (user.get("email") or "").strip().lower()
+    d = load_data()
+    rec = d.get("users", {}).get(email)
+    if not rec:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    stored = rec.get("password_hash", "")
+    if not stored or not _verify_password(body.current_password, stored):
+        raise HTTPException(status_code=400, detail="Contraseña actual incorrecta")
+    if len(body.new_password or "") < 8:
+        raise HTTPException(status_code=400, detail="La nueva contraseña debe tener al menos 8 caracteres")
+    rec["password_hash"] = _hash_password(body.new_password)
+    rec["must_change_password"] = False
+    save_data(d)
+    return {"ok": True}
+
+
+@app.get("/api/onboarding/status")
+def api_onboarding_status(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    state = get_onboarding_state(data, email)
+    save_data(data)
+    scrape = data.get("users", {}).get(email, {}).get("onboarding_scrape") or {}
+    brand = get_user_brand(data, email)
+    out = {**state}
+    if scrape.get("status") == "done":
+        out["insights"] = scrape.get("insights")
+        out["marca_visual"] = scrape.get("marca_visual")
+        out["brand_prefill"] = apply_scrape_to_brand(brand, {
+            "insights": scrape.get("insights"),
+            "profile": scrape.get("profile") or {},
+            "username": scrape.get("username"),
+        })
+    return out
+
+
+@app.post("/api/onboarding/scrape-ig")
+async def api_onboarding_scrape(payload: dict, user: dict = Depends(get_current_user)):
+    email = (user.get("email") or "").strip().lower()
+    username = (payload.get("username") or "").strip().lstrip("@")
+    if len(username) < 2:
+        raise HTTPException(status_code=400, detail="Usuario de Instagram inválido")
+
+    d = load_data()
+    scrape = d.get("users", {}).get(email, {}).get("onboarding_scrape") or {}
+    if scrape.get("status") == "running" or email in _scrape_running:
+        return {"status": "running", "username": username}
+
+    asyncio.create_task(_background_scrape(email, username))
+    return {"status": "running", "username": username, "message": "Analizando perfil en segundo plano"}
+
+
+@app.post("/api/onboarding/step")
+def api_onboarding_step(payload: dict, user: dict = Depends(get_current_user)):
+    email = (user.get("email") or "").strip().lower()
+    step = int(payload.get("step") or 1)
+    d = load_data()
+    rec = d.setdefault("users", {}).setdefault(email, {})
+    rec["onboarding_step"] = max(1, min(step, ONBOARDING_MAX_STEP))
+    save_data(d)
+    return {"ok": True, "onboarding_step": rec["onboarding_step"]}
+
+
+@app.post("/api/onboarding/face-profile")
+async def api_onboarding_face_profile(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user),
+):
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail="Formato de imagen no válido")
+    cid = _get_cliente_id(user)
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    brand = get_user_brand(data, email)
+    brand_name = brand.get("brand_name") or cid
+
+    content = await file.read()
+    if len(content) / (1024 * 1024) > MAX_SIZE_MB:
+        raise HTTPException(status_code=400, detail=f"Supera {MAX_SIZE_MB} MB")
+
+    ext = Path(file.filename or "face.jpg").suffix.lower() or ".jpg"
+    unique_name = f"face_profile_{int(time.time() * 1000)}{ext}"
+    dest_dir = cliente_images_dir(UPLOADS_DIR, cid, "branding")
+    dest = dest_dir / unique_name
+    dest.write_bytes(content)
+
+    url = archivo_url(cid, "branding", unique_name)
+    register_uploaded_image(cid, "branding", unique_name)
+
+    analisis = {}
+    try:
+        analisis = image_analysis_agent.analyze(str(dest), brand_name, "branding")
+        from core.db import set_imagen_analisis, get_imagen_por_url
+        from core.imagenes_cliente import usable_para_from_meta
+        img = get_imagen_por_url(cid, url)
+        if img:
+            set_imagen_analisis(
+                cid, img["id"], analisis,
+                usable_para=usable_para_from_meta("branding", analisis),
+                tags=analisis.get("tags", []),
+            )
+    except Exception as e:
+        print(f"[RIMA] face profile analyze: {e}")
+
+    profile = save_face_profile(
+        cid, url, filename=unique_name, analisis=analisis, brand_name=brand_name,
+    )
+    return {"ok": True, "face_profile": profile, "url": url}
+
+
+@app.post("/api/onboarding/complete")
+def api_onboarding_complete(user: dict = Depends(get_current_user)):
+    email = (user.get("email") or "").strip().lower()
+    d = load_data()
+    brand = get_user_brand(d, email)
+    plan = get_user_plan(d, email)
+    cid = _get_cliente_id(user)
+    missing = onboarding_complete_missing(brand, cid, plan)
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail="Completá: " + "; ".join(missing),
+        )
+    rec = d.setdefault("users", {}).setdefault(email, {})
+    rec["onboarding_completed"] = True
+    rec["onboarding_step"] = 0
+    rec["must_change_password"] = False
+    save_data(d)
+    return {"ok": True, "redirect": "/home"}
+
+
 # ── Auth routes ──────────────────────────────────────────────────────────────
 
 class LoginRequest(BaseModel):
@@ -2750,7 +3785,10 @@ async def auth_google_callback(request: Request):
         save_data(d)
 
     jwt_token = create_token(user["email"], user["role"])
-    resp = RedirectResponse(url="/home", status_code=302)
+    state = get_onboarding_state(d, email)
+    save_data(d)
+    dest = post_login_redirect(state)
+    resp = RedirectResponse(url=dest, status_code=302)
     resp.set_cookie(
         key=COOKIE_NAME,
         value=jwt_token,
@@ -2770,8 +3808,12 @@ def auth_login(body: LoginRequest, response: JSONResponse.__class__ = None):
     user = verify_login(body.email.strip().lower(), body.password.strip(), users_db)
     if not user:
         raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+    email = body.email.strip().lower()
+    state = get_onboarding_state(d, email)
+    save_data(d)
+    redirect_url = post_login_redirect(state)
     token = create_token(user["email"], user["role"])
-    resp = JR(content={"ok": True, "redirect": "/home"})
+    resp = JR(content={"ok": True, "redirect": redirect_url})
     resp.set_cookie(
         key=COOKIE_NAME,
         value=token,
@@ -2803,11 +3845,17 @@ def auth_me(user: dict = Depends(get_current_user)):
             "plan": normalize_plan(brand.get("plan", "max")),
             "brand_name": brand.get("brand_name", "Mi Negocio"),
             "ref_limits": get_ref_limits(brand.get("plan", "max")),
+            "onboarding_completed": True,
+            "brief_complete": True,
+            "brief_gate": False,
+            "must_change_password": False,
         }
     rec = data.get("users", {}).get(email, {})
     brand = get_user_brand(data, email)
     plan = get_user_plan(data, email)
     limits = get_ref_limits(plan)
+    ob = get_onboarding_state(data, email)
+    save_data(data)
     return {
         "email": email,
         "sub": email,
@@ -2816,6 +3864,7 @@ def auth_me(user: dict = Depends(get_current_user)):
         "plan": plan,
         "brand_name": brand.get("brand_name", ""),
         "ref_limits": limits,
+        **ob,
     }
 
 # ── Proteger home y dashboard ─────────────────────────────────────────────────
@@ -3046,5 +4095,8 @@ def api_calendar_delete(item_id: str, user: dict = Depends(get_current_user)):
 
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # En Windows, reload=True deja procesos hijo y Ctrl+C a veces no los mata.
+    # Para parar fácil: scripts\stop_rima.ps1  |  Sin reload: $env:RIMA_RELOAD=0
+    _reload = os.getenv("RIMA_RELOAD", "1").strip().lower() not in ("0", "false", "no")
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=_reload)
 

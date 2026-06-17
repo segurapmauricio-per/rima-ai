@@ -56,6 +56,34 @@
     }
     .contenido-body{padding:1.25rem 1.5rem 8rem}
     html,body{height:100%;min-height:0}
+    .slide-estado{font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.03em;white-space:nowrap}
+    .slide-estado-pend{background:rgba(245,158,11,0.12);color:#FCD34D;border:1px solid rgba(245,158,11,0.25)}
+    .slide-estado-ia{background:rgba(167,139,250,0.12);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25)}
+    .slide-estado-bib{background:rgba(52,211,153,0.12);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
+    .slide-acc-btn{font-size:9px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#CBD5E1}
+    .slide-acc-btn:hover{background:rgba(255,255,255,0.09)}
+    .slide-acc-btn.primary{background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.28);color:#34D399}
+    .slide-acc-btn.primary:hover{background:rgba(52,211,153,0.18)}
+    .slide-acc-btn.secondary{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.28);color:#A5B4FC}
+    .slide-acc-btn.secondary:hover{background:rgba(99,102,241,0.18)}
+    .rima-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+    .rima-modal-overlay.open{display:flex}
+    .rima-modal{background:#111827;border:1px solid rgba(255,255,255,0.1);border-radius:14px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.45)}
+    .rima-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.07)}
+    .rima-modal-body{padding:14px 16px;overflow-y:auto;flex:1}
+    .rima-modal-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.07);display:flex;gap:8px;justify-content:flex-end}
+    .bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+    .bib-item{cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s}
+    .bib-item:hover,.bib-item.selected{border-color:#7C3AED}
+    .bib-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
+    .render-strip{display:flex;flex-direction:row;flex-wrap:nowrap;gap:12px;overflow-x:auto;padding:12px 2px;margin:0;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+    .render-strip-item{flex:0 0 120px;cursor:pointer;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,0.08);transition:border-color .15s,transform .15s;background:rgba(0,0,0,0.35)}
+    .render-strip-item:hover{border-color:rgba(52,211,153,0.5);transform:translateY(-2px)}
+    .render-strip-item img{width:120px;height:120px;object-fit:cover;display:block}
+    .render-strip-item p{font-size:8px;color:#64748B;margin:0;padding:5px 4px;text-align:center;line-height:1.3}
+    .rima-modal-final-img{width:100%;max-height:min(70vh,720px);object-fit:contain;border-radius:8px;background:#000;display:block}
+    .prompt-textarea{width:100%;min-height:140px;background:#0A0A0F;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px;font-size:11px;color:#E2E8F0;font-family:'Inter',sans-serif;line-height:1.5;resize:vertical;outline:none}
+    .prompt-textarea:focus{border-color:rgba(124,58,237,0.5)}
   </style>
 </head>
 <body class="flex h-screen overflow-hidden min-h-0">
@@ -91,12 +119,12 @@
 
     <!-- Tabs tipo pestaña (Reels → Carruseles → Historias) -->
     <div class="flex gap-1 px-6 border-b border-white/5">
-      <button class="tab-btn active" id="tab-reels" onclick="showTab('reels')">
+      <button class="tab-btn text-slate-400" id="tab-reels" onclick="showTab('reels')">
         <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#7C3AED,#A855F7)"></div>
         Reels
         <span id="cnt-reels" class="tab-count bg-violet-500/20 text-violet-400">0</span>
       </button>
-      <button class="tab-btn text-slate-400" id="tab-carruseles" onclick="showTab('carruseles')">
+      <button class="tab-btn active" id="tab-carruseles" onclick="showTab('carruseles')">
         <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#06B6D4,#3B82F6)"></div>
         Carruseles
         <span id="cnt-carruseles" class="tab-count bg-cyan-500/20 text-cyan-400">0</span>
@@ -114,7 +142,7 @@
   <div class="contenido-body">
 
     <!-- Reels tab -->
-    <div id="view-reels" class="fade-in">
+    <div id="view-reels" class="fade-in" style="display:none">
       <div class="flex items-center justify-between mb-4">
         <p class="text-[10px] uppercase tracking-widest font-bold text-slate-600">Reels de la semana</p>
         <span class="text-[10px] text-slate-600" id="range-reels"></span>
@@ -128,7 +156,7 @@
     </div>
 
     <!-- Carruseles tab -->
-    <div id="view-carruseles" style="display:none" class="fade-in">
+    <div id="view-carruseles" class="fade-in">
       <div class="flex items-center justify-between mb-4">
         <p class="text-[10px] uppercase tracking-widest font-bold text-slate-600">Carruseles de la semana</p>
         <span class="text-[10px] text-slate-600" id="range-carruseles"></span>
@@ -159,6 +187,62 @@
   </div><!-- /contenido-body -->
   </div><!-- /contenido-scroll -->
 </main>
+
+<!-- Modal: biblioteca de imágenes -->
+<div id="modal-biblioteca" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalBiblioteca()">
+  <div class="rima-modal" role="dialog" aria-labelledby="modal-bib-title">
+    <div class="rima-modal-header">
+      <p id="modal-bib-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Buscar en la biblioteca</p>
+      <button type="button" onclick="cerrarModalBiblioteca()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+    </div>
+    <div class="rima-modal-body">
+      <p id="modal-bib-subtitle" style="font-size:10px;color:#64748B;margin:0 0 10px"></p>
+      <div id="modal-bib-grid" class="bib-grid"></div>
+      <p id="modal-bib-empty" style="display:none;font-size:11px;color:#64748B;text-align:center;padding:24px 0">No hay imágenes analizadas en la biblioteca</p>
+    </div>
+    <div class="rima-modal-footer">
+      <button type="button" class="slide-acc-btn" onclick="cerrarModalBiblioteca()">Cancelar</button>
+      <button type="button" id="modal-bib-confirm" class="slide-acc-btn primary" disabled onclick="confirmarImagenBiblioteca()">Usar imagen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: prompt IA -->
+<div id="modal-prompt-ia" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalPromptIA()">
+  <div class="rima-modal" role="dialog" aria-labelledby="modal-prompt-title">
+    <div class="rima-modal-header">
+      <p id="modal-prompt-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Generar con IA</p>
+      <button type="button" onclick="cerrarModalPromptIA()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+    </div>
+    <div class="rima-modal-body">
+      <p id="modal-prompt-subtitle" style="font-size:10px;color:#64748B;margin:0 0 8px"></p>
+      <label style="font-size:9px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px">Prompt (editable)</label>
+      <textarea id="modal-prompt-text" class="prompt-textarea" placeholder="Describe la imagen a generar…"></textarea>
+    </div>
+    <div class="rima-modal-footer">
+      <button type="button" class="slide-acc-btn" onclick="cerrarModalPromptIA()">Cancelar</button>
+      <button type="button" id="modal-prompt-confirm" class="slide-acc-btn primary" onclick="confirmarGenerarIA()">Generar con IA</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: preview slide final -->
+<div id="modal-final-slide" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalFinal()">
+  <div class="rima-modal" role="dialog" style="max-width:640px" aria-labelledby="modal-final-title">
+    <div class="rima-modal-header">
+      <p id="modal-final-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Vista previa</p>
+      <button type="button" onclick="cerrarModalFinal()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+    </div>
+    <div class="rima-modal-body" style="text-align:center">
+      <p id="modal-final-subtitle" style="font-size:10px;color:#64748B;margin:0 0 10px"></p>
+      <img id="modal-final-img" class="rima-modal-final-img" alt="" src="">
+    </div>
+    <div class="rima-modal-footer">
+      <button type="button" class="slide-acc-btn" onclick="cerrarModalFinal()">Cerrar</button>
+      <a id="modal-final-download" class="slide-acc-btn primary" href="#" download style="text-decoration:none;display:inline-flex;align-items:center">↓ Descargar esta slide</a>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -431,6 +515,13 @@ async function fetchAndRender() {
     renderList('carruseles', weekPubs.filter(function(p){ return p.tipo === 'carrusel'; }));
     renderList('historias',  weekPubs.filter(function(p){ return p.tipo === 'historia'; }));
 
+    setTimeout(function() {
+      weekPubs.forEach(function(p) {
+        var g = document.getElementById('final-gallery-' + p.id);
+        if (g) hydrateFinalGallery(g);
+      });
+    }, 60);
+
     // Contadores en tabs
     document.getElementById('cnt-reels').textContent       = weekPubs.filter(function(p){ return p.tipo==='reel'; }).length;
     document.getElementById('cnt-carruseles').textContent  = weekPubs.filter(function(p){ return p.tipo==='carrusel'; }).length;
@@ -459,8 +550,17 @@ async function fetchAndRender() {
   }
 }
 
+function propuestaAlternativas(pub) {
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  return prop.alternativas || [];
+}
+
 function statusBadge(pub) {
   var s = pub.status || 'planificado';
+  if (s === 'propuesta_generada' && !propuestaAlternativas(pub).length) {
+    return '<span class="badge b-plan">Sin referentes</span>';
+  }
   var map = {
     planificado:        {cls:'b-plan',    label:'Planificado'},
     propuesta_generada: {cls:'b-validacion', label:'Propuesta lista'},
@@ -497,12 +597,16 @@ function aprobacionesBadges(pub) {
 
 function etapaLabel(pub) {
   var s = pub.status || 'planificado';
+  if (s === 'copy_aprobado') {
+    var t = pub.tipo || '';
+    if (t === 'carrusel' || t === 'historia') return 'Etapa 3 · Imágenes';
+    return 'Copy aprobado';
+  }
   var map = {
     planificado: 'Plan mensual',
     propuesta_generada: 'Etapa 1 · Propuesta',
     propuesta_aprobada: 'Propuesta aprobada',
     copy_generado: 'Etapa 2 · Copy listo',
-    copy_aprobado: 'Copy aprobado',
     en_produccion: 'Etapa 3 · Producción',
     produccion_aprobada: 'Producción aprobada',
     programado: 'Programado',
@@ -522,26 +626,89 @@ function fmtNum(n) {
 
 function verReferenteLabel(tipo, alt) {
   if (alt && alt.tipo_propuesta === 'estrategia') return null;
-  if (tipo === 'carrusel') return 'Ver carrusel';
+  if (tipo === 'carrusel') {
+    if (alt && alt.adaptado_desde_reel) return 'Ver reel original';
+    var fmt = (alt && alt.formato_post) ? String(alt.formato_post).toLowerCase() : '';
+    if (fmt === 'sidecar' || fmt === 'carousel' || fmt === 'image') return 'Ver carrusel';
+    return null;
+  }
   if (tipo === 'historia') return 'Ver historia';
   return 'Ver video';
+}
+
+function etapaActiva(pub) {
+  var s = pub.status || 'planificado';
+  if (s === 'planificado') return 'plan';
+  if (s === 'propuesta_generada' || s === 'propuesta_enviada' || s === 'propuesta_aprobada') return 'propuesta';
+  if (s === 'copy_generado' || s === 'copy_enviado' || s === 'copy_aprobado') return 'copy';
+  if (s === 'en_produccion' || s === 'produccion_enviada') return 'produccion';
+  if (s === 'produccion_aprobada' || s === 'programado' || s === 'publicado') return 'final';
+  return 'plan';
+}
+
+function planSection(pub) {
+  if (etapaActiva(pub) !== 'plan') return '';
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  var angulo = prop.angulo_estrategico || (prop.slot_resumen && prop.slot_resumen.angulo_estrategico) || '';
+  if (!angulo) {
+    return '<p style="font-size:10px;color:#475569;font-style:italic;margin:8px 0 0">'
+      + 'Esperá el agente semanal para elegir referente y generar copy.</p>';
+  }
+  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(100,116,139,0.08);border:1px solid rgba(100,116,139,0.15)">'
+    + '<p style="font-size:10px;color:#94A3B8;font-weight:700;margin:0 0 6px">Ángulo estratégico (plan mensual)</p>'
+    + '<p style="font-size:11px;color:#CBD5E1;margin:0;line-height:1.5">' + esc(angulo) + '</p>'
+    + '</div>';
+  return html;
+}
+
+function propuestaEmptyHtml(pub, prop) {
+  var pubTipo = pub.tipo || 'reel';
+  var hint;
+  if (pubTipo === 'historia') {
+    hint = 'No hay ángulos estratégicos disponibles para esta historia.';
+  } else if (pubTipo === 'carrusel' && prop.warning === 'sin_carruseles_en_estudio') {
+    hint = 'No hay reels modelables para adaptar a carrusel en el estudio de mercado.';
+  } else {
+    hint = 'No hay referentes modelables en el estudio de mercado para esta pieza.';
+  }
+  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)">';
+  html += '<p style="font-size:10px;color:#FBBF24;font-weight:700;margin:0 0 6px">Sin opciones de propuesta</p>';
+  html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">' + esc(hint)
+    + ' Revisá <strong style="color:#CBD5E1">Referencias</strong> o el estudio de mercado, o usá '
+    + '<strong style="color:#CBD5E1">Reiniciar semana</strong> para que el agente vuelva a buscar.</p>';
+  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:#94A3B8" '
+    + 'onclick="refreshPropuesta(\'' + pub.id + '\',this)">↻ Buscar opciones</button>';
+  html += '</div>';
+  return html;
 }
 
 function propuestaSection(pub) {
   var prop = pub.propuesta_json || {};
   if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
   var alts = prop.alternativas || [];
-  if (!alts.length || pub.status === 'planificado') return '';
-  if (pub.status === 'copy_generado' || pub.status === 'copy_aprobado' || (pub.copy_json && pub.copy_json.hook)) {
-    return '';
-  }
+  var enPropuesta = etapaActiva(pub) === 'propuesta';
+  var sinReferentesPlan = pub.status === 'planificado' && (prop.warning === 'sin_referentes' || prop.warning === 'sin_carruseles_en_estudio');
+  if (!enPropuesta && !sinReferentesPlan) return '';
+  if (!alts.length) return propuestaEmptyHtml(pub, prop);
   var pubTipo = pub.tipo || 'reel';
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">';
-  html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 8px">';
-  html += pubTipo === 'historia'
-    ? 'Elegí el ángulo estratégico para esta historia'
-    : 'Elegí qué referente modelar';
-    html += '</p>';
+  html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 4px">';
+  if (pubTipo === 'historia') {
+    html += 'Elegí el ángulo estratégico para esta historia';
+  } else if (pubTipo === 'carrusel' && prop.modo_referente === 'reel_adaptado') {
+    html += 'Mejores reels del nicho — adaptar a carrusel';
+  } else if (pubTipo === 'carrusel' && prop.modo_referente === 'mixto') {
+    html += 'Elegí referente (carrusel o reel adaptable)';
+  } else {
+    html += 'Elegí qué referente modelar';
+  }
+  html += '</p>';
+  if (pubTipo === 'carrusel' && prop.modo_referente === 'reel_adaptado') {
+    html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px;line-height:1.45">'
+      + 'No hay carruseles en el estudio de mercado. Estas ideas vienen de reels virales '
+      + 'del nicho — el copy se adaptará a formato carrusel de 7 slides.</p>';
+  }
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
   html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:#94A3B8" '
     + 'onclick="refreshPropuesta(\'' + pub.id + '\',this)">↻ Otras opciones</button>';
@@ -560,8 +727,18 @@ function propuestaSection(pub) {
       html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
         + 'Opción ' + (idx + 1) + ' · ' + esc(titulo) + '</p>';
     } else {
+      var fmtPost = (alt.formato_post || '').toLowerCase();
+      var fmtTag = '';
+      if (pubTipo === 'carrusel') {
+        if (alt.adaptado_desde_reel) {
+          fmtTag = ' · <span style="color:#FCD34D">Reel → carrusel</span>';
+        } else if (fmtPost === 'sidecar' || fmtPost === 'carousel' || fmtPost === 'image') {
+          fmtTag = ' · <span style="color:#34D399">Carrusel</span>';
+        }
+      }
       html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
         + 'Opción ' + (idx + 1) + ' · @' + esc(alt.owner || '') + ' · ' + esc(titulo)
+        + fmtTag
         + ' · score ' + (alt.score_ventas != null ? alt.score_ventas : '—') + '</p>';
       html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">'
         + views + ' visualizaciones · ' + comments + ' comentarios · ' + seguidores + ' seguidores</p>';
@@ -571,7 +748,8 @@ function propuestaSection(pub) {
         + '<span style="color:#475569;font-weight:600">Idea principal:</span> ' + esc(idea) + '</p>';
     }
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
-    html += '<button type="button" class="aprobar-btn" onclick="elegirReferente(\'' + pub.id + '\',' + idx + ',this)">Modelar esta</button>';
+    html += '<button type="button" class="aprobar-btn" onclick="elegirReferente(\'' + pub.id + '\',' + idx + ',this)">'
+      + (alt.adaptado_desde_reel ? 'Adaptar a carrusel' : 'Modelar esta') + '</button>';
     if (verLabel && videoUrl) {
       html += '<a class="ver-video-btn" href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer">' + verLabel + '</a>';
     }
@@ -599,9 +777,81 @@ window.elegirReferente = async function(pubId, idx, btn) {
   }
 };
 
-window.aprobarCopy = async function(pubId, btn) {
+window.editarSlides = function(pubId) {
+  var viewDiv = document.getElementById('slides-view-' + pubId);
+  var editDiv = document.getElementById('slides-edit-' + pubId);
+  if (viewDiv) viewDiv.style.display = 'none';
+  if (editDiv) editDiv.style.display = 'block';
+};
+
+window.cancelarEdicion = function(pubId) {
+  var viewDiv = document.getElementById('slides-view-' + pubId);
+  var editDiv = document.getElementById('slides-edit-' + pubId);
+  if (viewDiv) viewDiv.style.display = 'block';
+  if (editDiv) editDiv.style.display = 'none';
+};
+
+window.guardarSlides = async function(pubId, btn) {
+  var card = document.getElementById('pub-' + pubId);
+  var textareas = card.querySelectorAll('.slide-edit-ta');
+  var slidesMap = {};
+  textareas.forEach(function(ta) {
+    var idx = ta.dataset.index;
+    var field = ta.dataset.field;
+    if (!slidesMap[idx]) slidesMap[idx] = { index: parseInt(idx) };
+    slidesMap[idx][field] = ta.value;
+  });
+  var slides = Object.values(slidesMap);
   btn.disabled = true;
-  btn.textContent = 'Aprobando...';
+  btn.textContent = 'Guardando...';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/editar-slides', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ slides: slides })
+    });
+    if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
+    window.rimaToast && rimaToast('Slides actualizados', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Guardar cambios';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+function _pubTipo(pubId) {
+  var card = document.getElementById('pub-' + pubId);
+  return (card && card.dataset.tipo) || 'reel';
+}
+
+function _aprobarCopyLabel(tipo) {
+  return 'Aprobar copy';
+}
+
+function _producirBtnLabel(tipo) {
+  if (tipo === 'reel') return 'Generar guion';
+  if (tipo === 'carrusel') return 'Armar carrusel';
+  return 'Preparar visual';
+}
+
+function _producirLoadingMsg(tipo) {
+  if (tipo === 'carrusel') return 'Acomodando las imágenes de tu carrusel…';
+  if (tipo === 'historia') return 'Preparando tu historia…';
+  return 'Generando guion…';
+}
+
+function _producirDoneMsg(tipo) {
+  if (tipo === 'carrusel') return 'Carrusel armado — revisá cada slide';
+  if (tipo === 'historia') return 'Historia lista — revisá las slides';
+  return 'Guion listo para grabar';
+}
+
+window.aprobarCopy = async function(pubId, btn) {
+  var tipo = _pubTipo(pubId);
+  var label = _aprobarCopyLabel(tipo);
+  btn.disabled = true;
+  btn.textContent = 'Aprobando…';
   try {
     var r = await fetch('/api/publicaciones/' + pubId + '/aprobar', {
       method: 'PATCH',
@@ -609,50 +859,293 @@ window.aprobarCopy = async function(pubId, btn) {
       body: JSON.stringify({ campo: 'copy' })
     });
     if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
-    window.rimaToast && rimaToast('Copy aprobado', 'success');
+    window.rimaToast && rimaToast('Copy aprobado — ahora revisá las imágenes', 'success');
     await fetchAndRender();
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'Aprobar copy';
+    btn.textContent = label;
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+window.confirmarProduccionVisual = async function(pubId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Confirmando…';
+  try {
+    var card = document.getElementById('pub-' + pubId);
+    var status = card && card.dataset.status;
+    if (status === 'copy_aprobado') {
+      var r0 = await fetch('/api/publicaciones/' + pubId + '/producir', { method: 'POST' });
+      var d0 = await r0.json().catch(function(){ return {}; });
+      if (!r0.ok) throw new Error(d0.detail || d0.error || r0.statusText);
+    }
+    var r = await fetch('/api/publicaciones/' + pubId + '/aprobar', {
+      method: 'PATCH',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ campo: 'visual' })
+    });
+    if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
+    var data = await r.json().catch(function(){ return {}; });
+    window.rimaToast && rimaToast(
+      (data.rendered && data.rendered.total)
+        ? 'Visual armado — ' + data.rendered.total + ' slides listos para descargar'
+        : 'Producción aprobada',
+      'success'
+    );
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Aprobar producción';
     window.rimaToast && rimaToast('Error: ' + e.message, 'error');
   }
 };
 
 window.producirPub = async function(pubId, btn) {
+  var tipo = _pubTipo(pubId);
+  var loading = _producirLoadingMsg(tipo);
   btn.disabled = true;
-  btn.textContent = 'Generando...';
+  btn.textContent = tipo === 'carrusel' ? 'Armando carrusel…' : 'Generando…';
+  window.rimaToast && rimaToast(loading);
   try {
     var r = await fetch('/api/publicaciones/' + pubId + '/producir', { method: 'POST' });
     var data = await r.json().catch(function(){ return {}; });
     if (!r.ok) throw new Error(data.detail || data.error || r.statusText);
-    window.rimaToast && rimaToast('Producción lista', 'success');
+    window.rimaToast && rimaToast(_producirDoneMsg(tipo), 'success');
     await fetchAndRender();
   } catch(e) {
     btn.disabled = false;
-    btn.textContent = 'Reintentar';
+    btn.textContent = _producirBtnLabel(tipo);
     window.rimaToast && rimaToast('Error: ' + e.message, 'error');
   }
 };
 
-window.generarImagenSlide = async function(pubId, slideIndex, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Generando con IA...';
+window._slideModal = { pubId: null, slideIndex: null, selectedImageId: null };
+
+function slideEstadoHtml(source) {
+  if (source === 'generada_ia') {
+    return '<span class="slide-estado slide-estado-ia">Generada con IA</span>';
+  }
+  if (source === 'cliente') {
+    return '<span class="slide-estado slide-estado-bib">Cargada de biblioteca</span>';
+  }
+  return '<span class="slide-estado slide-estado-pend">Imagen IA pendiente</span>';
+}
+
+window.abrirModalBiblioteca = async function(pubId, slideIndex, slideLabel) {
+  window._slideModal = { pubId: pubId, slideIndex: slideIndex, selectedImageId: null };
+  document.getElementById('modal-bib-subtitle').textContent = slideLabel || ('Slide ' + (slideIndex + 1));
+  document.getElementById('modal-bib-confirm').disabled = true;
+  document.getElementById('modal-bib-empty').style.display = 'none';
+  document.getElementById('modal-bib-empty').textContent = 'No hay imágenes analizadas en la biblioteca';
+  document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:#64748B;text-align:center;padding:20px">Cargando…</p>';
+  document.getElementById('modal-biblioteca').classList.add('open');
   try {
-    var r = await fetch('/api/publicaciones/' + pubId + '/generar-imagen-slide', {
+    var r = await fetch('/api/imagenes');
+    var data = await r.json().catch(function(){ return {}; });
+    var imgs = data.imagenes || [];
+    if (!imgs.length) {
+      var r2 = await fetch('/api/imagenes?uso=carrusel');
+      var data2 = await r2.json().catch(function(){ return {}; });
+      imgs = data2.imagenes || [];
+    }
+    var grid = document.getElementById('modal-bib-grid');
+    if (!imgs.length) {
+      grid.innerHTML = '';
+      var cid = data.cliente_id || data2.cliente_id || '';
+      var emptyEl = document.getElementById('modal-bib-empty');
+      if (cid) {
+        emptyEl.innerHTML = 'No hay imágenes en la biblioteca de <strong style="color:#94A3B8">' + esc(cid) + '</strong>.<br><span style="font-size:10px;margin-top:4px;display:block">Subí imágenes en /imagenes con esta misma cuenta (max@test.com ≠ basico@test.com).</span>';
+      }
+      emptyEl.style.display = 'block';
+      return;
+    }
+    grid.innerHTML = imgs.map(function(img) {
+      var analisis = img.analisis_json || {};
+      if (typeof analisis === 'string') { try { analisis = JSON.parse(analisis); } catch(e) { analisis = {}; } }
+      var desc = (analisis.description || img.nombre_archivo || '').slice(0, 40);
+      return '<div class="bib-item" data-image-id="' + escAttr(img.id) + '" title="' + escAttr(desc) + '">'
+        + '<img src="' + esc(img.archivo_url) + '" alt="" loading="lazy"></div>';
+    }).join('');
+  } catch(e) {
+    document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:#F87171">Error al cargar biblioteca</p>';
+  }
+};
+
+window.seleccionarBibItem = function(el, imageId) {
+  document.querySelectorAll('#modal-bib-grid .bib-item').forEach(function(n) { n.classList.remove('selected'); });
+  el.classList.add('selected');
+  window._slideModal.selectedImageId = imageId;
+  document.getElementById('modal-bib-confirm').disabled = false;
+};
+
+window.cerrarModalBiblioteca = function() {
+  document.getElementById('modal-biblioteca').classList.remove('open');
+  window._slideModal = { pubId: null, slideIndex: null, selectedImageId: null };
+};
+
+window.confirmarImagenBiblioteca = async function() {
+  var m = window._slideModal;
+  if (!m.pubId || m.slideIndex == null || !m.selectedImageId) return;
+  var btn = document.getElementById('modal-bib-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Asignando…';
+  try {
+    var r = await fetch('/api/publicaciones/' + m.pubId + '/asignar-imagen-slide', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ slide_index: slideIndex })
+      body: JSON.stringify({ slide_index: m.slideIndex, image_id: m.selectedImageId })
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    cerrarModalBiblioteca();
+    window.rimaToast && rimaToast('Imagen asignada desde biblioteca', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Usar imagen';
+  }
+};
+
+window.abrirModalPromptIA = function(pubId, slideIndex, promptDefault, slideLabel) {
+  if (!promptDefault) {
+    var pub = (allPubs || []).find(function(p) { return p.id === pubId; });
+    if (pub) {
+      var prod = pub.produccion_json || {};
+      if (typeof prod === 'string') { try { prod = JSON.parse(prod); } catch(e) { prod = {}; } }
+      var slide = (prod.slides || [])[slideIndex];
+      promptDefault = promptParaSlide(slide, pub);
+    }
+  }
+  window._slideModal = { pubId: pubId, slideIndex: slideIndex, selectedImageId: null };
+  document.getElementById('modal-prompt-subtitle').textContent = slideLabel || ('Slide ' + (slideIndex + 1));
+  document.getElementById('modal-prompt-text').value = promptDefault || '';
+  document.getElementById('modal-prompt-confirm').disabled = false;
+  document.getElementById('modal-prompt-confirm').textContent = 'Generar con IA';
+  document.getElementById('modal-prompt-ia').classList.add('open');
+};
+
+window.cerrarModalPromptIA = function() {
+  document.getElementById('modal-prompt-ia').classList.remove('open');
+  window._slideModal = { pubId: null, slideIndex: null, selectedImageId: null };
+};
+
+window.confirmarGenerarIA = async function() {
+  var m = window._slideModal;
+  if (!m.pubId || m.slideIndex == null) return;
+  var prompt = document.getElementById('modal-prompt-text').value.trim();
+  if (!prompt) {
+    window.rimaToast && rimaToast('Escribí un prompt para generar', 'error');
+    return;
+  }
+  var btn = document.getElementById('modal-prompt-confirm');
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  try {
+    var r = await fetch('/api/publicaciones/' + m.pubId + '/generar-imagen-slide', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ slide_index: m.slideIndex, prompt: prompt })
     });
     var data = await r.json().catch(function(){ return {}; });
     if (!r.ok) throw new Error(data.detail || r.statusText);
     if (!data.ok) throw new Error(data.reason || 'KIE AI no disponible');
+    cerrarModalPromptIA();
     window.rimaToast && rimaToast('Imagen generada con IA', 'success');
     await fetchAndRender();
   } catch(e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
     btn.disabled = false;
     btn.textContent = 'Generar con IA';
-    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
   }
+};
+
+window.generarCarruselCompleto = async function(pubId, btn) {
+  if (!confirm('Se generarán las slides pendientes con KIE AI (Nano Banana Pro).\n'
+    + 'Costo aproximado: ~$0.09 USD por slide.\n\n¿Continuar?')) {
+    return;
+  }
+  btn.disabled = true;
+  var labelOrig = btn.textContent;
+  btn.textContent = 'Generando carrusel… (1-5 min)';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/generar-carrusel-ia', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ confirmar_costo: true })
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    if (!data.ok && !data.generated) throw new Error((data.errors && data.errors[0] && data.errors[0].reason) || data.reason || 'Error KIE');
+    window.rimaToast && rimaToast(
+      'Carrusel generado: ' + (data.generated || 0) + ' slides con IA',
+      data.errors && data.errors.length ? 'warning' : 'success'
+    );
+    await fetchAndRender();
+  } catch(e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = labelOrig;
+  }
+};
+
+window.generarHistoriaCompleto = async function(pubId, btn) {
+  if (!confirm('Se generarán las slides pendientes con KIE AI (formato 9:16).\n'
+    + 'Las fotos de tu biblioteca se mantienen; solo se generan las faltantes.\n'
+    + 'Costo aproximado: ~$0.09 USD por slide.\n\n¿Continuar?')) {
+    return;
+  }
+  btn.disabled = true;
+  var labelOrig = btn.textContent;
+  btn.textContent = 'Generando historia… (1-5 min)';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/generar-historia-ia', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ confirmar_costo: true })
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    if (!data.ok && !data.generated) throw new Error((data.errors && data.errors[0] && data.errors[0].reason) || data.reason || 'Error KIE');
+    window.rimaToast && rimaToast(
+      'Historia generada: ' + (data.generated || 0) + ' slides con IA',
+      data.errors && data.errors.length ? 'warning' : 'success'
+    );
+    await fetchAndRender();
+  } catch(e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = labelOrig;
+  }
+};
+
+window.elegirCopyHistoria = async function(pubId, idx, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Aplicando…';
+  try {
+    var r = await fetch('/api/publicaciones/' + pubId + '/elegir-copy', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ proposal_index: idx })
+    });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    window.rimaToast && rimaToast('Propuesta ' + (idx + 1) + ' seleccionada', 'success');
+    await fetchAndRender();
+  } catch(e) {
+    window.rimaToast && rimaToast(e.message, 'error');
+    btn.disabled = false;
+    btn.textContent = 'Usar esta propuesta';
+  }
+};
+
+window.generarImagenSlide = function(pubId, slideIndex, promptDefault, slideLabel) {
+  abrirModalPromptIA(pubId, slideIndex, promptDefault, slideLabel);
+};
+
+window.asignarDesdeBiblioteca = function(pubId, slideIndex, slideLabel) {
+  abrirModalBiblioteca(pubId, slideIndex, slideLabel);
 };
 
 window.aprobarVisual = async function(pubId, btn) {
@@ -665,13 +1158,80 @@ window.aprobarVisual = async function(pubId, btn) {
       body: JSON.stringify({ campo: 'visual' })
     });
     if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
-    window.rimaToast && rimaToast('Producción aprobada', 'success');
+    var data = await r.json().catch(function(){ return {}; });
+    window.rimaToast && rimaToast(
+      (data.rendered && data.rendered.total)
+        ? 'Visual armado — ' + data.rendered.total + ' slides listos para descargar'
+        : 'Producción aprobada',
+      'success'
+    );
     await fetchAndRender();
   } catch(e) {
     btn.disabled = false;
     btn.textContent = 'Aprobar producción';
     window.rimaToast && rimaToast('Error: ' + e.message, 'error');
   }
+};
+
+window.generarVisualFinal = async function(pubId, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Generando…';
+  try {
+    var r = await fetch('/api/publicaciones/' + encodeURIComponent(pubId) + '/render-final', { method: 'POST' });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || data.error || r.statusText || ('HTTP ' + r.status));
+    window.rimaToast && rimaToast(
+      (data.rendered && data.rendered.total)
+        ? data.rendered.total + ' slides listos — deslizá para ver'
+        : 'Visual generado',
+      'success'
+    );
+    await fetchAndRender();
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Generar visual para descarga';
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  }
+};
+
+function urlArchivoFinal(pubId, filename) {
+  return '/api/publicaciones/' + encodeURIComponent(pubId) + '/archivo-final/' + encodeURIComponent(filename);
+}
+
+function urlDescargarCarrusel(pubId) {
+  return '/api/publicaciones/' + encodeURIComponent(pubId) + '/descargar-carrusel';
+}
+
+window.abrirModalFinal = function(pubId, filename, label) {
+  var url = urlArchivoFinal(pubId, filename);
+  document.getElementById('modal-final-subtitle').textContent = label || filename;
+  var imgEl = document.getElementById('modal-final-img');
+  imgEl.src = '';
+  fetch(url, { credentials: 'same-origin' })
+    .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); })
+    .then(function(blob) {
+      imgEl.src = URL.createObjectURL(blob);
+    })
+    .catch(function() {
+      imgEl.alt = 'No se pudo cargar la imagen';
+    });
+  var dl = document.getElementById('modal-final-download');
+  dl.href = url;
+  dl.setAttribute('download', filename);
+  document.getElementById('modal-final-slide').classList.add('open');
+};
+
+window.cerrarModalFinal = function() {
+  document.getElementById('modal-final-slide').classList.remove('open');
+  document.getElementById('modal-final-img').src = '';
+};
+
+window.descargarCarruselZip = function(pubId, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Preparando ZIP…'; }
+  window.location.href = urlDescargarCarrusel(pubId);
+  setTimeout(function() {
+    if (btn) { btn.disabled = false; btn.textContent = '↓ Descargar todas (.zip)'; }
+  }, 2000);
 };
 
 window.refreshPropuesta = async function(pubId, btn) {
@@ -710,18 +1270,29 @@ function referenteOwner(pub) {
   return copy.referente_owner || (prop.elegida && prop.elegida.owner) || '';
 }
 
+function slideBulletsHtml(bullets) {
+  if (!bullets || !bullets.length) return '';
+  return '<ul style="margin:3px 0 0;padding-left:14px;list-style:disc">'
+    + bullets.map(function(b) {
+      return '<li style="font-size:9px;color:#94A3B8;line-height:1.45;margin:1px 0">' + esc(b) + '</li>';
+    }).join('') + '</ul>';
+}
+
 function copySection(pub) {
+  if (etapaActiva(pub) !== 'copy') return '';
+  if (pub.status === 'copy_aprobado' && esPiezaVisual(pub)) return '';
   var copy = pub.copy_json || {};
   if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
   var prop = pub.propuesta_json || {};
   if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
   var elegido = copy.copy_elegido || {};
+  var slidesCopy = copy.slides && copy.slides.length ? copy.slides : (elegido.slides || []);
   var hook = copy.hook || elegido.hook_text || prop.hook_idea || '';
   var dev  = copy.desarrollo || copy.script_completo || (copy.idea && copy.idea.development)
           || (elegido.body_texts || []).join('\n') || prop.angulo_estrategico || '';
   var cta  = copy.cta || (copy.idea && copy.idea.cta) || elegido.cta_text || '';
   var keyword = copy.cta_keyword || (copy.idea && copy.idea.cta_keyword) || elegido.keyword || '';
-  if (!hook && !dev && !cta && !(copy.slides && copy.slides.length)) return '';
+  if (!hook && !dev && !cta && !slidesCopy.length) return '';
   var videoUrl = referenteVideoUrl(pub);
   var owner = referenteOwner(pub);
   var ideaModelada = (prop.elegida && (prop.elegida.idea_principal || prop.elegida.que_modelar)) || '';
@@ -729,6 +1300,36 @@ function copySection(pub) {
   var verLabel = videoUrl ? verReferenteLabel(pubTipo, prop.elegida || {}) : null;
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)">';
   html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 6px">Copy adaptado</p>';
+
+  if (pubTipo === 'historia' && copy.propuestas_copy && copy.propuestas_copy.length >= 2
+      && pub.status === 'copy_generado') {
+    var idxElegido = copy.propuesta_copy_index != null ? copy.propuesta_copy_index : 0;
+    html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">Elegí qué secuencia publicar (temática y enfoque fijos del plan)</p>';
+    copy.propuestas_copy.forEach(function(p, pi) {
+      if (!p || !p.slides) return;
+      var activa = pi === idxElegido;
+      html += '<div style="margin-bottom:8px;padding:8px;border-radius:8px;'
+        + (activa ? 'background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35)'
+          : 'background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06)') + '">';
+      html += '<p style="font-size:10px;font-weight:700;color:' + (activa ? '#A5B4FC' : '#CBD5E1')
+        + ';margin:0 0 4px">Propuesta ' + (pi + 1)
+        + (p.titulo ? ' · ' + esc(p.titulo) : '') + (activa ? ' ✓' : '') + '</p>';
+      if (p.angulo) {
+        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 4px">' + esc(p.angulo) + '</p>';
+      }
+      if (p.plan_resumen) {
+        html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px;font-style:italic">'
+          + esc(String(p.plan_resumen).slice(0, 160)) + '</p>';
+      }
+      html += '<p style="font-size:9px;color:#475569;margin:0 0 4px">' + p.slides.length + ' slides · 9:16</p>';
+      if (!activa) {
+        html += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#A5B4FC" '
+          + 'onclick="elegirCopyHistoria(\'' + pub.id + '\',' + pi + ',this)">Usar esta propuesta</button>';
+      }
+      html += '</div>';
+    });
+  }
+
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px">';
   if (owner) {
     html += '<p style="font-size:9px;color:#64748B;margin:0">Modelando @' + esc(owner) + '</p>';
@@ -743,32 +1344,178 @@ function copySection(pub) {
     html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
       + '<span style="color:#475569;font-weight:600">Idea modelada:</span> ' + esc(ideaModelada) + '</p>';
   }
+  if (copy.tematica || pub.tematica) {
+    html += '<p style="font-size:9px;color:#475569;margin:0 0 4px">Temática: <span style="color:#94A3B8">'
+      + esc(copy.tematica || pub.tematica) + '</span>'
+      + (copy.enfoque || pub.enfoque ? ' · Enfoque: <span style="color:#94A3B8">'
+        + esc(copy.enfoque || pub.enfoque) + '</span>' : '') + '</p>';
+  }
+  if (copy.plan_resumen && pubTipo === 'historia') {
+    html += '<p style="font-size:9px;color:#6EE7B7;margin:0 0 8px;line-height:1.4">'
+      + esc(copy.plan_resumen) + '</p>';
+  }
   if (hook) html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 3px">Hook</p><p style="font-size:11px;color:#CBD5E1;margin:0 0 8px;line-height:1.5">' + esc(hook) + '</p>';
-  if (dev)  html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:#94A3B8;margin:0 0 8px;line-height:1.5;white-space:pre-line">' + esc(dev) + '</p>';
-  if (cta)  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 3px">CTA</p><p style="font-size:11px;color:#6EE7B7;margin:0;line-height:1.5">' + esc(cta) + '</p>';
+  if (dev && !slidesCopy.length)  html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:#94A3B8;margin:0 0 8px;line-height:1.5;white-space:pre-line">' + esc(dev) + '</p>';
+  if (cta && !slidesCopy.length)  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 3px">CTA</p><p style="font-size:11px;color:#6EE7B7;margin:0;line-height:1.5">' + esc(cta) + '</p>';
   if (keyword) html += '<p style="font-size:9px;color:#64748B;margin:4px 0 0">Palabra clave: <span style="color:#94A3B8;font-weight:600">' + esc(keyword) + '</span></p>';
-  if (copy.slides && copy.slides.length) {
-    html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:8px 0 4px">Slides (' + copy.slides.length + ')</p>';
-    copy.slides.slice(0,3).forEach(function(s,i){
-      html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 4px">' + (i+1) + '. ' + esc(s.main_text || s.raw || '') + '</p>';
+  if (copy.valor_audience) {
+    html += '<p style="font-size:9px;color:#6EE7B7;margin:6px 0 0;line-height:1.4">'
+      + '<span style="font-weight:600">Aprendizaje:</span> ' + esc(copy.valor_audience) + '</p>';
+  }
+  if (slidesCopy.length) {
+    var esVisual = pub.tipo === 'carrusel' || pub.tipo === 'historia';
+    html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:8px 0 6px">Slides (' + slidesCopy.length + (pub.tipo === 'historia' ? ' · 9:16' : '') + ')</p>';
+    // Vista lectura
+    html += '<div id="slides-view-' + pub.id + '">';
+    slidesCopy.forEach(function(s,i){
+      var titulo = s.titulo || s.title || '';
+      var texto  = s.main_text || s.texto || s.raw || '';
+      var subtexto = s.secondary_text || s.subtexto || '';
+      var tipoSlide = s.content_type || s.role || '';
+      html += '<div style="padding:6px 8px;margin-bottom:4px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">';
+      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0 0 2px">Slide ' + (i+1)
+        + (tipoSlide ? ' · ' + esc(tipoSlide) : '') + (titulo ? ' · ' + esc(titulo) : '') + '</p>';
+      if (texto)    html += '<p style="font-size:10px;color:#CBD5E1;margin:0;line-height:1.5;font-weight:600">' + esc(texto) + '</p>';
+      html += slideBulletsHtml(s.bullets);
+      if (subtexto) html += '<p style="font-size:9px;color:#94A3B8;margin:2px 0 0;line-height:1.4;font-style:italic">' + esc(subtexto) + '</p>';
+      html += '</div>';
     });
+    html += '</div>';
+    // Modo edición (oculto)
+    if (esVisual) {
+      html += '<div id="slides-edit-' + pub.id + '" style="display:none">';
+      slidesCopy.forEach(function(s,i){
+        var titulo = s.titulo || s.title || '';
+        var texto  = s.main_text || s.texto || s.raw || '';
+        var subtexto = s.secondary_text || s.subtexto || '';
+        var bulletsTxt = (s.bullets || []).join('\n');
+        html += '<div style="margin-bottom:8px">';
+        html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0 0 3px">Slide ' + (i+1) + (titulo ? ' · ' + esc(titulo) : '') + '</p>';
+        html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="main_text" rows="2" placeholder="Texto principal — usá **palabra** para resaltar con recuadro"'
+          + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:6px;'
+          + 'color:#CBD5E1;font-size:10px;padding:6px 8px;resize:vertical;font-family:inherit;line-height:1.5">'
+          + esc(texto) + '</textarea>';
+        if (pub.tipo === 'carrusel') {
+        html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="bullets" rows="3" placeholder="Bullets (uno por línea)" '
+          + 'style="width:100%;box-sizing:border-box;margin-top:3px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:6px;'
+          + 'color:#A5B4FC;font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
+          + esc(bulletsTxt) + '</textarea>';
+        }
+        html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="secondary_text" rows="1" placeholder="Frase complementaria / takeaway" '
+          + 'style="width:100%;box-sizing:border-box;margin-top:3px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:6px;'
+          + 'color:#94A3B8;font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
+          + esc(subtexto) + '</textarea>';
+        html += '</div>';
+      });
+      html += '<div style="display:flex;gap:6px;margin-top:4px">';
+      html += '<button type="button" class="aprobar-btn" onclick="guardarSlides(\'' + pub.id + '\',this)">Guardar cambios</button>';
+      html += '<button type="button" class="aprobar-btn" style="background:rgba(100,116,139,0.15);border-color:rgba(100,116,139,0.3);color:#94A3B8" onclick="cancelarEdicion(\'' + pub.id + '\')">Cancelar</button>';
+      html += '</div>';
+      html += '</div>';
+    }
   }
   if (pub.status === 'copy_generado') {
-    html += '<div style="margin-top:10px"><button type="button" class="aprobar-btn" onclick="aprobarCopy(\'' + pub.id + '\',this)">Aprobar copy</button></div>';
+    var botonesRow = '<div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">';
+    botonesRow += '<button type="button" class="aprobar-btn" onclick="aprobarCopy(\'' + pub.id + '\',this)">'
+      + _aprobarCopyLabel(pub.tipo) + '</button>';
+    if (pub.tipo === 'carrusel' || pub.tipo === 'historia') {
+      botonesRow += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.3);color:#A5B4FC" onclick="editarSlides(\'' + pub.id + '\')">Editar slides</button>';
+    }
+    botonesRow += '</div>';
+    html += botonesRow;
   } else if (pub.status === 'copy_aprobado') {
-    var prodLabel = pub.tipo === 'reel' ? 'Generar guion' : 'Preparar visual';
-    html += '<div style="margin-top:10px"><button type="button" class="aprobar-btn" onclick="producirPub(\'' + pub.id + '\',this)">' + prodLabel + '</button></div>';
+    if (pub.tipo === 'reel') {
+      html += '<div style="margin-top:10px"><button type="button" class="aprobar-btn" onclick="producirPub(\'' + pub.id + '\',this)">'
+        + _producirBtnLabel(pub.tipo || 'reel') + '</button></div>';
+    }
   }
   html += '</div>';
   return html;
 }
 
-function produccionSection(pub) {
+function promptParaSlide(slide, pub) {
+  if (!slide) return '';
+  var p = slide.prompt_sugerido || slide.prompt_usado || '';
+  if (p) return p;
   var prod = pub.produccion_json || {};
   if (typeof prod === 'string') { try { prod = JSON.parse(prod); } catch(e) { prod = {}; } }
-  if (!prod.etapa) return '';
+  var integrado = prod.modo_visual === 'texto_integrado' || slide.texto_en_imagen;
+  var role = (slide.role || 'desarrollo').toLowerCase();
+  var hints = {
+    gancho: integrado
+      ? 'Portada del carrusel: gancho visual extremo, texto integrado en el diseño.'
+      : 'Slide de apertura (gancho): alto impacto, detiene el scroll.',
+    desarrollo: integrado
+      ? 'Slide de desarrollo: mismo estilo visual que la portada, texto en la imagen.'
+      : 'Slide de desarrollo: refuerza el concepto, composición clara.',
+    cierre: integrado
+      ? 'Slide de cierre/CTA: call to action visual con texto integrado.'
+      : 'Slide de cierre/CTA: energía de cierre, espacio para texto superpuesto.'
+  };
+  var formato = pub.tipo === 'historia' ? '1080x1920' : '1080x1080';
+  var texto = (slide.main_text || '').trim();
+  var sec = (slide.secondary_text || '').trim();
+  var parts = [
+    integrado
+      ? 'Diseño gráfico Instagram ' + formato + ', texto escrito dentro de la imagen (estilo Canva).'
+      : 'Fotografía para Instagram, formato ' + formato + '.',
+    hints[role] || hints.desarrollo,
+    slide.visual_suggestion ? 'Escena: ' + slide.visual_suggestion + '.' : '',
+    pub.tematica ? 'Temática: ' + pub.tematica + '.' : '',
+    texto ? 'Texto principal: "' + (texto.length > 120 ? texto.slice(0, 120) + '…' : texto) + '".' : '',
+    sec ? 'Texto secundario: "' + sec + '".' : '',
+    integrado
+      ? 'Tipografía bold legible en móvil. Coherencia visual con el resto del carrusel. Sin marcas de agua.'
+      : 'Estilo realista, limpio. Zona despejada para superponer texto. Sin texto incrustado.'
+  ];
+  return parts.filter(Boolean).join(' ');
+}
+
+function esPiezaVisual(pub) {
+  return pub.tipo === 'carrusel' || pub.tipo === 'historia';
+}
+
+function mostrarSeccionImagenes(pub) {
+  var etapa = etapaActiva(pub);
+  if (etapa === 'produccion' || etapa === 'final') return true;
+  return pub.status === 'copy_aprobado' && esPiezaVisual(pub);
+}
+
+function produccionSection(pub) {
+  if (pub.status === 'produccion_aprobada' || pub.status === 'programado' || pub.status === 'publicado') {
+    return '';
+  }
+  if (!mostrarSeccionImagenes(pub)) return '';
+  var prod = pub.produccion_json || {};
+  if (typeof prod === 'string') { try { prod = JSON.parse(prod); } catch(e) { prod = {}; } }
+  var esVisual = esPiezaVisual(pub);
+  var enRevisionImagenes = pub.status === 'copy_aprobado' && esVisual;
+
+  if (enRevisionImagenes && !(prod.slides && prod.slides.length)) {
+    var esCarruselKie = pub.tipo === 'carrusel';
+    var esHistoria = pub.tipo === 'historia';
+    return '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">'
+      + '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">'
+      + (esCarruselKie ? 'Imágenes · generación KIE' : esHistoria ? 'Imágenes · biblioteca + KIE' : 'Imágenes · biblioteca') + '</p>'
+      + '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
+      + (esCarruselKie
+        ? 'Se generarán slides nuevas con nano-banana-pro (texto integrado). Cada carrusel usa imágenes distintas.'
+        : esHistoria
+          ? 'Primero buscamos fotos tuyas en biblioteca; las que falten se generan con KIE en 9:16.'
+          : 'Todavía no hay sugerencias. Buscá imágenes en tu biblioteca para cada slide.') + '</p>'
+      + '<button type="button" class="aprobar-btn" onclick="producirPub(\'' + pub.id + '\',this)">'
+      + (esCarruselKie ? 'Preparar slides para KIE' : esHistoria ? 'Asignar fotos y preparar KIE' : 'Recomendar imágenes') + '</button>'
+      + '</div>';
+  }
+
+  if (!prod.etapa && !(prod.slides && prod.slides.length)) return '';
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">';
-  html += '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">Producción</p>';
+  html += '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">'
+    + (enRevisionImagenes
+      ? (pub.tipo === 'carrusel' && prod.modo_visual === 'texto_integrado'
+        ? 'Generación KIE · imágenes nuevas'
+        : 'Imágenes sugeridas · biblioteca')
+      : 'Producción') + '</p>';
   if (prod.tipo === 'guion') {
     if (prod.script_principal) {
       html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5;white-space:pre-line">'
@@ -778,9 +1525,53 @@ function produccionSection(pub) {
       html += '<p style="font-size:9px;color:#64748B;margin:6px 0 0">Variante B disponible</p>';
     }
   } else if (prod.slides && prod.slides.length) {
+    var asignadas = prod.slides.filter(function(s) {
+      return s.image_source === 'cliente' && s.archivo_url;
+    }).length;
+    var pendientes = prod.slides.filter(function(s) { return s.image_source === 'kie_pending'; }).length;
+    var generadas = prod.slides.filter(function(s) { return s.image_source === 'generada_ia'; }).length;
+    var copy = pub.copy_json || {};
+    if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
+    if (pub.tipo === 'carrusel' && (copy.formato || prod.style_guide)) {
+      var modeloKie = (prod.carousel_plan && prod.carousel_plan.modelo_kie)
+        || prod.kie_model || 'nano-banana-pro';
+      html += '<p style="font-size:9px;color:#A78BFA;margin:0 0 6px">Formato: '
+        + esc(copy.formato || (prod.style_guide && prod.style_guide.formato_nombre) || 'Carrusel')
+        + (prod.modo_visual === 'texto_integrado'
+          ? ' · texto en imagen (' + esc(modeloKie) + ')' : '')
+        + '</p>';
+      var planResumen = (prod.carousel_plan && prod.carousel_plan.plan_resumen)
+        || copy.plan_resumen;
+      if (planResumen) {
+        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 6px;line-height:1.4">'
+          + esc(String(planResumen).slice(0, 280)) + '</p>';
+      }
+    }
+    if (pub.tipo === 'historia' && (copy.plan_resumen || prod.story_plan)) {
+      var planH = (prod.story_plan && prod.story_plan.plan_resumen) || copy.plan_resumen;
+      if (planH) {
+        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 6px;line-height:1.4">'
+          + esc(String(planH).slice(0, 280)) + '</p>';
+      }
+      html += '<p style="font-size:9px;color:#A5B4FC;margin:0 0 6px">Formato 9:16 (1080×1920) · texto superpuesto</p>';
+    }
     html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 6px">Composición visual · ' + prod.slides.length + ' slides</p>';
+    if (enRevisionImagenes) {
+      if (pub.tipo === 'carrusel' && prod.modo_visual === 'texto_integrado') {
+        html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">'
+          + pendientes + ' pendientes de KIE · ' + generadas + ' ya generadas'
+          + (asignadas ? ' · ' + asignadas + ' desde biblioteca (manual)' : '')
+          + '</p>';
+      } else {
+        html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">'
+          + asignadas + ' desde biblioteca · ' + generadas + ' generadas con IA · ' + pendientes + ' pendientes de IA</p>';
+      }
+    }
     prod.slides.forEach(function(s, idx) {
-      html += '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:1px solid rgba(245,158,11,0.1)">';
+      var slideLabel = (s.slide_number ? 'Slide ' + s.slide_number : 'Slide ' + (idx + 1))
+        + (s.role ? ' · ' + s.role : '');
+      var promptDefault = promptParaSlide(s, pub);
+      html += '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid rgba(245,158,11,0.1)">';
       if ((s.image_source === 'cliente' || s.image_source === 'generada_ia') && s.archivo_url) {
         html += '<img src="' + esc(s.archivo_url) + '" alt="" loading="lazy" '
           + 'style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid rgba(245,158,11,0.25)">';
@@ -790,46 +1581,211 @@ function produccionSection(pub) {
           + '<span style="font-size:8px;color:#FCD34D;font-weight:700;text-align:center;line-height:1.2">IA<br>pend.</span></div>';
       }
       html += '<div style="flex:1;min-width:0">';
-      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0">'
-        + esc(s.slide_number ? 'Slide ' + s.slide_number : '') + (s.role ? ' · ' + esc(s.role) : '') + '</p>';
+      html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">';
+      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0">' + esc(slideLabel) + '</p>';
+      html += slideEstadoHtml(s.image_source);
+      html += '</div>';
       if (s.main_text) {
-        html += '<p style="font-size:10px;color:#CBD5E1;margin:1px 0 0;line-height:1.4;white-space:pre-line">' + esc(s.main_text) + '</p>';
+        html += '<p style="font-size:10px;color:#CBD5E1;margin:1px 0 0;line-height:1.4;white-space:pre-line;font-weight:600">' + esc(s.main_text) + '</p>';
       }
+      html += slideBulletsHtml(s.bullets);
       if (s.secondary_text) {
-        html += '<p style="font-size:9px;color:#94A3B8;margin:1px 0 0;line-height:1.4">' + esc(s.secondary_text) + '</p>';
+        html += '<p style="font-size:9px;color:#94A3B8;margin:1px 0 0;line-height:1.4;font-style:italic">' + esc(s.secondary_text) + '</p>';
       }
       if (s.image_source === 'cliente' || s.image_source === 'generada_ia') {
         var tz = s.text_zone || {};
-        var origenImg = s.image_source === 'cliente' ? 'Imagen del cliente' : 'Generada con IA';
-        html += '<p style="font-size:8px;color:#64748B;margin:2px 0 0">' + origenImg
-          + (tz.zone ? ' · texto en ' + esc(tz.zone) : '') + '</p>';
-        if (s.image_source === 'generada_ia') {
-          html += '<span class="badge" style="display:inline-block;margin-top:3px;background:rgba(167,139,250,0.1);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25)">Generada con IA</span>';
+        if (tz.zone) {
+          html += '<p style="font-size:8px;color:#64748B;margin:2px 0 0">Texto en ' + esc(tz.zone) + '</p>';
         }
+        html += slideBtnsHtml(pub.id, idx, slideLabel, promptDefault, true);
       } else {
-        html += '<span class="badge" style="display:inline-block;margin-top:3px;background:rgba(245,158,11,0.1);color:#FCD34D;border:1px solid rgba(245,158,11,0.25)">'
-          + 'Imagen IA pendiente</span>';
-        if (s.prompt_sugerido) {
-          html += '<p style="font-size:8px;color:#64748B;margin:3px 0 0;line-height:1.4">Prompt: ' + esc(s.prompt_sugerido) + '</p>';
-        }
-        html += '<div style="margin-top:4px"><button type="button" class="aprobar-btn" '
-          + 'onclick="generarImagenSlide(\'' + pub.id + '\',' + idx + ',this)">Generar con IA</button></div>';
+        html += slideBtnsHtml(pub.id, idx, slideLabel, promptDefault, false);
       }
       html += '</div></div>';
     });
+    if (pub.tipo === 'carrusel' && pendientes > 0) {
+      var costoEst = pendientes * 0.09;
+      html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2)">';
+      html += '<p style="font-size:9px;color:#C4B5FD;margin:0 0 6px;line-height:1.45">'
+        + 'Generación automática: prompts con texto integrado y coherencia visual '
+        + 'entre slides vía KIE (Nano Banana Pro), como el skill /carrusel.</p>';
+      html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#7C3AED,#A78BFA)" '
+        + 'onclick="generarCarruselCompleto(\'' + pub.id + '\',this)">'
+        + 'Generar carrusel completo con IA'
+        + (pendientes ? ' (' + pendientes + ' pendientes · ~$' + costoEst.toFixed(2) + ')' : '')
+        + '</button></div>';
+    }
+    if (pub.tipo === 'historia' && pendientes > 0) {
+      var costoEstH = pendientes * 0.09;
+      html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">';
+      html += '<p style="font-size:9px;color:#A5B4FC;margin:0 0 6px;line-height:1.45">'
+        + 'Generación híbrida: mantiene fotos de biblioteca y genera con KIE las slides '
+        + 'pendientes en 9:16, con coherencia visual entre ellas.</p>';
+      html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#4338CA,#6366F1)" '
+        + 'onclick="generarHistoriaCompleto(\'' + pub.id + '\',this)">'
+        + 'Generar historia completa con IA'
+        + (pendientes ? ' (' + pendientes + ' pendientes · ~$' + costoEstH.toFixed(2) + ')' : '')
+        + '</button></div>';
+    }
   } else {
     html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5">Visual pendiente de composición · '
       + ((prod.imagenes_candidatas || []).length) + ' imágenes candidatas del cliente</p>';
   }
-  if (pub.status === 'en_produccion') {
-    html += '<div style="margin-top:8px"><button type="button" class="aprobar-btn" onclick="aprobarVisual(\'' + pub.id + '\',this)">Aprobar producción</button></div>';
+  if (pub.status === 'en_produccion' || enRevisionImagenes) {
+    html += '<div style="margin-top:8px"><button type="button" class="aprobar-btn" onclick="'
+      + (enRevisionImagenes ? 'confirmarProduccionVisual' : 'aprobarVisual')
+      + '(\'' + pub.id + '\',this)">Aprobar producción</button></div>';
   }
   html += '</div>';
   return html;
 }
 
+function descripcionParaPublicar(pub) {
+  var copy = pub.copy_json || {};
+  if (typeof copy === 'string') { try { copy = JSON.parse(copy); } catch(e) { copy = {}; } }
+  var lines = [];
+  var slides = copy.slides || [];
+  if (slides.length) {
+    var s1 = slides[0];
+    if (s1.main_text) lines.push(String(s1.main_text).trim());
+    if (s1.secondary_text) lines.push(String(s1.secondary_text).trim());
+    var last = slides[slides.length - 1];
+    if (last && last !== s1) {
+      if (last.main_text) lines.push(String(last.main_text).trim());
+      if (last.secondary_text) lines.push(String(last.secondary_text).trim());
+    }
+  } else {
+    if (copy.hook) lines.push(String(copy.hook).trim());
+    if (copy.cta) lines.push(String(copy.cta).trim());
+  }
+  var prop = pub.propuesta_json || {};
+  if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
+  var keyword = copy.cta_keyword || (copy.copy_elegido && copy.copy_elegido.keyword) || '';
+  var body = lines.filter(Boolean).join('\n\n');
+  if (keyword && body.indexOf(keyword) === -1) {
+    body += (body ? '\n\n' : '') + 'Comentá "' + keyword + '" para recibir el recurso.';
+  }
+  return body || (pub.tematica ? 'Contenido sobre ' + pub.tematica + '.' : '');
+}
+
+window.copiarDescripcionPublicar = function(btn) {
+  var ta = document.getElementById(btn.getAttribute('data-target'));
+  if (!ta) return;
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try {
+    navigator.clipboard.writeText(ta.value);
+    window.rimaToast && rimaToast('Descripción copiada', 'success');
+  } catch(e) {
+    document.execCommand('copy');
+    window.rimaToast && rimaToast('Descripción copiada', 'success');
+  }
+};
+
+function hydrateFinalGallery(root) {
+  if (!root) return;
+  root.querySelectorAll('[data-final-fname]').forEach(function(item) {
+    var pubId = item.getAttribute('data-pub-id');
+    var fname = item.getAttribute('data-final-fname');
+    var img = item.querySelector('img');
+    if (!pubId || !fname || !img) return;
+    fetch(urlArchivoFinal(pubId, fname), { credentials: 'same-origin' })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.blob();
+      })
+      .then(function(blob) {
+        img.src = URL.createObjectURL(blob);
+        img.onerror = null;
+      })
+      .catch(function() {
+        img.alt = 'Error al cargar';
+        item.style.borderColor = 'rgba(248,113,113,0.5)';
+      });
+  });
+}
+
+function finalSection(pub) {
+  if (!esPiezaVisual(pub)) return '';
+  if (pub.status !== 'produccion_aprobada' && pub.status !== 'programado' && pub.status !== 'publicado') return '';
+  var prod = pub.produccion_json || {};
+  if (typeof prod === 'string') { try { prod = JSON.parse(prod); } catch(e) { prod = {}; } }
+  var rendered = prod.rendered || {};
+  var slides = rendered.slides || [];
+  var esCarrusel = pub.tipo === 'carrusel';
+  var html = '<div style="margin-top:10px;padding:12px;border-radius:8px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)">';
+  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 8px">Visual final · listo para publicar</p>';
+
+  if (!slides.length) {
+    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 10px;line-height:1.55">'
+      + 'Compone cada slide (imagen + copy) y preparalo para subir a Instagram.</p>';
+    html += '<button type="button" class="aprobar-btn" onclick="generarVisualFinal(\'' + pub.id + '\',this)">Generar visual para descarga</button>';
+    html += '</div>';
+    return html;
+  }
+
+  html += '<div style="padding:10px;border-radius:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.06);margin-bottom:12px">';
+  html += '<p style="font-size:10px;color:#CBD5E1;font-weight:600;margin:0 0 6px">Descripción para publicar</p>';
+  html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">Copiá este texto como caption al subir el carrusel.</p>';
+  var descId = 'desc-pub-' + pub.id;
+  html += '<textarea id="' + descId + '" readonly rows="5" '
+    + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);'
+    + 'border-radius:8px;color:#CBD5E1;font-size:10px;padding:8px 10px;line-height:1.5;resize:vertical;font-family:inherit">'
+    + esc(descripcionParaPublicar(pub)) + '</textarea>';
+  html += '<button type="button" class="slide-acc-btn" style="margin-top:6px" data-target="' + descId + '" '
+    + 'onclick="copiarDescripcionPublicar(this)">Copiar descripción</button>';
+  html += '</div>';
+
+  html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">' + slides.length + ' slides · clic para ver en grande</p>';
+  html += '<div class="render-strip" id="final-gallery-' + pub.id + '">';
+  slides.forEach(function(s) {
+    var fname = s.filename || ('slide-' + String(s.slide_number || 0).padStart(2, '0') + '.png');
+    var label = 'Slide ' + (s.slide_number || '') + (s.role ? ' · ' + s.role : '');
+    html += '<div class="render-strip-item" role="button" tabindex="0" '
+      + 'data-pub-id="' + escAttr(pub.id) + '" data-final-fname="' + escAttr(fname) + '" '
+      + 'onclick="abrirModalFinal(\'' + pub.id + '\',\'' + escAttr(fname) + '\',\'' + escAttr(label) + '\')" '
+      + 'onkeydown="if(event.key===\'Enter\')abrirModalFinal(\'' + pub.id + '\',\'' + escAttr(fname) + '\',\'' + escAttr(label) + '\')">'
+      + '<img src="" alt="' + escAttr(label) + '" loading="lazy">'
+      + '<p>' + esc(label) + '</p></div>';
+  });
+  html += '</div>';
+
+  html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(52,211,153,0.15)">';
+  html += '<button type="button" class="aprobar-btn" style="background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.35)" '
+    + 'onclick="descargarCarruselZip(\'' + pub.id + '\',this)">↓ Descargar todas (.zip)</button>';
+  html += '<span style="font-size:9px;color:#64748B;margin-left:8px">' + slides.length + ' PNG · 1080×' + (esCarrusel ? '1080' : '1920') + '</span>';
+  html += '</div></div>';
+  return html;
+}
+
 function esc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function escAttr(s) {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/\r/g, '&#13;')
+    .replace(/\n/g, '&#10;');
+}
+
+function slideBtnsHtml(pubId, idx, slideLabel, promptDefault, hasImage) {
+  var ds = ' data-pub-id="' + escAttr(pubId) + '" data-slide-idx="' + idx + '"'
+    + ' data-slide-label="' + escAttr(slideLabel) + '" data-prompt="' + escAttr(promptDefault) + '"';
+  var wrap = 'display:flex;gap:6px;flex-wrap:wrap;margin-top:6px';
+  if (hasImage) {
+    return '<div style="' + wrap + '">'
+      + '<button type="button" class="slide-acc-btn secondary" data-slide-action="gen-ia"' + ds + '>Regenerar imagen</button>'
+      + '<button type="button" class="slide-acc-btn" data-slide-action="bib"' + ds + '>Seleccionar de biblioteca</button>'
+      + '</div>';
+  }
+  return '<div style="' + wrap + '">'
+    + '<button type="button" class="slide-acc-btn" data-slide-action="bib"' + ds + '>Buscar en la biblioteca</button>'
+    + '<button type="button" class="slide-acc-btn primary" data-slide-action="gen-ia"' + ds + '>Generar con IA</button>'
+    + '</div>';
 }
 
 function renderList(tipo, pubs) {
@@ -860,6 +1816,7 @@ function renderList(tipo, pubs) {
     div.className = 'piece-card';
     div.id = 'pub-' + pub.id;
     div.dataset.tipo = pub.tipo || tipo.replace(/s$/, '');
+    div.dataset.status = pub.status || '';
     div.innerHTML =
       '<div style="display:flex;align-items:flex-start;gap:12px">'
       + '<div style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:'+typeColor.bg+';border:1px solid '+typeColor.border+'">'
@@ -876,14 +1833,13 @@ function renderList(tipo, pubs) {
           + (tematica ? '<span>Tematica: <span style="color:#64748B">'+esc(tematica)+'</span></span>' : '')
           + (enfoque  ? '<span>·</span><span>Enfoque: <span style="color:#64748B">'+esc(enfoque)+'</span></span>' : '')
           + '</div>' : '')
+      + planSection(pub)
       + propuestaSection(pub)
       + copySection(pub)
       + produccionSection(pub)
+      + finalSection(pub)
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'
-      + (tematica && !tematicaAprobada
-          ? '<button class="aprobar-btn" data-id="'+pub.id+'" onclick="aprobarTematica(\''+pub.id+'\',this)">Aprobar temática</button>'
-          : (tematicaAprobada ? '<button class="aprobar-btn done" disabled>✓ Aprobada</button>' : ''))
       + '<span style="font-size:9px;color:#334155">'+pub.fecha+'</span>'
       + '</div>'
       + '</div>';
@@ -926,6 +1882,27 @@ function showTab(tab, keepScroll) {
   }
 }
 window.showTab = showTab;
+
+document.addEventListener('click', function(e) {
+  var slideBtn = e.target.closest('[data-slide-action]');
+  if (slideBtn) {
+    var pubId = slideBtn.getAttribute('data-pub-id');
+    var idx = parseInt(slideBtn.getAttribute('data-slide-idx'), 10);
+    var label = slideBtn.getAttribute('data-slide-label') || '';
+    var prompt = slideBtn.getAttribute('data-prompt') || '';
+    var action = slideBtn.getAttribute('data-slide-action');
+    if (action === 'gen-ia') {
+      generarImagenSlide(pubId, idx, prompt, label);
+    } else if (action === 'bib') {
+      asignarDesdeBiblioteca(pubId, idx, label);
+    }
+    return;
+  }
+  var bibItem = e.target.closest('#modal-bib-grid .bib-item[data-image-id]');
+  if (bibItem) {
+    seleccionarBibItem(bibItem, bibItem.getAttribute('data-image-id'));
+  }
+});
 
 // Init
 buildWeekSelect();

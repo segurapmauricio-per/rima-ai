@@ -4,7 +4,7 @@ import json
 import os
 import random
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 SYSTEM_PROMPT = f"""Eres el Agente de Contenido de RIMA. Generas la ESTRATEGIA mensual de contenido
 para negocios de servicios en LATAM — el plan de qué tipo de pieza va cada día y por qué,
@@ -36,8 +36,8 @@ PLAN_LIMITS = {
     "max":    {"reels": 9, "carruseles": 3, "historias": 7},
 }
 
-PLAN_DAYS = 30                    # ventana del plan: próximos 30 días corridos desde mañana
-WEEK_DAYS = 7                     # bloque de programación: hoy+1..+7, +8..+14, etc.
+PLAN_DAYS = 30                    # ventana del plan: 30 días corridos anclados al lunes de esta semana
+WEEK_DAYS = 7                     # bloque de programación alineado a semanas calendario (lun-dom)
 
 # Pesos base de engagement por día (Lun=0 … Dom=6). Viernes/sábado elevados, no fijos.
 _DAY_WEIGHT = [0.82, 0.88, 0.94, 1.00, 1.14, 1.18, 0.92]
@@ -80,12 +80,11 @@ class ContentAgent:
         """
         brand_brief: dict estándar del negocio (incluye "plan": basico|pro|max)
         market_research: texto del análisis de referentes (opcional)
-        month: ignorado para la planificación — el plan es siempre una ventana
-               continua de 30 días desde mañana (no "mes calendario", no "semana 1")
+        month: ignorado para la planificación — ventana de 30 días anclada al
+               lunes de esta semana; se guarda y muestra solo desde mañana.
         enfoque: {ventas, educacion, conexion} porcentajes
         cliente_id: si se pasa, guarda los slots en SQLite
         """
-        from datetime import date, timedelta
         business_name = brand_brief.get("business_name", "unknown")
         enfoque = self._normalize_enfoque(enfoque)
 
@@ -94,9 +93,15 @@ class ContentAgent:
             plan_tier = "basico"
         limits = PLAN_LIMITS.get(plan_tier, PLAN_LIMITS["pro"])
 
-        # La ventana del plan SIEMPRE arranca mañana — nunca en el pasado,
-        # y es continua (no se ancla a "semana 1" de un mes calendario)
-        start_date = date.today() + timedelta(days=1)
+        # start_date = ESTE lunes (semana calendario actual).
+        # Si hoy es miércoles, start_date es el lunes de esta semana (pasado).
+        # Los slots anteriores a mañana se saltan al guardar en DB — así la
+        # semana 1 queda con contenido proporcional (jue-dom si hoy es miér)
+        # y las semanas 2-5 se llenan completas. Sin este anclaje, la semana 1
+        # estaría vacía hasta el próximo lunes.
+        today = date.today()
+        tomorrow = today + timedelta(days=1)
+        start_date = today - timedelta(days=today.weekday())  # lunes de esta semana
         end_date = start_date + timedelta(days=PLAN_DAYS - 1)
 
         calendar = self._generate_strategy_plan(
@@ -109,16 +114,34 @@ class ContentAgent:
             try:
                 from core.db import delete_publicaciones_regenerables, init_db
                 init_db(cliente_id)
-                deleted_slots = delete_publicaciones_regenerables(
+                # Pasado + hoy: fuera del calendario visible
+                deleted_past = delete_publicaciones_regenerables(
                     cliente_id,
-                    start_date=start_date.strftime("%Y-%m-%d"),
+                    end_date=today.strftime("%Y-%m-%d"),
+                )
+                # Mañana en adelante: reemplazar plan regenerable en la ventana
+                deleted_forward = delete_publicaciones_regenerables(
+                    cliente_id,
+                    start_date=tomorrow.strftime("%Y-%m-%d"),
                     end_date=end_date.strftime("%Y-%m-%d"),
                 )
+                deleted_slots = deleted_past + deleted_forward
                 if deleted_slots:
-                    print(f"[ContentAgent] Eliminados {deleted_slots} slots regenerables en ventana del plan")
+                    print(f"[ContentAgent] Eliminados {deleted_slots} slots regenerables "
+                          f"({deleted_past} pasado/hoy, {deleted_forward} ventana futura)")
             except Exception as e:
                 print(f"[ContentAgent] Warning: no se pudo limpiar slots regenerables: {e}")
-            self._save_to_db(cliente_id, calendar, historias, start_date, brand_brief)
+            self._save_to_db(cliente_id, calendar, historias, start_date, brand_brief, tomorrow)
+
+        min_visible_offset = (tomorrow - start_date).days
+        visible_calendar = [
+            s for s in calendar
+            if int(s.get("dia_offset", s.get("offset", 0))) >= min_visible_offset
+        ]
+        visible_historias = [
+            s for s in historias
+            if int(s.get("dia_offset", s.get("offset", 0))) >= min_visible_offset
+        ]
 
         result = {
             "agent": self.name,
@@ -127,11 +150,12 @@ class ContentAgent:
             "plan_tier": plan_tier,
             "limites_semanales": limits,
             "starts_on": start_date.strftime("%Y-%m-%d"),
+            "visible_from": tomorrow.strftime("%Y-%m-%d"),
             "ends_on": end_date.strftime("%Y-%m-%d"),
-            "total_piezas": len(calendar) + len(historias),
+            "total_piezas": len(visible_calendar) + len(visible_historias),
             "enfoque": enfoque,
-            "calendar": calendar,
-            "historias_calendar": historias,
+            "calendar": visible_calendar,
+            "historias_calendar": visible_historias,
             "used_market_research": bool(market_research),
             "deleted_slots": deleted_slots,
         }
@@ -140,12 +164,8 @@ class ContentAgent:
         return result
 
     def _save_to_db(self, cliente_id: str, calendar: list, historias: list,
-                    start_date, brand_brief: dict) -> None:
-        """Escribe cada slot estratégico (reels/carruseles + historias) como
-        publicacion en SQLite. Sin copy — solo la intención estratégica.
-        Las fechas se derivan de start_date + dia_offset (0 = mañana), nunca
-        caen en el pasado y no dependen de un "mes calendario" ni de "semana 1".
-        """
+                    start_date, brand_brief: dict, tomorrow: date) -> None:
+        """Escribe slots estratégicos en SQLite. Solo fechas >= mañana."""
         try:
             from core.db import create_or_update_cliente, create_publicacion, update_publicacion_field, init_db, get_publicaciones
             from datetime import timedelta
@@ -174,36 +194,36 @@ class ContentAgent:
                 semana = (offset // 7) + 1  # solo informativo/visual — NO es el ancla del plan
                 return f.strftime("%Y-%m-%d"), mes_str, dia_nombre, semana
 
+            tomorrow_str = tomorrow.strftime("%Y-%m-%d")
             created = 0
-            batch_week_counts: dict[tuple[str, str, str], int] = {}
 
             def _week_key(fecha_str: str) -> tuple[str, str]:
                 from core.week_quota import week_bounds_for_date
-                ws, we = week_bounds_for_date(fecha_str)
-                return ws, we
+                return week_bounds_for_date(fecha_str)
 
             def _puede_crear(fecha_str: str, tipo_slot: str) -> bool:
-                from core.week_quota import can_create_slot
+                from core.week_quota import can_create_slot_for_week
                 ws, we = _week_key(fecha_str)
                 week_pubs = [
                     p for p in get_publicaciones(cliente_id)
                     if ws <= (p.get("fecha") or "") <= we
                 ]
-                batch = {}
-                for (bws, bwe, bt), n in batch_week_counts.items():
-                    if bws == ws and bwe == we and bt == tipo_slot:
-                        batch[tipo_slot] = batch.get(tipo_slot, 0) + n
-                return can_create_slot(plan_db, week_pubs, tipo_slot, batch)
+                return can_create_slot_for_week(
+                    plan_db, week_pubs, tipo_slot,
+                    date.fromisoformat(ws), date.fromisoformat(we),
+                    tomorrow,
+                )
 
             def _registrar_creado(fecha_str: str, tipo_slot: str) -> None:
-                ws, we = _week_key(fecha_str)
-                k = (ws, we, tipo_slot)
-                batch_week_counts[k] = batch_week_counts.get(k, 0) + 1
+                pass  # DB ya registra; no se necesita contador en memoria
 
             # Reels y carruseles — estrategia, sin copy
             for slot in calendar:
                 offset = slot.get("dia_offset", slot.get("offset", 0))
                 fecha_str, mes_str, dia_nombre, semana = datos_de(offset)
+
+                if fecha_str < tomorrow_str:
+                    continue  # no escribir al pasado
 
                 tipo_slot = slot.get("formato", slot.get("tipo_formato", "reel"))
                 if not _puede_crear(fecha_str, tipo_slot):
@@ -236,6 +256,9 @@ class ContentAgent:
                 offset = slot.get("dia_offset", slot.get("offset", 0))
                 fecha_str, mes_str, dia_nombre, semana = datos_de(offset)
 
+                if fecha_str < tomorrow_str:
+                    continue  # no escribir al pasado
+
                 if not _puede_crear(fecha_str, "historia"):
                     continue
 
@@ -256,8 +279,9 @@ class ContentAgent:
             from core.week_quota import trim_excess_planificado
             trimmed = trim_excess_planificado(
                 cliente_id, plan_db,
-                start_date=start_date.strftime("%Y-%m-%d"),
+                start_date=tomorrow_str,
                 end_date=(start_date + timedelta(days=PLAN_DAYS - 1)).strftime("%Y-%m-%d"),
+                quota_from=tomorrow_str,
             )
             if trimmed:
                 print(f"[ContentAgent] Recortados {trimmed} slots planificado sobrantes por cuota semanal")
@@ -266,30 +290,48 @@ class ContentAgent:
         except Exception as e:
             print(f"[ContentAgent] Warning: no se pudo guardar en DB: {e}")
 
-    def _get_weekly_blocks(self, limits: dict) -> list:
-        """Bloques de 7 días (último parcial prorrateado): cada uno con cuota semanal del plan."""
+    def _quota_for_days(self, limits: dict, days: int) -> tuple[int, int, int]:
+        """Cuota prorrateada cuando el bloque tiene menos de 7 días."""
+        if days >= WEEK_DAYS:
+            return limits["reels"], limits["carruseles"], limits["historias"]
+        ratio = days / WEEK_DAYS
+        return (
+            round(limits["reels"] * ratio),
+            round(limits["carruseles"] * ratio),
+            round(limits["historias"] * ratio),
+        )
+
+    def _get_weekly_blocks(self, limits: dict, start_date) -> list:
+        """Semanas calendario (lun-dom) con cuota proporcional en la semana en curso.
+
+        Coordina las cantidades del plan por semana real. En la semana en curso
+        solo asigna días desde mañana hasta domingo (prorrateado). Semanas
+        futuras reciben cuota completa.
+        """
+        tomorrow = date.today() + timedelta(days=1)
+        plan_end = start_date + timedelta(days=PLAN_DAYS - 1)
         blocks = []
-        offset = 0
+        week_mon = start_date
         week_num = 1
-        while offset < PLAN_DAYS:
-            days = min(WEEK_DAYS, PLAN_DAYS - offset)
-            if days == WEEK_DAYS:
-                reels, carrs, hist = limits["reels"], limits["carruseles"], limits["historias"]
-            else:
-                ratio = days / WEEK_DAYS
-                reels = round(limits["reels"] * ratio)
-                carrs = round(limits["carruseles"] * ratio)
-                hist = round(limits["historias"] * ratio)
-            blocks.append({
-                "week": week_num,
-                "offset_start": offset,
-                "offset_end": offset + days - 1,
-                "days": days,
-                "reels": reels,
-                "carruseles": carrs,
-                "historias": hist,
-            })
-            offset += days
+
+        while week_mon <= plan_end:
+            week_sun = week_mon + timedelta(days=6)
+            write_from = max(week_mon, tomorrow)
+            write_to = min(week_sun, plan_end)
+            if write_from <= write_to:
+                writable_days = (write_to - write_from).days + 1
+                reels, carrs, hist = self._quota_for_days(limits, writable_days)
+                if reels or carrs or hist:
+                    blocks.append({
+                        "week": week_num,
+                        "offset_start": (write_from - start_date).days,
+                        "offset_end": (write_to - start_date).days,
+                        "days": writable_days,
+                        "reels": reels,
+                        "carruseles": carrs,
+                        "historias": hist,
+                    })
+            week_mon += timedelta(days=7)
             week_num += 1
         return blocks
 
@@ -409,7 +451,7 @@ class ContentAgent:
 
     def _build_reel_carrusel_skeleton(self, limits: dict, start_date, enfoque: dict) -> list:
         skeleton = []
-        for block in self._get_weekly_blocks(limits):
+        for block in self._get_weekly_blocks(limits, start_date):
             for o in self._pick_varied_offsets(
                 block["offset_start"], block["offset_end"], block["reels"],
                 block["week"], "reel", start_date
@@ -463,7 +505,7 @@ class ContentAgent:
                                 end_date, enfoque: dict, limits: dict) -> list:
         """Genera la ESTRATEGIA de los próximos 30 días corridos (reels + carruseles, sin copy/ideas).
         El plan NO se organiza por "mes calendario" ni "semana 1" — cada pieza lleva
-        un dia_offset (0 = mañana .. 29 = último día de la ventana).
+        un dia_offset (0 = lunes de esta semana .. 29 = último día de la ventana).
         Retorna slots: {dia_offset, formato, tipo_contenido, enfoque, angulo_estrategico}.
         """
 
@@ -481,7 +523,7 @@ ANÁLISIS DE REFERENTES DEL NICHO (úsalo como contexto estratégico, no para co
 
         skeleton = self._build_reel_carrusel_skeleton(limits, start_date, enfoque)
         total = len(skeleton)
-        blocks = self._get_weekly_blocks(limits)
+        blocks = self._get_weekly_blocks(limits, start_date)
         weekly_rules = "\n".join(
             f"  · Bloque {b['week']} (dia_offset {b['offset_start']}–{b['offset_end']}, {b['days']} días): "
             f"EXACTAMENTE {b['reels']} reels y {b['carruseles']} carruseles"
@@ -499,7 +541,8 @@ Genera la ESTRATEGIA de contenido (reels + carruseles) para los PRÓXIMOS 30 DÍ
 desde el {start_date.strftime('%d/%m/%Y')} hasta el {end_date.strftime('%d/%m/%Y')}.
 
 REGLA DE PROGRAMACIÓN SEMANAL (OBLIGATORIA — no negociable):
-Cada bloque de 7 días corridos desde mañana debe cumplir la cuota semanal del plan contratado.
+Cada bloque semanal (lun-dom) debe cumplir la cuota del plan; el bloque 1 puede ser parcial
+si la semana en curso ya empezó — respeta los dia_offset asignados.
 {weekly_rules}
 
 Los dia_offset, formato, tipo_contenido y enfoque de cada pieza YA ESTÁN DEFINIDOS — NO los cambies:
@@ -593,7 +636,7 @@ Solo el JSON, sin texto adicional antes ni después.
 
         enfoque = self._normalize_enfoque(enfoque)
         offsets_all = []
-        for block in self._get_weekly_blocks(limits):
+        for block in self._get_weekly_blocks(limits, start_date):
             offsets_all.extend(self._pick_varied_offsets(
                 block["offset_start"], block["offset_end"], block["historias"],
                 block["week"], "historia", start_date

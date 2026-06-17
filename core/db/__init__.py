@@ -26,11 +26,16 @@ from .database import (
     create_imagen,
     set_imagen_analisis,
     get_imagenes_para,
+    get_imagen,
+    get_imagen_por_url,
+    get_marca_visual,
+    set_marca_visual,
     # Notificaciones
     create_notificacion,
     update_notificacion_respuesta,
     # Cliente
     create_or_update_cliente,
     get_cliente,
+    update_cliente_status,
     update_cliente_memoria,
 )

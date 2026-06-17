@@ -8,6 +8,8 @@
   <style>
     *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
     .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
+    .f-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;font-size:12px;color:#F1F5F9;outline:none}
+    .btn-p{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-size:11px;font-weight:600;padding:9px 16px;border-radius:10px;border:none;cursor:pointer}
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -17,7 +19,7 @@
 <main class="flex-1 flex flex-col overflow-hidden">
   <div class="px-6 py-5 border-b border-white/5">
     <h1 class="text-sm font-semibold text-white">Configuración</h1>
-    <p class="text-[11px] text-slate-500 mt-0.5">Cuenta, plan y preferencias de RIMA</p>
+    <p class="text-[11px] text-slate-500 mt-0.5">Cuenta, plan y seguridad</p>
   </div>
 
   <div class="flex-1 overflow-y-auto p-6 space-y-4 max-w-lg">
@@ -32,12 +34,23 @@
     </div>
 
     <div class="glass rounded-2xl p-5">
-      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-bold mb-2">Próximamente</p>
-      <p class="text-[11px] text-slate-500 leading-relaxed">Aquí irán preferencias de notificaciones, zona horaria, integraciones y cambio de plan.</p>
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-bold mb-3">Cambiar contraseña</p>
+      <div class="space-y-2">
+        <input type="password" id="pw-cur" class="f-input" placeholder="Contraseña actual" />
+        <input type="password" id="pw-new" class="f-input" placeholder="Nueva (mín. 8 caracteres)" />
+        <input type="password" id="pw-cf" class="f-input" placeholder="Confirmar nueva" />
+        <p id="pw-msg" class="text-[11px] hidden"></p>
+        <button type="button" class="btn-p" onclick="changePassword()">Actualizar contraseña</button>
+      </div>
+    </div>
+
+    <div class="glass rounded-2xl p-5">
+      <p class="text-[9px] uppercase tracking-widest text-slate-600 font-bold mb-2">Suscripción</p>
+      <p class="text-[11px] text-slate-500 leading-relaxed mb-3">Para cancelar tu plan, gestioná la suscripción desde Gumroad. Tu acceso se desactiva automáticamente al cancelar.</p>
+      <a id="cancel-link" href="#" target="_blank" rel="noopener" class="text-[11px] text-violet-400 hover:text-violet-300 no-underline font-medium">Gestionar suscripción en Gumroad →</a>
     </div>
 
     <a href="/auth/logout" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-[11px] font-semibold text-red-400 glass hover:bg-red-500/10 transition-colors no-underline">
-      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
       Cerrar sesión
     </a>
   </div>
@@ -51,6 +64,21 @@ fetch('/auth/me').then(r=>r.json()).then(u=>{
   document.getElementById('cfg-plan').textContent=plans[u.plan]||u.plan||'—';
   document.getElementById('cfg-brand').textContent=u.brand_name||'—';
 }).catch(()=>{});
+
+var gumroadUrl = 'https://gumroad.com/library';
+document.getElementById('cancel-link').href = gumroadUrl;
+
+async function changePassword(){
+  var msg=document.getElementById('pw-msg');
+  var r=await fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    current_password:document.getElementById('pw-cur').value,
+    new_password:document.getElementById('pw-new').value
+  })});
+  msg.classList.remove('hidden');
+  if(r.ok){msg.textContent='Contraseña actualizada';msg.style.color='#34D399';}
+  else{var d=await r.json().catch(function(){return{};});msg.textContent=d.detail||'Error';msg.style.color='#F87171';}
+  if(document.getElementById('pw-new').value!==document.getElementById('pw-cf').value){msg.textContent='Las contraseñas no coinciden';msg.style.color='#F87171';msg.classList.remove('hidden');}
+}
 </script>
 </body>
 </html>

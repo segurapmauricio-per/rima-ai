@@ -40,29 +40,39 @@ def main():
     now = int(time.time())
 
     for spec in USERS:
+        existing = users.get(spec["email"], {})
+        refs = existing.get("referentes_profiles")
+        scraping = existing.get("scraping")
+        brand_existing = existing.get("brand") or {}
+
         users[spec["email"]] = {
             "name": spec["name"],
             "plan": spec["plan"],
             "password_hash": PWD_HASH,
             "status": "active",
-            "created_at": now,
+            "created_at": existing.get("created_at", now),
             "brand": {
-                "brand_name": spec["brand_name"],
-                "brand_service": "Coaching fitness online",
-                "brand_ideal_client": "Profesionales 30-45 años",
-                "brand_problem": "No tienen tiempo para entrenar",
-                "brand_result": "Rutina de 20 min en casa",
+                "brand_name": brand_existing.get("brand_name") or spec["brand_name"],
+                "brand_service": brand_existing.get("brand_service") or "Coaching fitness online",
+                "brand_ideal_client": brand_existing.get("brand_ideal_client") or "Profesionales 30-45 años",
+                "brand_problem": brand_existing.get("brand_problem") or "No tienen tiempo para entrenar",
+                "brand_result": brand_existing.get("brand_result") or "Rutina de 20 min en casa",
                 "plan": spec["plan"],
-                "enfoque_default": {"ventas": 60, "educacion": 30, "conexion": 10},
+                "enfoque_default": brand_existing.get("enfoque_default")
+                or {"ventas": 60, "educacion": 30, "conexion": 10},
+                **{k: v for k, v in brand_existing.items()
+                   if k not in ("brand_name", "brand_service", "brand_ideal_client",
+                                "brand_problem", "brand_result", "plan", "enfoque_default")},
             },
-            "referentes_profiles": {"instagram": [], "youtube": []},
-            "scraping": {
+            "referentes_profiles": refs if refs is not None else {"instagram": [], "youtube": []},
+            "scraping": scraping if scraping is not None else {
                 "manual_remaining": 3,
                 "last_reset_week": None,
                 "last_manual_scrape_at": None,
             },
         }
-        print(f"OK  {spec['email']}  plan={spec['plan']}  pass=uno")
+        kept = len((users[spec["email"]].get("referentes_profiles") or {}).get("instagram") or [])
+        print(f"OK  {spec['email']}  plan={spec['plan']}  pass=uno  referentes={kept}")
 
     DATA_FILE.parent.mkdir(exist_ok=True)
     DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")

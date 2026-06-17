@@ -9,6 +9,24 @@
 5. **Q&A** — Cajita de preguntas. La gente pregunta → respuesta con valor → lead pregunta qué vendés.
 6. **Libre / Awareness** — Victorias de clientes, día a día, sin venta.
 
+## Secuencias RIMA (dashboard — Jun 2026)
+
+Cada publicación tipo **historia** genera una **secuencia de 3–5 slides** (9:16), no un solo frame.
+
+**Estructura por slide:**
+| Rol | Contenido |
+|-----|-----------|
+| Slide 1 `gancho` | Hook en el primer frame — sin silencio previo |
+| Slides 2–N-1 `desarrollo` | Valor, tip o insight (1 idea por slide) |
+| Último `cierre` | CTA, pregunta abierta o palabra clave |
+
+**2 propuestas de copy (A/B):** ángulos distintos; el cliente elige cuál publicar. Temática y enfoque vienen **fijos** del calendario mensual.
+
+**Marcado para diseño visual** (slide_renderer):
+- `**palabra**` → recuadro pill con color acento de marca
+- MAYÚSCULAS o números → color primario de marca
+- Palabra clave del CTA → pill automático en slide de cierre
+
 ## Estructura de secuencia CTA (storytelling en 4 historias)
 
 **Historia 1 — Victoria impresionante:**

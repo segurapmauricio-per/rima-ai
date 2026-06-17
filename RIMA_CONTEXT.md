@@ -1,5 +1,5 @@
 # RIMA AI — Contexto del Proyecto
-<!-- Última actualización: Jun 11 2026 (Sprint Copy E2E completado en local, sin deploy) -->
+<!-- Última actualización: Jun 15 2026 (Sprint Historias + diseño visual enriquecido, local sin deploy) -->
 
 ## Datos clave
 - **Repo:** https://github.com/segurapmauricio-per/rima-ai
@@ -16,22 +16,31 @@ rima-ai/
 │   ├── auth.py          # JWT + Google OAuth2
 │   ├── client_store.py  # Persistencia de clientes
 │   ├── gemini_client.py # Cliente Gemini
+│   ├── kie_client.py    # KIE AI (nano-banana-pro, image_input, rate limit)
+│   ├── visual_spec.py   # Spec visual JSON + prompts ES/EN por idioma
+│   ├── marca_visual.py  # Paleta, idioma_cliente, style_hints para copy/KIE
+│   ├── carousel_plan.py # Artefacto plan.json carrusel
+│   ├── story_plan.py    # Artefacto plan.json historias 9:16
+│   ├── slide_renderer.py # Render final Pillow (historias diseño enriquecido)
 │   └── db/
 │       ├── schema.py    # 5 tablas SQLite: clientes, publicaciones, referentes_contenido, imagenes, notificaciones
 │       └── database.py  # CRUD, upsert inteligente, historial de versiones
-├── agents/              # 12 agentes especializados
+├── agents/              # 12+ agentes especializados
 │   ├── content          # Monthly Planner 30d — genera slots → escribe en DB
 │   ├── market_research  # v3 — conectado a DB, scores en SQLite/JSON
 │   ├── weekly           # Orquestador: propuestas → copy → producción (SQLite)
 │   ├── script, image_analysis, story_copy
-│   ├── visual_composer  # Sprint B — slides + match de imágenes, determinístico (sin LLM)
+│   ├── story_generator  # Batch KIE historias 9:16 (híbrido biblioteca + IA)
+│   ├── carousel_generator # Batch KIE carrusel texto integrado + coherencia
+│   ├── visual_composer  # Slides + match biblioteca / kie_pending (determinístico)
 │   └── carousel_copy, reel_copy, landing, meta, operations, sales, prospecting
 ├── bot/
 │   ├── telegram_bot.py
 │   └── weekly_flow.py
 ├── dashboard/
 │   ├── login.html
-│   └── rima-home.html
+│   ├── rima-home.html
+│   └── rima-contenido.html  # Pipeline E2E reels/carruseles/historias
 └── Conocimiento/
 ```
 
@@ -43,7 +52,10 @@ rima-ai/
 | /calendario | Slots del mes | GET /api/publicaciones?mes=Julio 2026 |
 | /calendario | Detalle al click | GET /api/publicaciones/{id} |
 | /contenido | Cards reels/carruseles/historias | GET /api/publicaciones?tipo=reel&semana= |
-| /contenido | Aprobar tematica/copy | PATCH /api/publicaciones/{id}/aprobar |
+| /contenido | Aprobar tematica/copy/visual | PATCH /api/publicaciones/{id}/aprobar |
+| /contenido | Elegir propuesta copy historia | POST /api/publicaciones/{id}/elegir-copy |
+| /contenido | Generar carrusel/historia KIE batch | POST .../generar-carrusel-ia · .../generar-historia-ia |
+| /contenido | Descargar ZIP slides finales | GET /api/publicaciones/{id}/descargar-carrusel |
 | /mercado | Top referentes | GET /api/referentes/top?tipo=reel |
 | /imagenes | Galeria | GET /api/imagenes |
 | /lab | Monthly Planner | POST /api/agent/content/run |
@@ -64,22 +76,55 @@ planificado → propuesta_generada → [elegir-referente] → copy_generado
 - UI /contenido: botones "Modelar esta", "Aprobar copy", "Generar guion"/"Preparar visual", "Aprobar producción" + badges por estado
 - Flujo legacy del bot Telegram (next_story/approve_story en agents/weekly) sigue existiendo pero está desconectado del dashboard — candidato a deprecar
 
-## Sub-pipeline producción visual (Sprint B Fase 2 — Jun 12, verificado local en negocio_básico)
-Al producir carrusel/historia, `agents/visual_composer` (100% determinístico, cero Gemini):
-1. `plan_slides(copy_json, tipo, slot_context)` — carrusel: passthrough de copy_json.slides; historia: gancho (hook_text) → desarrollo (body_texts) → cierre (cta_text+keyword, solo si existen).
-2. `match_images_to_slides(cliente_id, tipo, slides)` — scoring por solapamiento de tokens (tags x3, descripción/vibe/categoría x1, bonus calidad alta, umbral 3.0) contra `get_imagenes_para`; greedy global sin reusar imágenes. best_text_zone null → "center"; coords derivadas de safe_zone_px si Gemini no las guardó.
-3. produccion_json = {etapa, tipo:"visual", slides:[...], generated_at}. Cada slide: image_source "cliente" (image_id, archivo_url, text_zone{zone,coords,color}, match_score) o "kie_pending" (prompt_sugerido por template, ratio 1:1/9:16).
-- UI /contenido produccionSection: thumbnail 44px vía /uploads (mount estático) o badge "Imagen IA pendiente — falta configurar KIE AI" + prompt. Fallback para produccion_json viejo con `pendiente`.
-- Verificado (Jun 12): carrusel d3042e2d → 7 slides (4 cliente + 3 kie_pending), historia 63ff7758 → 2 slides (kie_pending; las imágenes del cliente no matchean ese copy). Thumbnails sirven 200 vía /uploads. weekly_state sincronizado.
+## Sub-pipeline producción visual (actualizado Jun 15)
+Al producir carrusel/historia, `agents/visual_composer` (determinístico, cero Gemini):
 
-## Sprint KIE + spec visual JSON (Jun 12 tarde — verificado local)
+**Carrusel**
+1. `plan_slides` — passthrough de `copy_json.slides` (7 slides del carousel_copy).
+2. `slides_kie_integrado` — **no** matchea biblioteca automáticamente; cada carrusel genera imágenes nuevas vía KIE (biblioteca solo asignación manual).
+3. `carousel_generator.generate_carousel_batch` — nano-banana-pro, texto integrado, slide 1 → referencia slides 2+.
+4. Render: si `texto_en_imagen` → PNG directo de KIE; si no → overlay Pillow simple.
+
+**Historia (Sprint Jun 15 — metodología Santiago Muñoz / Nico Azero)**
+1. `plan_slides` — passthrough de `copy_json.slides` (3–5 slides: gancho → desarrollo → cierre). Legacy: hook/body/cta.
+2. `match_images_to_slides` — **híbrido**: fotos reales del cliente (historia/branding); excluye `generada_ia` de otras secuencias; faltantes → `kie_pending`.
+3. `story_generator.generate_story_batch` — KIE 9:16, coherencia visual, mantiene fotos de biblioteca.
+4. `slide_renderer.render_publicacion_visual` — diseño enriquecido al aprobar visual:
+   - 2 colores de marca (primario + acento desde `marca_visual`)
+   - Palabras `**resaltadas**` → recuadros pill (acento)
+   - MAYÚSCULAS / números → color primario
+   - Símbolos por rol: ✦ gancho · ▸ desarrollo · → cierre
+   - Barra lateral primaria, scrim degradado, punto decorativo terciario
+   - Salida: PNG 1080×1920 + ZIP `historia-{pub_id}.zip`
+
+- UI `/contenido`: propuestas A/B de copy (historias), editar slides, batch KIE, preview/descarga final.
+- Cliente test: **Negocio Max** (`max@test.com` / pass `uno`).
+
+## Sprint Historias E2E (Jun 15 — implementado local, pendiente E2E completo + deploy)
+Flujo dashboard:
+```
+planificado → propuesta (2 ángulos estratégicos) → elegir-referente + copy
+→ copy_generado (2 propuestas secuencia 3–5 slides) → elegir-copy (A/B)
+→ [editar-slides] → aprobar copy → copy_aprobado
+→ producir / match biblioteca → generar-historia-ia (pendientes KIE)
+→ aprobar visual → render Pillow enriquecido → produccion_aprobada → descargar ZIP
+```
+Archivos clave: `agents/story_copy/`, `agents/story_generator/`, `core/story_plan.py`, `core/slide_renderer.py`.
+Endpoints nuevos: `POST /elegir-copy`, `POST /generar-historia-ia`.
+Copy: temática/enfoque fijos del plan mensual; idioma desde `marca_visual`; keywords con `**` para diseño.
+
+## Sprint Carrusel KIE + Copy nutritivo (Jun 14–15 — local)
+- `carousel_copy`: 7 slides estructurados, bullets, 5 formatos, valor_audience, idioma/marca.
+- `carousel_generator` + `POST /generar-carrusel-ia` — nano-banana-pro (~$0.09/slide).
+- Fix: carruseles no reutilizan mismas imágenes de biblioteca entre publicaciones.
+- UI: botón "Generar carrusel completo con IA", editar slides, descarga ZIP 1080×1080.
+
+## Sprint KIE + spec visual JSON (Jun 12 — base, extendido Jun 15)
 - **Spec visual JSON** (`core/visual_spec.py` + `docs/visual_spec_schema.md`): esquema único para describir piezas visuales desde análisis (origen "analisis", mapeo de analisis_json vía `spec_desde_analisis` / `ImageAnalysisAgent.to_visual_spec`) o para generación (origen "generacion", `spec_desde_slide` + `spec_a_prompt`). Campos video reservados (duracion_seg, escenas).
 - visual_composer: slides kie_pending llevan `spec_visual` + `prompt_sugerido` derivado, con paleta de marca desde dominant_colors de imágenes branding y elementos_clave desde slot_context.
-- **`core/kie_client.py` REAL (imagen)**: nano-banana vía POST api.kie.ai/api/v1/jobs/createTask + polling jobs/recordInfo (state→resultJson.resultUrls). `RateLimiter` ventana deslizante 20/10s (límite duro de la cuenta). Sin KIE_API_KEY → not_configured. Con reference_image URL pública usa nano-banana-edit (no usable desde localhost). Costo medido: **4 créditos/imagen**, ~20-45s. El CDN de KIE rechaza el User-Agent default de urllib (403) — download_image manda UA de navegador.
-- **Video: NO implementado** — Veo3.1 existe (POST /api/v1/veo/generate, clips 8s, polling /api/v1/veo/record-info) pero costo sin documentar; pendiente.
-- **POST /api/publicaciones/{id}/generar-imagen-slide** (JWT, body {"slide_index": N}): genera UN slide kie_pending por llamada (nunca masivo), guarda en data/uploads/generadas/{cliente_id}/ y actualiza el slide a image_source "generada_ia" (archivo_url, spec_usada, prompt_usado, kie_task_id). Si la descarga falla devuelve task_id+image_url para no perder el crédito.
-- UI: botón "Generar con IA" por slide pendiente, badge violeta "Generada con IA", thumbnail igual que imágenes de cliente.
-- Verificado (Jun 12): historia 63ff7758 slide 1 generado real (4 créditos, PNG 1.6MB servido por /uploads, persistido en produccion_json, UI renderiza). Rate limiter validado con límites simulados.
+- **`core/kie_client.py`**: default `nano-banana-pro`, `image_input[]` para coherencia, fallback legacy. RateLimiter 20/10s. ~18 créditos/imagen pro vs ~4 legacy. Download con UA navegador (CDN 403 sin UA).
+- **POST /generar-imagen-slide** — un slide por llamada (carrusel/historia).
+- **POST /generar-carrusel-ia** · **POST /generar-historia-ia** — batch con `confirmar_costo: true`.
 
 ## Endpoints base (Jun 5)
 - GET /api/publicaciones?mes=&status=&tipo=
@@ -118,11 +163,14 @@ Al producir carrusel/historia, `agents/visual_composer` (100% determinístico, c
 - [x] Market Research v3 conectado a DB — ranking R1-R4 cerrado (rotación semanal, scores temáticos internos ~78/22, filtro ≥35→≥20→pool)
 - [x] Dashboard conectado a APIs reales: /contenido, /calendario, /mercado, /lab usan SQLite (no datos estáticos)
 - [x] **Sprint Copy E2E (Jun 11, local):** pipeline completo propuesta→copy→aprobación→producción para reel/carrusel/historia, verificado con 1 pieza de cada tipo en negocio_básico. weekly_state.json sincronizado desde SQLite.
-- [ ] **Sprint Perfil de Voz:** agente de onboarding — scrape Apify de la cuenta del cliente + transcripción + análisis (vocabulario, expresión, temáticas) → voice_profile.json como 3ra fuente de los copy agents
-- [x] **Sprint B (visual) Fases 1–2 (Jun 12, local):** composición de slides historias/carruseles — visual_composer determinístico asigna imágenes del cliente analizadas (17 en negocio_básico) y deja kie_pending con prompt_sugerido donde no hay match. UI con thumbnails/badges. PENDIENTE: API key de KIE AI (nano banana) para generar las imágenes faltantes.
-- [ ] **Sprint Reels producción:** vista de grabación por líneas + upload de tomas + agente de edición (cortes de silencio, subtítulos, transiciones)
-- [ ] Deploy de todo lo anterior al VPS (28+ archivos WIP sin commitear — esperar OK de Mauricio)
-- [ ] Pagina de ventas + onboarding — al final
+- [x] **Sprint B (visual) Fases 1–2 (Jun 12, local):** composición slides + match biblioteca + kie_pending.
+- [x] **Sprint Carrusel KIE + copy nutritivo (Jun 14–15, local):** carousel_generator, generar-carrusel-ia, texto integrado, fix no-reuso biblioteca, idioma/marca en copy.
+- [x] **Sprint Historias E2E (Jun 15, local):** secuencias 3–5 slides 9:16, 2 propuestas copy, elegir-copy, híbrido biblioteca+KIE, generar-historia-ia, render diseño enriquecido (2 colores, pills, símbolos).
+- [ ] **E2E historias Negocio Max:** probar flujo completo semana actual (después de onboarding).
+- [ ] **Sprint Onboarding (ACTIVO — Jun 15):** wizard paso a paso, scrape IG cliente en paralelo, brief + marca visual, fotos historias, face_profile.json para KIE, change-password, baja/cancelación. Ver **`PROMPT_SPRINT_ONBOARDING.md`**.
+- [ ] **Sprint Reels producción:** vista grabación + upload tomas + edición
+- [ ] Deploy al VPS (WIP sin commitear — esperar OK de Mauricio)
+- [ ] Página de ventas
 
 ## Precios
 | Plan | Precio |
@@ -175,5 +223,13 @@ curl https://rima.n8n-ghl.com/api/health
 1. Chat central lee este archivo + consulta grafo + memoria claude-mem
 2. Genera prompt especifico para subtarea
 3. Chat hijo trabaja subtarea en aislado
-4. Chat hijo devuelve resumen
+4. Chat hijo devuelve resumen (formato abajo)
 5. Chat central actualiza RIMA_CONTEXT.md y continua
+
+### Resumen estándar para chat central (Jun 15)
+Ver bloque "Entregable chat central" en el último sprint completado, o pegar:
+- **Qué se hizo** (1 párrafo)
+- **Archivos tocados** (lista)
+- **Endpoints/UI nuevos**
+- **Verificado / pendiente**
+- **Siguiente paso acordado**

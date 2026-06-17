@@ -588,13 +588,13 @@ class MarketResearchAgent:
                     for p in competitor_profiles if p
                 ],
                 "resultsType": "posts",
-                "resultsLimit": 20,
+                "resultsLimit": 35,
             }
         elif hashtags:
             actor_input = {
                 "hashtags": [h.strip().lstrip("#") for h in hashtags[:5]],
                 "resultsType": "posts",
-                "resultsLimit": 20,
+                "resultsLimit": 35,
             }
         else:
             return {"posts": [], "note": "Sin perfiles ni hashtags"}

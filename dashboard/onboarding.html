@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RIMA — Configuración inicial</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9;min-height:100vh}
+    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);backdrop-filter:blur(12px)}
+    .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+    .btn-primary{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
+    .btn-primary:hover:not(:disabled){box-shadow:0 4px 24px rgba(124,58,237,0.45);transform:translateY(-1px)}
+    .btn-primary:disabled{opacity:.45;cursor:not-allowed}
+    .f-input,.f-textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;font-size:13px;color:#F1F5F9;outline:none;font-family:inherit}
+    .f-input:focus,.f-textarea:focus{border-color:rgba(124,58,237,0.5);box-shadow:0 0 0 2px rgba(124,58,237,0.12)}
+    .step-dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,0.12);transition:all .3s}
+    .step-dot.active{background:linear-gradient(135deg,#7C3AED,#06B6D4);box-shadow:0 0 12px rgba(124,58,237,0.5);width:10px;height:10px}
+    .step-dot.done{background:#34D399}
+    .step-panel{display:none}.step-panel.active{display:block}
+    .scrape-bar{height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden}
+    .scrape-bar>div{height:100%;background:linear-gradient(90deg,#7C3AED,#06B6D4);transition:width .4s}
+    .palette-swatch{width:36px;height:36px;border-radius:8px;border:2px solid rgba(255,255,255,0.15)}
+    .chip{padding:5px 12px;border-radius:20px;font-size:11px;border:1px solid rgba(255,255,255,0.12);color:#94A3B8;cursor:pointer}
+    .chip.on{background:rgba(124,58,237,0.2);border-color:rgba(124,58,237,0.5);color:#C4B5FD}
+    .drop-zone{border:2px dashed rgba(124,58,237,0.35);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:all .2s}
+    .drop-zone:hover{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.05)}
+    .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1)}
+    .check-ok{color:#34D399}.check-pending{color:#64748B}
+  </style>
+</head>
+<body class="flex items-center justify-center p-6">
+  <div class="w-full max-w-xl">
+    <div class="text-center mb-6">
+      <div class="inline-flex items-center gap-2 mb-2">
+        <div class="w-9 h-9 rounded-xl btn-primary flex items-center justify-center text-white font-bold text-sm">R</div>
+        <span class="text-xl font-bold gt">RIMA</span>
+      </div>
+      <h1 class="text-lg font-semibold text-white">Configuración de tu cuenta</h1>
+      <p class="text-[12px] text-slate-500 mt-1">Tu voz, tu marca y tus fotos — listo para generar contenido</p>
+    </div>
+    <div class="flex justify-center gap-1.5 mb-6 flex-wrap max-w-sm mx-auto" id="step-dots"></div>
+
+    <!-- 1 Contraseña -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-1">
+      <h2 class="text-sm font-semibold text-white mb-1">Bienvenido a RIMA</h2>
+      <p class="text-[11px] text-slate-500 mb-5">Creá tu contraseña privada.</p>
+      <div class="space-y-3">
+        <div><label class="text-[10px] uppercase text-slate-500 font-bold">Contraseña actual</label><input type="password" id="pw-current" class="f-input mt-1" placeholder="La del email" /></div>
+        <div><label class="text-[10px] uppercase text-slate-500 font-bold">Nueva contraseña</label><input type="password" id="pw-new" class="f-input mt-1" placeholder="Mínimo 8 caracteres" /></div>
+        <div><label class="text-[10px] uppercase text-slate-500 font-bold">Confirmar</label><input type="password" id="pw-confirm" class="f-input mt-1" /></div>
+      </div>
+      <p id="pw-error" class="text-[11px] text-red-400 mt-3 hidden"></p>
+      <button type="button" class="btn-primary w-full mt-5 py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitPassword()">Continuar</button>
+      <button type="button" class="w-full mt-2 py-2 text-[11px] text-slate-500" id="skip-pw" onclick="goStep(2)" style="display:none">Ya cambié mi contraseña →</button>
+    </div>
+
+    <!-- 2 Instagram -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-2">
+      <h2 class="text-sm font-semibold text-white mb-1">Tu Instagram</h2>
+      <p class="text-[11px] text-slate-500 mb-4">Analizamos tus últimas 20 publicaciones en segundo plano.</p>
+      <input type="text" id="ig-user" class="f-input" placeholder="@tunegocio" />
+      <div id="scrape-status" class="mt-4 hidden">
+        <div class="flex items-center gap-2 mb-2"><div class="w-2 h-2 rounded-full bg-violet-400 animate-pulse" id="scrape-pulse"></div><span class="text-[11px] text-violet-300" id="scrape-label">Analizando…</span></div>
+        <div class="scrape-bar"><div id="scrape-progress" style="width:15%"></div></div>
+      </div>
+      <p id="ig-error" class="text-[11px] text-red-400 mt-3 hidden"></p>
+      <button type="button" class="btn-primary w-full mt-5 py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitInstagram()">Analizar y continuar</button>
+    </div>
+
+    <!-- 3 Brief -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-3">
+      <h2 class="text-sm font-semibold text-white mb-1">Tu negocio</h2>
+      <p class="text-[11px] text-slate-500 mb-4">RIMA necesita esto antes de armar tu plan de contenido.</p>
+      <div class="space-y-3 max-h-[48vh] overflow-y-auto pr-1">
+        <div><label class="text-[10px] text-slate-500 font-bold">Nombre *</label><input id="b-name" class="f-input mt-1" /></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Servicio u oferta *</label><textarea id="b-service" class="f-textarea mt-1" rows="2"></textarea></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Cliente ideal *</label><textarea id="b-client" class="f-textarea mt-1" rows="2"></textarea></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Problema *</label><textarea id="b-problem" class="f-textarea mt-1" rows="2"></textarea></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Resultado principal *</label><textarea id="b-result" class="f-textarea mt-1" rows="2"></textarea></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Precio</label><input id="b-price" class="f-input mt-1" /></div>
+        <div><label class="text-[10px] text-slate-500 font-bold">Casos de éxito</label><textarea id="b-cases" class="f-textarea mt-1" rows="2"></textarea></div>
+      </div>
+      <p id="brief-error" class="text-[11px] text-red-400 mt-3 hidden"></p>
+      <button type="button" class="btn-primary w-full mt-4 py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitBrief()">Guardar y continuar</button>
+    </div>
+
+    <!-- 4 Marca visual -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-4">
+      <h2 class="text-sm font-semibold text-white mb-1">Identidad visual</h2>
+      <p class="text-[11px] text-slate-500 mb-4">Confirmá paleta, tono e idioma detectados.</p>
+      <div id="palette-row" class="flex flex-wrap gap-2 mb-3"></div>
+      <p id="fonts-display" class="text-[12px] text-slate-300 mb-3"></p>
+      <input id="b-tone" class="f-input mb-3" placeholder="Tono de comunicación" />
+      <div class="flex gap-2 mb-3">
+        <span class="chip on" data-lang="es" onclick="pickLang(this)">Español</span>
+        <span class="chip" data-lang="en" onclick="pickLang(this)">Inglés</span>
+        <span class="chip" data-lang="pt" onclick="pickLang(this)">Portugués</span>
+      </div>
+      <div id="scrape-insights" class="rounded-xl p-3 text-[10px] text-slate-400 mb-4" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)"></div>
+      <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitVisual()">Confirmar identidad</button>
+    </div>
+
+    <!-- 5 Fotos historias -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-5">
+      <h2 class="text-sm font-semibold text-white mb-1">Fotos para historias</h2>
+      <p class="text-[11px] text-slate-500 mb-4">Subí fotos <strong>reales</strong> tuyas o de tu negocio. Mínimo <span id="min-photos">3</span> (plan <span id="plan-label">—</span>).</p>
+      <div class="drop-zone mb-3" onclick="document.getElementById('upload-historias').click()">
+        <input type="file" id="upload-historias" multiple accept="image/*" class="hidden" />
+        <p class="text-[12px] text-violet-300 font-medium">+ Subir fotos</p>
+        <p class="text-[10px] text-slate-500 mt-1">JPG/PNG · máx 10 MB c/u</p>
+      </div>
+      <p class="text-[11px] text-slate-400 mb-2">Subidas: <span id="photos-count">0</span> / <span id="min-photos-2">3</span></p>
+      <div id="photos-thumbs" class="flex flex-wrap gap-2 mb-3"></div>
+      <p id="photos-error" class="text-[11px] text-red-400 hidden"></p>
+      <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" id="btn-photos" onclick="submitPhotos()">Continuar</button>
+    </div>
+
+    <!-- 6 Foto rostro -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-6">
+      <h2 class="text-sm font-semibold text-white mb-1">Tu rostro para la IA</h2>
+      <p class="text-[11px] text-slate-500 mb-4" id="face-hint">Foto frontal clara, estilo carnet. RIMA la usa para no inventar personajes en las historias generadas.</p>
+      <div class="drop-zone mb-3" onclick="document.getElementById('upload-face').click()">
+        <input type="file" id="upload-face" accept="image/*" class="hidden" />
+        <p class="text-[12px] text-violet-300 font-medium">+ Subir foto de rostro</p>
+      </div>
+      <img id="face-preview" class="hidden w-24 h-24 rounded-xl object-cover mx-auto mb-3 border border-white/10" alt="preview" />
+      <p id="face-error" class="text-[11px] text-red-400 hidden"></p>
+      <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitFace()">Continuar</button>
+      <button type="button" class="w-full mt-2 py-2 text-[11px] text-slate-500" id="skip-face" onclick="goStep(7)" style="display:none">Omitir por ahora →</button>
+    </div>
+
+    <!-- 7 Resumen -->
+    <div class="step-panel glass rounded-2xl p-6" id="step-7">
+      <h2 class="text-sm font-semibold text-white mb-4 text-center">Resumen</h2>
+      <ul id="summary-list" class="space-y-2 text-[12px] mb-6"></ul>
+      <p id="finish-error" class="text-[11px] text-red-400 text-center mb-3 hidden"></p>
+      <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" onclick="finishOnboarding()">Comenzar con RIMA</button>
+    </div>
+  </div>
+
+<script>
+var STATE = { step:1, mustChangePassword:true, lang:'es', scrapePoll:null, marca:null, minPhotos:3, faceRequired:true, photosCount:0, faceOk:false, plan:'pro' };
+var TOTAL_STEPS = 7;
+
+function renderDots(){var el=document.getElementById('step-dots');el.innerHTML='';for(var i=1;i<=TOTAL_STEPS;i++){var d=document.createElement('div');d.className='step-dot'+(i===STATE.step?' active':(i<STATE.step?' done':''));el.appendChild(d);}}
+function goStep(n){STATE.step=n;document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});var p=document.getElementById('step-'+n);if(p)p.classList.add('active');renderDots();if(n===7)renderSummary();if(n===5)refreshPhotosCount();}
+
+async function loadState(){
+  try{
+    var me=await fetch('/auth/me').then(function(r){return r.json();});
+    STATE.mustChangePassword=!!me.must_change_password;
+    STATE.minPhotos=me.min_photos||3;
+    STATE.photosCount=me.photos_count||0;
+    STATE.faceRequired=!!me.face_required;
+    STATE.faceOk=!!me.face_profile_ok;
+    STATE.plan=me.plan||'pro';
+    document.getElementById('min-photos').textContent=STATE.minPhotos;
+    document.getElementById('min-photos-2').textContent=STATE.minPhotos;
+    document.getElementById('plan-label').textContent={basico:'Básico',pro:'Pro',max:'Max'}[STATE.plan]||STATE.plan;
+    if(!STATE.faceRequired){document.getElementById('skip-face').style.display='block';document.getElementById('face-hint').textContent='Opcional en tu plan. Recomendado para historias con IA.';}
+    if(!STATE.mustChangePassword){document.getElementById('skip-pw').style.display='block';}
+    if(me.onboarding_step>1)goStep(me.onboarding_step);
+    var params=new URLSearchParams(window.location.search);
+    if(params.get('step'))goStep(parseInt(params.get('step'),10)||1);
+    if(params.get('reason')==='brief')goStep(3);
+    prefillBrief(await fetch('/api/brand').then(function(r){return r.json();}));
+    STATE.marca=await fetch('/api/marca-visual').then(function(r){return r.json();});
+    if(STATE.marca&&STATE.marca.comunicacion&&STATE.marca.comunicacion.tono)document.getElementById('b-tone').value=STATE.marca.comunicacion.tono;
+    if(me.scrape_status==='running'){showScrapeProgress();startScrapePoll();}
+    else if(me.scrape_status==='done')loadScrapeInsights();
+  }catch(e){console.error(e);}
+}
+
+function prefillBrief(b){
+  var m={'b-name':'brand_name','b-service':'brand_service','b-client':'brand_ideal_client','b-problem':'brand_problem','b-result':'brand_result','b-price':'brand_price','b-cases':'brand_success_cases'};
+  Object.keys(m).forEach(function(id){var el=document.getElementById(id);if(el&&b[m[id]])el.value=b[m[id]];});
+  var ig=b.brand_ig||b.ig_username||'';if(ig)document.getElementById('ig-user').value=ig.indexOf('@')===0?ig:'@'+ig;
+}
+
+async function submitPassword(){
+  var err=document.getElementById('pw-error');err.classList.add('hidden');
+  var cur=document.getElementById('pw-current').value,nw=document.getElementById('pw-new').value,cf=document.getElementById('pw-confirm').value;
+  if(STATE.mustChangePassword&&!cur){err.textContent='Ingresá tu contraseña temporal';err.classList.remove('hidden');return;}
+  if(nw.length<8){err.textContent='Mínimo 8 caracteres';err.classList.remove('hidden');return;}
+  if(nw!==cf){err.textContent='No coinciden';err.classList.remove('hidden');return;}
+  if(nw){var r=await fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({current_password:cur,new_password:nw})});if(!r.ok){var d=await r.json().catch(function(){return{};});err.textContent=d.detail||'Error';err.classList.remove('hidden');return;}}
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:2})});goStep(2);
+}
+
+async function submitInstagram(){
+  var err=document.getElementById('ig-error');err.classList.add('hidden');
+  var ig=document.getElementById('ig-user').value.trim();
+  if(ig.length<2){err.textContent='Ingresá tu @';err.classList.remove('hidden');return;}
+  await fetch('/api/brand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brand_ig:ig,ig_username:ig.replace('@','')})});
+  showScrapeProgress();
+  var r=await fetch('/api/onboarding/scrape-ig',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:ig})});
+  var d=await r.json();
+  if(!r.ok){err.textContent=(d.detail||d.error||'Error')+'. Continuá manual.';err.classList.remove('hidden');hideScrapeProgress();setTimeout(function(){goStep(3);},1000);return;}
+  if(d.status==='running')startScrapePoll();
+}
+
+function showScrapeProgress(){document.getElementById('scrape-status').classList.remove('hidden');}
+function hideScrapeProgress(){document.getElementById('scrape-status').classList.add('hidden');}
+function startScrapePoll(){
+  if(STATE.scrapePoll)clearInterval(STATE.scrapePoll);
+  var prog=15;
+  STATE.scrapePoll=setInterval(async function(){
+    prog=Math.min(prog+8,92);document.getElementById('scrape-progress').style.width=prog+'%';
+    try{
+      var s=await fetch('/api/onboarding/status').then(function(r){return r.json();});
+      if(s.scrape_status==='done'){clearInterval(STATE.scrapePoll);applyScrapeToForm(s);setTimeout(function(){goStep(3);},500);}
+      else if(s.scrape_status==='error'){clearInterval(STATE.scrapePoll);hideScrapeProgress();}
+    }catch(e){}
+  },2500);
+}
+function applyScrapeToForm(data){prefillBrief(data.brand_prefill||{});if(data.insights&&data.insights.forma_de_hablar)document.getElementById('b-tone').value=data.insights.forma_de_hablar;STATE.marca=data.marca_visual||STATE.marca;loadVisualPreview(STATE.marca,data.insights||{});}
+async function loadScrapeInsights(){try{var s=await fetch('/api/onboarding/status').then(function(r){return r.json();});if(s.insights)applyScrapeToForm(s);}catch(e){}}
+function loadVisualPreview(marca,insights){
+  marca=marca||{};insights=insights||{};var visual=marca.visual||{};var row=document.getElementById('palette-row');row.innerHTML='';
+  (visual.paleta_colores||insights.paleta_colores||[]).forEach(function(c){var sw=document.createElement('div');sw.className='palette-swatch';sw.style.background=c;row.appendChild(sw);});
+  document.getElementById('fonts-display').textContent=(visual.tipografias||insights.tipografias||[]).join(' · ')||'';
+  var parts=[];if(insights.tipos_contenido&&insights.tipos_contenido.descripcion)parts.push(insights.tipos_contenido.descripcion);if(insights.oferta_detectada)parts.push('Oferta: '+insights.oferta_detectada);
+  document.getElementById('scrape-insights').textContent=parts.join(' · ')||'Análisis completado.';
+}
+
+async function submitBrief(){
+  var err=document.getElementById('brief-error');err.classList.add('hidden');
+  var payload={brand_name:document.getElementById('b-name').value.trim(),brand_service:document.getElementById('b-service').value.trim(),brand_ideal_client:document.getElementById('b-client').value.trim(),brand_problem:document.getElementById('b-problem').value.trim(),brand_result:document.getElementById('b-result').value.trim(),brand_price:document.getElementById('b-price').value.trim(),brand_success_cases:document.getElementById('b-cases').value.trim(),brand_ig:document.getElementById('ig-user').value.trim(),brand_tone:document.getElementById('b-tone').value.trim(),brand_language:STATE.lang};
+  var r=await fetch('/api/brand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});var d=await r.json();
+  if(!r.ok||!d.brief_complete){err.textContent=(d.missing&&d.missing.join(', '))||'Completá los campos';err.classList.remove('hidden');return;}
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:4})});
+  STATE.marca=await fetch('/api/marca-visual').then(function(x){return x.json();});loadVisualPreview(STATE.marca,d.scrape_insights||{});goStep(4);
+}
+
+function pickLang(el){document.querySelectorAll('.chip[data-lang]').forEach(function(c){c.classList.remove('on');});el.classList.add('on');STATE.lang=el.dataset.lang;}
+
+async function submitVisual(){
+  await fetch('/api/marca-visual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({comunicacion:{tono:document.getElementById('b-tone').value,idioma:STATE.lang},visual:STATE.marca?STATE.marca.visual:{}})});
+  await fetch('/api/brand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brand_tone:document.getElementById('b-tone').value,brand_language:STATE.lang})});
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:5})});goStep(5);
+}
+
+document.getElementById('upload-historias').addEventListener('change',async function(e){
+  var files=e.target.files;if(!files.length)return;
+  var fd=new FormData();for(var i=0;i<files.length;i++)fd.append('files',files[i]);fd.append('category','historias');
+  var r=await fetch('/api/images/upload',{method:'POST',body:fd});var d=await r.json();
+  if(d.saved&&d.saved.length){var brand=document.getElementById('b-name').value||'default';try{await fetch('/api/images/analyze-batch/'+encodeURIComponent(brand)+'/historias',{method:'POST'});}catch(x){}}
+  await refreshPhotosCount();e.target.value='';
+});
+
+async function refreshPhotosCount(){
+  var me=await fetch('/auth/me').then(function(r){return r.json();});
+  STATE.photosCount=me.photos_count||0;document.getElementById('photos-count').textContent=STATE.photosCount;
+  var imgs=await fetch('/api/images?category=historias').then(function(r){return r.json();});
+  var box=document.getElementById('photos-thumbs');box.innerHTML='';
+  (imgs.images||[]).slice(0,8).forEach(function(img){var im=document.createElement('img');im.className='thumb';im.src=img.url||'';box.appendChild(im);});
+}
+
+async function submitPhotos(){
+  var err=document.getElementById('photos-error');err.classList.add('hidden');
+  await refreshPhotosCount();
+  if(STATE.photosCount<STATE.minPhotos){err.textContent='Necesitás al menos '+STATE.minPhotos+' fotos ('+STATE.photosCount+' subidas)';err.classList.remove('hidden');return;}
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:6})});goStep(6);
+}
+
+document.getElementById('upload-face').addEventListener('change',async function(e){
+  var f=e.target.files[0];if(!f)return;
+  var fd=new FormData();fd.append('file',f);
+  var err=document.getElementById('face-error');err.classList.add('hidden');
+  var r=await fetch('/api/onboarding/face-profile',{method:'POST',body:fd});
+  var d=await r.json();
+  if(!r.ok){err.textContent=d.detail||'Error al subir';err.classList.remove('hidden');return;}
+  STATE.faceOk=true;var prev=document.getElementById('face-preview');prev.src=d.url||'';prev.classList.remove('hidden');e.target.value='';
+});
+
+async function submitFace(){
+  var err=document.getElementById('face-error');err.classList.add('hidden');
+  var me=await fetch('/auth/me').then(function(r){return r.json();});
+  if(me.face_required&&!STATE.faceOk&&!me.face_profile_ok){err.textContent='Subí tu foto de rostro';err.classList.remove('hidden');return;}
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:7})});goStep(7);
+}
+
+function renderSummary(){
+  fetch('/auth/me').then(function(r){return r.json();}).then(function(me){
+    var items=[
+      ['Brief de marca',me.brief_complete],
+      ['Fotos historias ('+me.photos_count+'/'+me.min_photos+')',me.photos_ok],
+      ['Foto rostro',me.face_required?me.face_profile_ok:true],
+      ['Identidad visual',true]
+    ];
+    document.getElementById('summary-list').innerHTML=items.map(function(it){
+      return '<li class="flex justify-between"><span>'+it[0]+'</span><span class="'+(it[1]?'check-ok':'check-pending')+'">'+(it[1]?'✓':'pendiente')+'</span></li>';
+    }).join('');
+  });
+}
+
+async function finishOnboarding(){
+  var err=document.getElementById('finish-error');err.classList.add('hidden');
+  var r=await fetch('/api/onboarding/complete',{method:'POST'});
+  var d=await r.json();
+  if(!r.ok){err.textContent=d.detail||'Faltan pasos';err.classList.remove('hidden');return;}
+  window.location.href='/home';
+}
+
+loadState();goStep(1);
+</script>
+</body>
+</html>

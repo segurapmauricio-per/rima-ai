@@ -65,6 +65,12 @@ def init_db(cliente_id: str) -> None:
             )
         except sqlite3.OperationalError:
             pass
+        try:
+            conn.execute(
+                "ALTER TABLE clientes ADD COLUMN marca_visual_json TEXT DEFAULT '{}'"
+            )
+        except sqlite3.OperationalError:
+            pass
         for statement in INDICES:
             conn.execute(statement)
     print(f"[DB] Initialized {cliente_id} — schema v{SCHEMA_VERSION}")
@@ -527,6 +533,42 @@ def get_imagenes_para(cliente_id: str, uso: str) -> list:
     return rows_to_list(rows)
 
 
+def get_imagen(cliente_id: str, img_id: str) -> Optional[dict]:
+    with db(cliente_id) as conn:
+        row = conn.execute(
+            "SELECT * FROM imagenes WHERE id = ? AND cliente_id = ?",
+            (img_id, cliente_id),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def get_imagen_por_url(cliente_id: str, archivo_url: str) -> Optional[dict]:
+    with db(cliente_id) as conn:
+        row = conn.execute(
+            "SELECT * FROM imagenes WHERE cliente_id = ? AND archivo_url = ?",
+            (cliente_id, archivo_url),
+        ).fetchone()
+    return row_to_dict(row)
+
+
+def get_marca_visual(cliente_id: str) -> dict:
+    cliente = get_cliente(cliente_id)
+    if not cliente:
+        return {}
+    return cliente.get("marca_visual_json") or {}
+
+
+def set_marca_visual(cliente_id: str, marca: dict) -> None:
+    init_db(cliente_id)
+    if not get_cliente(cliente_id):
+        create_or_update_cliente(cliente_id, nombre=cliente_id, plan="basico")
+    with db(cliente_id) as conn:
+        conn.execute(
+            "UPDATE clientes SET marca_visual_json = ?, updated_at = ? WHERE id = ?",
+            (to_json(marca), now(), cliente_id),
+        )
+
+
 # ── CRUD: Notificaciones ──────────────────────────────────────────────────────
 
 def create_notificacion(cliente_id: str, pub_id: str, tipo: str,
@@ -581,6 +623,17 @@ def get_cliente(cliente_id: str) -> Optional[dict]:
             "SELECT * FROM clientes WHERE id = ?", (cliente_id,)
         ).fetchone()
     return row_to_dict(row)
+
+
+def update_cliente_status(cliente_id: str, status: str) -> None:
+    init_db(cliente_id)
+    if not get_cliente(cliente_id):
+        create_or_update_cliente(cliente_id, nombre=cliente_id, plan="basico")
+    with db(cliente_id) as conn:
+        conn.execute(
+            "UPDATE clientes SET status = ?, updated_at = ? WHERE id = ?",
+            (status, now(), cliente_id),
+        )
 
 
 def update_cliente_memoria(cliente_id: str, updates: dict) -> None:

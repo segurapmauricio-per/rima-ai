@@ -22,6 +22,21 @@ RATIO_A_FORMATO = {"1:1": "1080x1080", "9:16": "1080x1920", "16:9": "1920x1080"}
 ZONA_LABEL = {"upper_third": "tercio superior", "center": "centro",
               "lower_third": "tercio inferior"}
 
+ROLE_VISUAL_HINTS = {
+    "gancho": (
+        "Slide de apertura (gancho): imagen de alto impacto que detenga el scroll, "
+        "rostro expresivo o escena contundente, contraste fuerte, energía de apertura"
+    ),
+    "desarrollo": (
+        "Slide de desarrollo: imagen de apoyo que refuerce el concepto del texto, "
+        "composición clara y profesional, sin elementos que distraigan del mensaje"
+    ),
+    "cierre": (
+        "Slide de cierre/CTA: sensación de resolución e invitación a actuar, "
+        "punto focal claro, energía de cierre, espacio generoso para texto superpuesto"
+    ),
+}
+
 ESTILO_DEFAULT = ("fotografía realista, limpia y profesional, buena "
                   "iluminación natural, composición simple")
 
@@ -108,22 +123,31 @@ def spec_desde_slide(slide: dict, tipo: str,
     slot_context = slot_context or {}
     spec = spec_vacia()
     ratio = "9:16" if tipo == "historia" else "1:1"
-    descripcion = (slide.get("visual_suggestion")
-                   or slide.get("image_vibe_needed")
-                   or slide.get("main_text")
-                   or "imagen de marca limpia y profesional").strip()
+    role = (slide.get("role") or "desarrollo").lower()
+    role_hint = ROLE_VISUAL_HINTS.get(role, ROLE_VISUAL_HINTS["desarrollo"])
+    base_desc = (slide.get("visual_suggestion")
+                 or slide.get("image_vibe_needed")
+                 or slide.get("main_text")
+                 or "imagen de marca limpia y profesional").strip()
+    descripcion = f"{role_hint}. {base_desc.rstrip('.')}"
     elementos = [v for v in (slot_context.get("tematica"),
-                             slot_context.get("enfoque")) if v]
+                             slot_context.get("enfoque"),
+                             role if role != "desarrollo" else None) if v]
+    zona = "upper_third" if role == "gancho" else ("lower_third" if role == "cierre" else "center")
     spec.update({
         "origen": "generacion",
         "ratio": ratio,
         "formato": RATIO_A_FORMATO[ratio],
         "descripcion": descripcion,
-        "vibe": slot_context.get("vibe", ""),
+        "vibe": slot_context.get("vibe", "") or slide.get("visual_suggestion", ""),
         "paleta_colores": list(paleta_marca or []),
         "elementos_clave": elementos,
         "texto_overlay": (slide.get("main_text") or "").strip(),
-        "zona_texto": {"zone": "center", "coords": None,
+        "texto_secundario": (slide.get("secondary_text") or "").strip(),
+        "texto_bullets": [
+            str(b).strip() for b in (slide.get("bullets") or []) if str(b).strip()
+        ],
+        "zona_texto": {"zone": zona, "coords": None,
                        "recommended_text_color": "#FFFFFF"},
     })
     return spec
@@ -148,4 +172,122 @@ def spec_a_prompt(spec: dict) -> str:
     partes.append(f"Dejar el {zona} de la imagen despejado y con fondo uniforme "
                   "para superponer texto.")
     partes.append("Sin texto incrustado, sin logos, sin marcas de agua.")
+    return " ".join(p for p in partes if p and p != ".")
+
+
+def spec_a_prompt_integrado(spec: dict, style_guide: dict,
+                            slide_idx: int = 0, total: int = 7) -> str:
+    """Prompt nano-banana-pro: diseño con texto escrito en la imagen (skill /carrusel)."""
+    sg = style_guide or {}
+    idioma = (sg.get("idioma") or "es").lower()[:2]
+    if idioma == "en":
+        return _spec_a_prompt_integrado_en(spec, sg, slide_idx, total)
+    return _spec_a_prompt_integrado_es(spec, sg, slide_idx, total)
+
+
+def _spec_a_prompt_integrado_es(spec: dict, sg: dict,
+                                slide_idx: int = 0, total: int = 7) -> str:
+    main = (spec.get("texto_overlay") or "").strip()
+    sec = (spec.get("texto_secundario") or "").strip()
+    num = slide_idx + 1
+    colores = sg.get("colores") or spec.get("paleta_colores") or []
+    colores_txt = ", ".join(colores[:5]) if colores else "rojo, blanco y negro"
+    negocio = sg.get("negocio") or ""
+
+    if slide_idx == 0:
+        fase = "PORTADA — gancho extremo que detenga el scroll"
+    elif slide_idx >= total - 1:
+        fase = "CIERRE — call to action claro con palabra clave visible"
+    else:
+        fase = f"DESARROLLO slide {num} — continúa la narrativa del carrusel"
+
+    partes = [
+        f"Slide {num} de {total} de carrusel Instagram, cuadrado 1080x1080, {fase}.",
+        f"Estilo visual (coherente en TODAS las slides): {sg.get('estilo_visual', 'diseño gráfico moderno bold')}.",
+        f"Formato narrativo: {sg.get('formato_nombre', 'carrusel educativo')}.",
+        f"Paleta de colores (estricta, marca del cliente): {colores_txt}.",
+        f"Tipografía: {sg.get('tipografia', 'sans-serif bold, alto contraste, legible en móvil')}.",
+    ]
+    if negocio:
+        partes.append(f"Contexto de marca: {negocio}.")
+    if main:
+        partes.append(
+            f'Renderizá este texto principal EXACTO dentro de la imagen con tipografía profesional: "{main}".'
+        )
+    if sec:
+        partes.append(f'Texto secundario debajo, más pequeño: "{sec}".')
+    bullets = spec.get("texto_bullets") or []
+    if bullets:
+        items = "; ".join(f"• {b}" for b in bullets[:5])
+        partes.append(
+            f"Lista vertical con viñetas legibles en móvil: {items}."
+        )
+        partes.append("Layout: título arriba, bullets al centro, takeaway abajo si hay espacio.")
+    desc = (spec.get("descripcion") or spec.get("vibe") or "").strip().rstrip(".")
+    if desc:
+        partes.append(f"Escena de fondo y composición: {desc}.")
+    if slide_idx > 0:
+        partes.append(
+            "CRÍTICO: Mismo estilo visual, paleta, tipografía y lenguaje de diseño que la slide 1 (portada)."
+        )
+    partes.append(
+        "Diseño profesional de carrusel Instagram con texto integrado (calidad Canva). "
+        "Texto nítido y legible en móvil. Sin marcas de agua. Sin logos de terceros. Salida PNG."
+    )
+    return " ".join(p for p in partes if p and p != ".")
+
+
+def _spec_a_prompt_integrado_en(spec: dict, sg: dict,
+                                slide_idx: int = 0, total: int = 7) -> str:
+    main = (spec.get("texto_overlay") or "").strip()
+    sec = (spec.get("texto_secundario") or "").strip()
+    num = slide_idx + 1
+    colores = sg.get("colores") or spec.get("paleta_colores") or []
+    colores_txt = ", ".join(colores[:5]) if colores else "rojo, blanco y negro"
+    negocio = sg.get("negocio") or ""
+
+    if slide_idx == 0:
+        fase = "PORTADA — gancho extremo que detenga el scroll"
+    elif slide_idx >= total - 1:
+        fase = "CIERRE — call to action claro con palabra clave visible"
+    else:
+        fase = f"DESARROLLO slide {num} — continúa la narrativa del carrusel"
+
+    partes = [
+        f"Instagram carousel slide {num} of {total}, square 1080x1080, {fase}.",
+        f"Visual style (consistent across ALL slides): {sg.get('estilo_visual', 'modern bold graphic design')}.",
+        f"Narrative format: {sg.get('formato_nombre', 'educational carousel')}.",
+        f"Color palette (strict): {colores_txt}.",
+        f"Typography: {sg.get('tipografia', 'bold sans-serif, high contrast, mobile-readable')}.",
+    ]
+    if negocio:
+        partes.append(f"Brand context: {negocio}.")
+    if main:
+        partes.append(
+            f'Render this EXACT main text inside the image with professional typography: "{main}".'
+        )
+    if sec:
+        partes.append(
+            f'Secondary text below main, smaller size: "{sec}".'
+        )
+    bullets = spec.get("texto_bullets") or []
+    if bullets:
+        items = "; ".join(f"• {b}" for b in bullets[:5])
+        partes.append(
+            f"Render a clean vertical bullet list with icons, legible on mobile: {items}."
+        )
+        partes.append("Layout: title on top, bullet list in the middle, takeaway at bottom if space.")
+    desc = (spec.get("descripcion") or spec.get("vibe") or "").strip().rstrip(".")
+    if desc:
+        partes.append(f"Background scene and composition: {desc}.")
+    if slide_idx > 0:
+        partes.append(
+            "CRITICAL: Match exactly the same visual style, color palette, typography "
+            "and design language as slide 1 (cover) of this carousel sequence."
+        )
+    partes.append(
+        "Professional Instagram carousel design with text baked into the image "
+        "(Canva-quality). Text must be sharp and legible on mobile. "
+        "No watermarks. No third-party logos. PNG output."
+    )
     return " ".join(p for p in partes if p and p != ".")

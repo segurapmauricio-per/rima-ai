@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS clientes (
     memoria_json    TEXT DEFAULT '{}',  -- aprendizajes acumulados del agente
     config_json     TEXT DEFAULT '{}',  -- {timezone, ig_avg_views, enfoque_default, autopublish}
     metricas_cuenta_json TEXT DEFAULT '{}',  -- performance de la cuenta del cliente
+    marca_visual_json TEXT DEFAULT '{}',  -- identidad visual onboarding (paleta, tipografías, tono)
     -- Timestamps
     created_at      TEXT DEFAULT (datetime('now')),
     updated_at      TEXT DEFAULT (datetime('now'))

@@ -20,9 +20,12 @@ ENFOQUE_ALIASES = {
 
 TIPO_POST_MAP = {
     "reel": ("video", "reel", "xdt_graph_video"),
-    "carrusel": ("sidecar", "carousel"),
+    "carrusel": ("sidecar", "carousel", "image"),
     "historia": ("video", "reel", "image", "sidecar", "historia"),
 }
+
+CARRUSEL_POST_TYPES = frozenset({"sidecar", "carousel", "image"})
+VIDEO_POST_TYPES = frozenset({"video", "reel", "xdt_graph_video", "clips"})
 
 TEMATICA_KEYS = ("problema", "mentalidad", "proceso", "solucion", "resultado")
 
@@ -471,9 +474,70 @@ def _post_tipo_matches(slot_tipo: str, post_type: str, strict: bool = False) -> 
         return True
     if strict:
         return False
-    if slot_tipo == "carrusel" and pt in ("image", "carrusel"):
+    if slot_tipo == "carrusel" and pt in CARRUSEL_POST_TYPES:
         return True
     return False
+
+
+def _normalize_post_type(post_type: str) -> str:
+    return (post_type or "").lower().strip()
+
+
+def _es_post_carrusel(post: dict) -> bool:
+    return _normalize_post_type(post.get("type")) in CARRUSEL_POST_TYPES
+
+
+def market_has_carousel_posts(market_data: dict) -> bool:
+    posts = market_data.get("posts") or market_data.get("top_posts") or []
+    return any(_es_post_carrusel(p) for p in posts)
+
+
+def _alternativas_validas_carrusel(alternativas: list, posts_by_url: dict) -> bool:
+    """Válido si hay carrusel nativo o reel marcado como adaptable."""
+    for alt in alternativas or []:
+        if alt.get("adaptado_desde_reel"):
+            return True
+        pt = _normalize_post_type(alt.get("formato_post") or "")
+        if pt in CARRUSEL_POST_TYPES:
+            return True
+        url = alt.get("url") or ""
+        post = posts_by_url.get(url) or {}
+        if _es_post_carrusel(post):
+            return True
+    return False
+
+
+def _propuesta_carrusel_necesita_regenerar(pub: dict, market_data: dict) -> bool:
+    if (pub.get("tipo") or "").lower() != "carrusel":
+        return False
+    prop = _parse_propuesta(pub)
+    alts = prop.get("alternativas") or []
+    if not alts:
+        return True
+    posts = {
+        p.get("url"): p
+        for p in (market_data.get("posts") or market_data.get("top_posts") or [])
+        if p.get("url")
+    }
+    return not _alternativas_validas_carrusel(alts, posts)
+
+
+def _reel_es_adaptable_a_carrusel(post: dict) -> bool:
+    """Reel/video con estructura modelable → candidato a convertir en carrusel."""
+    if _normalize_post_type(post.get("type")) not in VIDEO_POST_TYPES:
+        return False
+    return _is_modelable_post(post, "carrusel")
+
+
+def _modo_referente_carrusel(alternativas: list) -> str | None:
+    if not alternativas:
+        return None
+    adaptados = sum(1 for a in alternativas if a.get("adaptado_desde_reel"))
+    if adaptados == 0:
+        return "carrusel_nativo"
+    if adaptados == len(alternativas):
+        return "reel_adaptado"
+    return "mixto"
 
 
 def _enfoque_score(slot_enfoque: str, post: dict) -> float:
@@ -593,7 +657,7 @@ def _rank_score(post: dict, slot: dict) -> float:
     slot_tipo = (slot.get("tipo") or slot.get("type") or "reel").lower()
     pt = (post.get("type") or "").lower()
     if slot_tipo == "carrusel" and pt in ("sidecar", "carousel"):
-        tipo_bonus = 4.0
+        tipo_bonus = 8.0
     return tematica_score * 0.78 + ventas * 0.22 + enfoque_bonus + tipo_bonus
 
 
@@ -621,7 +685,7 @@ def _is_modelable_post(post: dict, slot_tipo: str = "") -> bool:
     return bool(_raw_caption(post))
 
 
-def post_to_alternativa(post: dict) -> dict:
+def post_to_alternativa(post: dict, slot_tipo: str = "") -> dict:
     analisis = _parse_analisis(post)
     metrics = post.get("metrics") or {}
     idea = _idea_principal(post)
@@ -630,6 +694,23 @@ def post_to_alternativa(post: dict) -> dict:
     guion_es = _a_texto_cliente(guion_raw, max_len=500) if guion_raw else ""
     que_raw = _raw_field(analisis, "que_modelar", 12)
     que_es = _a_texto_cliente(que_raw, max_len=280) if que_raw else idea
+    formato = _normalize_post_type(post.get("type"))
+    slot = (slot_tipo or "").lower()
+    adaptado_reel = (
+        slot == "carrusel"
+        and formato not in CARRUSEL_POST_TYPES
+        and formato in VIDEO_POST_TYPES
+    )
+    if adaptado_reel:
+        nota = (
+            "Referente reel viral — adaptar gancho, desarrollo y CTA "
+            "a un carrusel de 7 slides con la misma idea central."
+        )
+        que_es = f"{(que_es or idea).rstrip('.')}. {nota}"
+        guion_es = (
+            f"{(guion_es or idea).rstrip('.')}. "
+            "Convertir la estructura narrativa del reel en slides secuenciales."
+        )
     return {
         "referente_id": post.get("id"),
         "owner": post.get("owner", ""),
@@ -653,6 +734,8 @@ def post_to_alternativa(post: dict) -> dict:
         ),
         "caption_preview": (post.get("caption") or "")[:160],
         "tipo_propuesta": "referente",
+        "formato_post": formato,
+        "adaptado_desde_reel": adaptado_reel,
         "traducido": not _looks_spanish(_raw_idea_source(post)),
     }
 
@@ -686,6 +769,15 @@ def rank_posts_for_slot(slot: dict, posts: list, exclude_urls: set | None = None
         if candidates:
             break
 
+    # Sin carruseles en el estudio → mejores reels adaptables a carrusel.
+    if slot_tipo == "carrusel" and not candidates:
+        for p in posts:
+            url = p.get("url") or ""
+            if url in exclude:
+                continue
+            if _reel_es_adaptable_a_carrusel(p):
+                candidates.append(p)
+
     def sort_key(p: dict) -> float:
         score = _rank_score(p, slot)
         ts = score_tematica_for_slot(p, slot_tematica)
@@ -694,7 +786,10 @@ def rank_posts_for_slot(slot: dict, posts: list, exclude_urls: set | None = None
         elif ts >= TEMA_SCORE_RELAXED:
             score += 18.0
         if slot_tipo == "carrusel":
-            score += 18.0 if _carousel_es_adaptable(p) else -12.0
+            if _es_post_carrusel(p):
+                score += 18.0 if _carousel_es_adaptable(p) else 8.0
+            elif _reel_es_adaptable_a_carrusel(p):
+                score += 12.0 if _carousel_es_adaptable(p) else 4.0
         return score
 
     candidates.sort(key=sort_key, reverse=True)
@@ -722,7 +817,7 @@ def _pick_market_alternatives(
             url = p.get("url") or ""
             if url in blocked:
                 continue
-            alt = post_to_alternativa(p)
+            alt = post_to_alternativa(p, slot.get("tipo") or slot.get("type") or "")
             if not alt.get("idea_principal"):
                 continue
             picked.append(alt)
@@ -980,16 +1075,97 @@ def refresh_propuesta_for_pub(cliente_id: str, pub_id: str, market_data: dict) -
 
 
 def build_propuesta_json(alternativas: list, slot: dict) -> dict:
-    return {
+    angulo = slot.get("angulo_estrategico", "")
+    prop = {
         "etapa": "propuesta",
         "alternativas": alternativas,
+        "angulo_estrategico": angulo,
         "slot_resumen": {
             "fecha": slot.get("fecha") or slot.get("date"),
             "tipo": slot.get("tipo") or slot.get("type"),
             "tematica": slot.get("tematica") or slot.get("topic"),
             "enfoque": slot.get("enfoque"),
-            "angulo_estrategico": slot.get("angulo_estrategico", ""),
+            "angulo_estrategico": angulo,
         },
+    }
+    if (slot.get("tipo") or slot.get("type") or "").lower() == "carrusel":
+        modo = _modo_referente_carrusel(alternativas)
+        if modo:
+            prop["modo_referente"] = modo
+    return prop
+
+
+def ensure_week_propuestas(cliente_id: str, week_start: str, week_end: str) -> dict:
+    """Genera propuestas faltantes para la semana (sin borrar copy ni plan mensual).
+
+    Se invoca al cargar Contenido cuando hay piezas planificado sin alternativas
+    y el cliente ya tiene estudio de mercado.
+    """
+    from core.client_store import load_latest_market_research
+    from core.db import (
+        get_publicaciones, update_publicacion_field, update_publicacion_status, init_db,
+    )
+
+    init_db(cliente_id)
+    market = load_latest_market_research(cliente_id) or {}
+    posts = market.get("posts") or market.get("top_posts") or []
+    if not posts:
+        return {"ok": False, "reason": "sin_estudio_mercado", "generated": 0}
+
+    all_week_pubs = get_week_publicaciones(get_publicaciones, cliente_id, week_start, week_end)
+    pending = []
+    for pub in all_week_pubs:
+        status = pub.get("status") or "planificado"
+        prop = _parse_propuesta(pub)
+        if status == "planificado":
+            if prop.get("warning") == "sin_referentes" and (pub.get("tipo") or "").lower() != "carrusel":
+                continue
+            pending.append(pub)
+            continue
+        if status == "propuesta_generada":
+            if not (prop.get("alternativas") or []):
+                pending.append(pub)
+            elif _propuesta_carrusel_necesita_regenerar(pub, market):
+                pending.append(pub)
+
+    if not pending:
+        return {"ok": True, "generated": 0, "skipped": 0}
+
+    used_urls = collect_used_referente_urls(all_week_pubs)
+    used_angulos = collect_used_historia_angulos(all_week_pubs)
+    assignments = assign_propuestas_rotating(
+        pending, market, exclude_urls=used_urls, exclude_angulos=used_angulos,
+    )
+
+    generated = 0
+    sin_ref = 0
+    for pub in pending:
+        alternativas = assignments.get(pub["id"]) or []
+        slot = pub_to_slot(pub)
+        prop_prev = _parse_propuesta(pub)
+
+        if not alternativas:
+            propuesta_vacia = build_propuesta_json([], slot)
+            propuesta_vacia["warning"] = "sin_referentes"
+            if prop_prev.get("fuente"):
+                propuesta_vacia["fuente"] = prop_prev["fuente"]
+            update_publicacion_field(cliente_id, pub["id"], "propuesta_json", propuesta_vacia)
+            update_publicacion_status(cliente_id, pub["id"], "planificado")
+            sin_ref += 1
+            continue
+
+        propuesta = build_propuesta_json(alternativas, slot)
+        if prop_prev.get("fuente"):
+            propuesta["fuente"] = prop_prev["fuente"]
+        update_publicacion_field(cliente_id, pub["id"], "propuesta_json", propuesta)
+        update_publicacion_status(cliente_id, pub["id"], "propuesta_generada")
+        generated += 1
+
+    return {
+        "ok": True,
+        "generated": generated,
+        "sin_referentes": sin_ref,
+        "pending": len(pending),
     }
 
 

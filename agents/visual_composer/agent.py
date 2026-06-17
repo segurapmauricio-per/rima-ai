@@ -14,14 +14,15 @@ from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Any, Optional
+from datetime import datetime
+from typing import Optional
 
 from core.db import get_imagenes_para
 from core.visual_spec import spec_a_prompt, spec_desde_slide
 
 # Umbral mínimo para aceptar una imagen del cliente como match.
-# Equivale a 1 tag coincidente (peso 3) o 3 palabras de descripción/vibe.
 MIN_MATCH_SCORE = 3.0
+MIN_MATCH_SCORE_CARRUSEL = 2.0
 
 RATIO_POR_TIPO = {"historia": "9:16", "carrusel": "1:1"}
 
@@ -29,6 +30,16 @@ RATIO_POR_TIPO = {"historia": "9:16", "carrusel": "1:1"}
 PESO_TAG = 3.0
 PESO_TEXTO = 1.0
 BONUS_CALIDAD_ALTA = 1.0
+
+# Tokens para priorizar tipo de imagen según rol del slide (carrusel IG)
+IMPACTO_TOKENS = {
+    "persona", "retrato", "rostro", "humano", "mirada", "expresion",
+    "portrait", "cara", "selfie", "coach", "entrenador",
+}
+BRANDING_TOKENS = {
+    "logo", "marca", "color", "abstract", "minimal", "grafico",
+    "tipografia", "fondo", "plano", "simple", "infografia", "icono",
+}
 
 STOPWORDS_ES = {
     "para", "con", "una", "uno", "unos", "unas", "del", "las", "los", "que",
@@ -54,9 +65,11 @@ def _tokens(texto: str) -> set:
 
 
 def _tokens_slide(slide: dict) -> set:
+    bullets = " ".join(str(b) for b in (slide.get("bullets") or []))
     partes = [
         slide.get("main_text", ""),
         slide.get("secondary_text", ""),
+        bullets,
         slide.get("visual_suggestion", ""),
         slide.get("notes", ""),
     ]
@@ -78,6 +91,104 @@ def _score_imagen(tokens_slide: set, imagen: dict) -> float:
     if score > 0 and analisis.get("production_quality") == "alta":
         score += BONUS_CALIDAD_ALTA
     return score
+
+
+def _es_imagen_ia_biblioteca(img: dict) -> bool:
+    tags = img.get("tags_json") or []
+    if "generada_ia" in tags:
+        return True
+    analisis = img.get("analisis_json") or {}
+    return analisis.get("origen_biblioteca") == "generada_ia"
+
+
+def _imagenes_pool(cliente_id: str, tipo: str) -> list:
+    """Pool de imágenes analizadas. Carrusel incluye branding e historias."""
+    if tipo == "historia":
+        vistos: dict = {}
+        for uso in ("historia", "branding"):
+            for img in get_imagenes_para(cliente_id, uso) or []:
+                if _es_imagen_ia_biblioteca(img):
+                    continue
+                iid = img.get("id")
+                if iid and iid not in vistos:
+                    vistos[iid] = img
+        return list(vistos.values())
+    if tipo != "carrusel":
+        return get_imagenes_para(cliente_id, tipo) or []
+    vistos: dict = {}
+    for uso in ("carrusel", "branding", "historia"):
+        for img in get_imagenes_para(cliente_id, uso) or []:
+            iid = img.get("id")
+            if iid and iid not in vistos:
+                vistos[iid] = img
+    return list(vistos.values())
+
+
+def _es_impacto(analisis: dict) -> bool:
+    desc = _normalizar(analisis.get("description", ""))
+    cat = _normalizar(analisis.get("suggested_category", ""))
+    tokens = _tokens(desc)
+    return bool(tokens & IMPACTO_TOKENS) or any(
+        k in cat for k in ("persona", "retrato", "portada", "gancho", "thumbnail")
+    )
+
+
+def _es_branding(analisis: dict) -> bool:
+    cat = _normalizar(analisis.get("suggested_category", ""))
+    tokens = _tokens(analisis.get("description", ""))
+    return "branding" in cat or bool(tokens & BRANDING_TOKENS)
+
+
+def _bonus_por_rol(role: str, idx: int, total: int, analisis: dict) -> float:
+    """Bonus según estructura típica de carrusel IG: portada, slide 2, medio, CTA."""
+    calidad = analisis.get("production_quality", "media")
+    bonus = 0.0
+    impacto = _es_impacto(analisis)
+    branding = _es_branding(analisis)
+    ultimo = idx == total - 1
+
+    if role == "gancho" or idx == 0:
+        if impacto:
+            bonus += 3.0
+        if calidad == "alta":
+            bonus += 2.0
+    elif idx == 1 and total > 2:
+        if impacto:
+            bonus += 2.5
+        if calidad == "alta":
+            bonus += 1.5
+    elif role == "cierre" or ultimo:
+        if impacto:
+            bonus += 2.5
+        if calidad == "alta":
+            bonus += 1.0
+    else:
+        if branding:
+            bonus += 3.0
+        elif not impacto and calidad in ("media", "baja"):
+            bonus += 0.5
+    return bonus
+
+
+def _score_imagen_carrusel(tokens_slide: set, imagen: dict,
+                           role: str, idx: int, total: int) -> float:
+    base = _score_imagen(tokens_slide, imagen)
+    analisis = imagen.get("analisis_json") or {}
+    bonus = _bonus_por_rol(role, idx, total, analisis)
+    if base == 0 and bonus > 0:
+        base = 0.5
+    return base + bonus
+
+
+def _prioridad_asignacion(idx: int, slide: dict, total: int) -> int:
+    role = slide.get("role", "desarrollo")
+    if role == "gancho" or idx == 0:
+        return 0
+    if idx == 1:
+        return 1
+    if role == "cierre" or idx == total - 1:
+        return 2
+    return 3 + idx
 
 
 def _coords_zona(analisis: dict, zona: str) -> Optional[dict]:
@@ -112,8 +223,16 @@ def _text_zone(analisis: dict) -> dict:
 
 
 def _paleta_marca(cliente_id: str, max_colores: int = 5) -> list:
-    """Paleta de marca derivada de los dominant_colors de las imágenes de
-    branding del cliente. Determinístico: orden de aparición, sin duplicados."""
+    """Paleta de marca: marca_visual_json → imágenes branding → vacío."""
+    try:
+        from core.marca_visual import paleta_colores
+        from core.db import get_marca_visual
+        mv = get_marca_visual(cliente_id)
+        paleta = paleta_colores(mv, max_colores)
+        if paleta:
+            return paleta
+    except Exception:
+        pass
     try:
         imagenes = get_imagenes_para(cliente_id, "branding") or []
     except Exception:
@@ -147,18 +266,42 @@ def plan_slides(copy_json: dict, tipo: str,
             slides.append({
                 "slide_number": s.get("slide_number", i),
                 "role": s.get("role", "desarrollo"),
+                "content_type": s.get("content_type", ""),
                 "main_text": s.get("main_text", ""),
                 "secondary_text": s.get("secondary_text", ""),
+                "bullets": list(s.get("bullets") or []),
                 "visual_suggestion": s.get("visual_suggestion", ""),
                 "notes": s.get("notes", ""),
             })
         return slides
 
     if tipo == "historia":
+        raw_slides = copy_json.get("slides") or []
+        if not raw_slides:
+            elegido = copy_json.get("copy_elegido") or {}
+            if not elegido:
+                propuestas = copy_json.get("propuestas_copy") or []
+                elegido = propuestas[0] if propuestas else {}
+            raw_slides = elegido.get("slides") or []
+        if raw_slides:
+            slides = []
+            keyword = (copy_json.get("cta_keyword") or copy_json.get("keyword") or "").strip()
+            for i, s in enumerate(raw_slides, start=1):
+                slide = {
+                    "slide_number": s.get("slide_number", i),
+                    "role": s.get("role", "desarrollo"),
+                    "main_text": s.get("main_text", ""),
+                    "secondary_text": s.get("secondary_text", ""),
+                    "visual_suggestion": s.get("visual_suggestion", ""),
+                    "sticker_type": s.get("sticker_type", ""),
+                    "notes": s.get("notes", ""),
+                    "highlight_words": list(s.get("highlight_words") or []),
+                }
+                if slide["role"] == "cierre" and keyword:
+                    slide["keyword"] = keyword
+                slides.append(slide)
+            return slides
         elegido = copy_json.get("copy_elegido") or {}
-        if not elegido:
-            propuestas = copy_json.get("propuestas_copy") or []
-            elegido = propuestas[0] if propuestas else {}
         vibe = elegido.get("image_vibe_needed", "")
         slides = []
         if elegido.get("hook_text"):
@@ -205,32 +348,59 @@ def match_images_to_slides(cliente_id: str, tipo: str, slides: list,
     (esquema común de core/visual_spec) y prompt_sugerido derivado de ella.
     """
     try:
-        imagenes = get_imagenes_para(cliente_id, tipo) or []
+        imagenes = _imagenes_pool(cliente_id, tipo)
     except Exception:
         imagenes = []
     paleta_marca = _paleta_marca(cliente_id)
-
-    # Score de todos los pares (slide, imagen) que superan el umbral.
-    pares = []
+    min_score = MIN_MATCH_SCORE_CARRUSEL if tipo == "carrusel" else MIN_MATCH_SCORE
+    total = len(slides)
     tokens_por_slide = [_tokens_slide(s) for s in slides]
-    for idx, tokens in enumerate(tokens_por_slide):
+
+    # Matriz de scores slide↔imagen sobre el umbral.
+    scores_por_slide: dict[int, list] = {i: [] for i in range(total)}
+    for idx, slide in enumerate(slides):
+        role = slide.get("role", "desarrollo")
+        tokens = tokens_por_slide[idx]
         for img in imagenes:
-            score = _score_imagen(tokens, img)
-            if score >= MIN_MATCH_SCORE:
-                pares.append((score, idx, img))
-    pares.sort(key=lambda p: p[0], reverse=True)
+            if tipo == "carrusel":
+                score = _score_imagen_carrusel(tokens, img, role, idx, total)
+            else:
+                score = _score_imagen(tokens, img)
+            if score >= min_score:
+                scores_por_slide[idx].append((score, img))
 
     asignacion: dict = {}
     usadas: set = set()
-    for score, idx, img in pares:
-        if idx in asignacion or img.get("id") in usadas:
-            continue
-        asignacion[idx] = (img, score)
-        usadas.add(img.get("id"))
+
+    if tipo == "carrusel":
+        orden = sorted(range(total),
+                       key=lambda i: _prioridad_asignacion(i, slides[i], total))
+        for idx in orden:
+            candidatas = sorted(scores_por_slide[idx], key=lambda p: p[0], reverse=True)
+            for score, img in candidatas:
+                iid = img.get("id")
+                if iid in usadas:
+                    continue
+                asignacion[idx] = (img, score)
+                usadas.add(iid)
+                break
+    else:
+        pares = []
+        for idx, candidatas in scores_por_slide.items():
+            for score, img in candidatas:
+                pares.append((score, idx, img))
+        pares.sort(key=lambda p: p[0], reverse=True)
+        for score, idx, img in pares:
+            if idx in asignacion or img.get("id") in usadas:
+                continue
+            asignacion[idx] = (img, score)
+            usadas.add(img.get("id"))
 
     resultado = []
     for idx, slide in enumerate(slides):
         compuesto = dict(slide)
+        spec = spec_desde_slide(slide, tipo, slot_context, paleta_marca)
+        prompt = spec_a_prompt(spec)
         if idx in asignacion:
             img, score = asignacion[idx]
             analisis = img.get("analisis_json") or {}
@@ -240,14 +410,131 @@ def match_images_to_slides(cliente_id: str, tipo: str, slides: list,
                 "archivo_url": img.get("archivo_url"),
                 "text_zone": _text_zone(analisis),
                 "match_score": round(score, 1),
+                "spec_visual": spec,
+                "prompt_sugerido": prompt,
             })
         else:
-            spec = spec_desde_slide(slide, tipo, slot_context, paleta_marca)
             compuesto.update({
                 "image_source": "kie_pending",
                 "spec_visual": spec,
-                "prompt_sugerido": spec_a_prompt(spec),
+                "prompt_sugerido": prompt,
                 "ratio": spec["ratio"],
             })
         resultado.append(compuesto)
     return resultado
+
+
+def slides_kie_integrado(slides: list, tipo: str,
+                         slot_context: Optional[dict] = None,
+                         paleta_marca: Optional[list] = None) -> list:
+    """Carrusel con texto integrado (KIE): sin matching de biblioteca.
+
+    Cada slide queda kie_pending con prompt integrado — imágenes nuevas por carrusel.
+    La biblioteca sigue disponible solo si el usuario elige manualmente una foto.
+    """
+    slot_context = slot_context or {}
+    paleta_marca = paleta_marca or []
+    resultado = []
+    for slide in slides:
+        compuesto = dict(slide)
+        spec = spec_desde_slide(slide, tipo, slot_context, paleta_marca)
+        compuesto.update({
+            "image_source": "kie_pending",
+            "spec_visual": spec,
+            "prompt_sugerido": spec_a_prompt(spec),
+            "ratio": spec.get("ratio") or RATIO_POR_TIPO.get(tipo, "1:1"),
+            "texto_en_imagen": True,
+        })
+        compuesto.pop("image_id", None)
+        compuesto.pop("archivo_url", None)
+        compuesto.pop("match_score", None)
+        resultado.append(compuesto)
+    return resultado
+
+
+def compose_produccion(cliente_id: str, copy_json: dict, tipo: str,
+                       slot_context: Optional[dict] = None,
+                       modo: str = "produccion") -> dict:
+    """Plan de slides + matching de biblioteca. modo=previsual tras generar copy."""
+    slot_context = slot_context or {}
+    slides = plan_slides(copy_json, tipo, slot_context)
+    if not slides:
+        return {}
+    if tipo == "carrusel":
+        paleta = _paleta_marca(cliente_id)
+        matched = slides_kie_integrado(slides, tipo, slot_context, paleta)
+    else:
+        matched = match_images_to_slides(cliente_id, tipo, slides, slot_context)
+    if tipo == "carrusel":
+        from agents.carousel_generator.agent import (
+            attach_carousel_plan,
+            build_style_guide,
+            refresh_kie_prompts,
+        )
+        from core.db import get_marca_visual
+        try:
+            from core.marca_visual import normalizar_marca
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+        except Exception:
+            marca = {}
+        style_guide = build_style_guide(marca, {}, copy_json)
+        matched = refresh_kie_prompts(matched, style_guide, slot_context)
+        pub_stub = {
+            "tematica": slot_context.get("tematica", ""),
+            "enfoque": slot_context.get("enfoque", ""),
+            "fecha": slot_context.get("fecha", ""),
+        }
+        plan_data = attach_carousel_plan(
+            pub_stub, copy_json, style_guide, matched,
+        )
+        return {
+            "etapa": "previsual" if modo == "previsual" else "produccion",
+            "tipo": "visual",
+            "modo": modo,
+            "modo_visual": "texto_integrado",
+            "style_guide": style_guide,
+            "kie_model": plan_data["carousel_plan"].get("modelo_kie"),
+            "carousel_plan": plan_data["carousel_plan"],
+            "slides": matched,
+            "generated_at": datetime.now().isoformat(),
+        }
+    if tipo == "historia":
+        from agents.story_generator.agent import build_style_guide, refresh_kie_prompts
+        from core.story_plan import build_story_plan
+        from core.db import get_marca_visual
+        from core import kie_client
+        try:
+            from core.marca_visual import normalizar_marca
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+        except Exception:
+            marca = {}
+        style_guide = build_style_guide(marca, {}, copy_json)
+        matched = refresh_kie_prompts(matched, style_guide, slot_context)
+        pub_stub = {
+            "tematica": slot_context.get("tematica", ""),
+            "enfoque": slot_context.get("enfoque", ""),
+            "fecha": slot_context.get("fecha", ""),
+        }
+        story_plan = build_story_plan(
+            pub_stub, copy_json, style_guide, matched,
+            modelo_kie=kie_client.model_imagen(),
+        )
+        return {
+            "etapa": "previsual" if modo == "previsual" else "produccion",
+            "tipo": "visual",
+            "modo": modo,
+            "modo_visual": "fondo_limpio",
+            "style_guide": style_guide,
+            "kie_model": story_plan.get("modelo_kie"),
+            "story_plan": story_plan,
+            "slides": matched,
+            "generated_at": datetime.now().isoformat(),
+        }
+    return {
+        "etapa": "previsual" if modo == "previsual" else "produccion",
+        "tipo": "visual",
+        "modo": modo,
+        "modo_visual": "fondo_limpio",
+        "slides": matched,
+        "generated_at": datetime.now().isoformat(),
+    }

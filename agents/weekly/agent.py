@@ -27,7 +27,8 @@ from core.weekly_helpers import (
     assign_propuestas_rotating, build_propuesta_json,
     collect_used_referente_urls, collect_used_historia_angulos,
     refresh_pending_propuestas, format_slot_context_for_copy,
-    sync_weekly_state_from_db,
+    sync_weekly_state_from_db, market_has_carousel_posts,
+    _propuesta_carrusel_necesita_regenerar, _parse_propuesta,
 )
 from datetime import datetime, timedelta
 import json
@@ -117,13 +118,19 @@ class WeeklyAgent:
                     })
                 continue
 
-            # Slots del plan mensual siempre reciben propuesta; el cupo semanal
-            # solo limita cuántos slots nuevos crea el agente de contenido.
-            update_publicacion_status(cid, pub["id"], "propuesta_generada")
             to_generate.append(pub)
 
-        pending = get_week_publicaciones(get_publicaciones, cid, week_start, week_end)
-        pending = [p for p in pending if p.get("status") == "propuesta_generada"]
+        pending = []
+        for pub in get_week_publicaciones(get_publicaciones, cid, week_start, week_end):
+            status = pub.get("status")
+            prop = _parse_propuesta(pub)
+            if status == "planificado":
+                pending.append(pub)
+            elif status == "propuesta_generada":
+                if not (prop.get("alternativas") or []):
+                    pending.append(pub)
+                elif _propuesta_carrusel_necesita_regenerar(pub, market):
+                    pending.append(pub)
         used_urls = collect_used_referente_urls(all_week_pubs)
         used_angulos = collect_used_historia_angulos(all_week_pubs)
         assignments = assign_propuestas_rotating(
@@ -134,6 +141,11 @@ class WeeklyAgent:
             slot = pub_to_slot(pub)
             alternativas = assignments.get(pub["id"]) or []
             if not alternativas:
+                propuesta_vacia = build_propuesta_json([], slot)
+                propuesta_vacia["warning"] = "sin_referentes"
+                update_publicacion_field(cid, pub["id"], "propuesta_json", propuesta_vacia)
+                if pub.get("status") == "propuesta_generada":
+                    update_publicacion_status(cid, pub["id"], "planificado")
                 piezas.append({
                     "pub_id": pub["id"],
                     "fecha": pub.get("fecha"),
@@ -145,7 +157,16 @@ class WeeklyAgent:
                 continue
 
             propuesta = build_propuesta_json(alternativas, slot)
+            prop_prev = pub.get("propuesta_json") or {}
+            if isinstance(prop_prev, str):
+                try:
+                    prop_prev = json.loads(prop_prev)
+                except Exception:
+                    prop_prev = {}
+            if prop_prev.get("fuente"):
+                propuesta["fuente"] = prop_prev["fuente"]
             update_publicacion_field(cid, pub["id"], "propuesta_json", propuesta)
+            update_publicacion_status(cid, pub["id"], "propuesta_generada")
             piezas.append({
                 "pub_id": pub["id"],
                 "fecha": pub.get("fecha"),
@@ -264,24 +285,53 @@ class WeeklyAgent:
 
         tipo = pub.get("tipo", "reel")
         if tipo == "historia":
-            copy_result = story_copy_agent.run(slot, brief, brand, research_ctx)
+            from core.db import get_marca_visual
+            from core.marca_visual import normalizar_marca, idioma_cliente
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+            copy_result = story_copy_agent.run(
+                slot, brief, brand, research_ctx, marca=marca,
+            )
+            proposals = copy_result.get("proposals") or [{}]
+            copy_elegido = proposals[0] if proposals else {}
             copy_json = {
                 "etapa": "copy",
                 "referente_url": elegida.get("url") or "",
                 "referente_owner": elegida.get("owner") or "",
                 "story_type": elegida.get("story_type") or slot.get("tematica", ""),
                 "angulo_estrategico": elegida.get("titulo", ""),
-                "propuestas_copy": copy_result.get("proposals", []),
-                "copy_elegido": (copy_result.get("proposals") or [{}])[0],
+                "tematica": pub.get("tematica", ""),
+                "enfoque": pub.get("enfoque", ""),
+                "propuestas_copy": proposals,
+                "propuesta_copy_index": 0,
+                "copy_elegido": copy_elegido,
+                "slides": copy_elegido.get("slides", []),
+                "titulo": copy_elegido.get("titulo", ""),
+                "plan_resumen": copy_elegido.get("plan_resumen", ""),
+                "cta_keyword": copy_elegido.get("cta_keyword")
+                or copy_elegido.get("keyword", ""),
+                "idioma": idioma_cliente(brief, marca),
+                "style_guide": copy_elegido.get("style_guide") or {},
             }
         elif tipo == "carrusel":
-            copy_result = carousel_copy_agent.run(slot, brief, brand, referent=referent)
+            from core.db import get_marca_visual
+            from core.marca_visual import normalizar_marca
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+            copy_result = carousel_copy_agent.run(
+                slot, brief, brand, referent=referent, marca=marca,
+            )
             copy_json = {
                 "etapa": "copy",
                 "referente_url": elegida.get("url"),
                 "referente_owner": elegida.get("owner"),
                 "slides": copy_result.get("slides", []),
-                "formato": "carrusel" if copy_result.get("slides") else "",
+                "formato": copy_result.get("formato", ""),
+                "formato_id": copy_result.get("formato_id", ""),
+                "style_guide": copy_result.get("style_guide", {}),
+                "idioma": copy_result.get("idioma", "es"),
+                "plan_resumen": copy_result.get("plan_resumen", ""),
+                "valor_audience": copy_result.get("valor_audience", ""),
+                "cta_keyword": copy_result.get("cta_keyword", ""),
+                "cta_deliverable": copy_result.get("cta_deliverable", ""),
             }
         else:
             copy_result = reel_copy_agent.run(slot, brief, brand, referent=referent)
@@ -308,6 +358,20 @@ class WeeklyAgent:
         update_publicacion_field(cliente_id, pub_id, "referente_id", elegida.get("referente_id") or "")
         update_publicacion_field(cliente_id, pub_id, "copy_json", copy_json)
         update_publicacion_status(cliente_id, pub_id, "copy_generado")
+
+        if tipo in ("carrusel", "historia"):
+            from agents.visual_composer import compose_produccion
+            slot_ctx_dict = {
+                "tematica": pub.get("tematica", ""),
+                "enfoque": pub.get("enfoque", ""),
+                "fecha": pub.get("fecha", ""),
+            }
+            previsual = compose_produccion(
+                cliente_id, copy_json, tipo, slot_ctx_dict, modo="previsual",
+            )
+            if previsual:
+                update_publicacion_field(cliente_id, pub_id, "produccion_json", previsual)
+
         sync_weekly_state_from_db(cliente_id, brand, pub.get("fecha"))
 
         refreshed = self._refresh_sibling_propuestas(
@@ -447,7 +511,13 @@ class WeeklyAgent:
         carousels = state.get("carousels", [])
         slot = carousels[carousel_index]
 
-        copy_result = carousel_copy_agent.run(slot, brief, brand, referent=chosen_referent)
+        cid = brand.lower().replace(" ", "_")
+        from core.db import get_marca_visual
+        from core.marca_visual import normalizar_marca
+        marca = normalizar_marca(get_marca_visual(cid))
+        copy_result = carousel_copy_agent.run(
+            slot, brief, brand, referent=chosen_referent, marca=marca,
+        )
 
         state.setdefault("carousel_approvals", {})[str(carousel_index)] = {
             "referent": chosen_referent,

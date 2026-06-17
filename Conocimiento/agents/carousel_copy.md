@@ -1,60 +1,64 @@
 # Conocimiento: Agente Carousel Copy
 
-## Estructura base de carrusel (7 slides)
+## Objetivo del carrusel
 
-**Slide 1 — Gancho (el más importante):**
-- Afirmación polémica, resultado impactante, o pregunta que duele
-- El primer slide decide si la persona desliza
-- Visual dominante + texto de alto contraste
+Carruseles que **nutren**: quien los lee debe sentir que aprendió tips, pasos o insights
+aplicables. No es motivación vacía — es micro-educación con conversión al final.
 
-**Slides 2-5 — Desarrollo:**
-- Un concepto claro por slide
-- Cada slide debe incentivar deslizar al siguiente (curiosidad + micro-revelación)
-- Usar listas, contrastes antes/después, o revelación progresiva
+## Idioma e identidad visual
 
-**Slide 6 — Cierre / insight final:**
-- El "giro" que hace que el lector quiera guardar el carrusel
-- Remate que conecta todo
+- **Idioma:** Todo el copy visible (`main_text`, `bullets`, CTA) en el idioma del cliente
+  (default español). Configurable vía `brand_language` en el brief o onboarding.
+- **Marca:** Usar paleta, tipografía y estilo de `marca_visual_json` (onboarding / perfil IG)
+  en el `style_guide` y en las `visual_suggestion` de cada slide.
+
+## Estructura base (7 slides)
+
+**Slide 1 — Gancho:**
+- Pregunta incómoda o afirmación polarizante
+- main_text potente; secondary_text opcional (contexto)
+
+**Slides 2-5 — Desarrollo con valor:**
+- Cada slide enseña algo concreto: mito desmontado, contraste, tips, pasos, dato
+- **bullets obligatorios** (2-4 ítems cortos, accionables, máx. 12 palabras c/u)
+- main_text = titular del slide; secondary_text = takeaway o puente al siguiente
+
+**Slide 6 — Resumen / insight:**
+- Sintetiza lo aprendido; bullets opcionales (2 puntos clave)
 
 **Slide 7 — CTA:**
-- Siempre con entregable concreto: "Comentá [PALABRA] y te lo mando"
-- Nunca CTA vago como "escribime"
+- Entregable concreto + palabra clave ("Comentá [PALABRA] y te lo mando")
 
-## 5 formatos probados de carrusel
+## Campos por slide
 
-**Formato 1 — Metafórico / Cinematográfico:**
-Gancho impactante → metáforas visuales (antes/después) → contraste → CTA palabra clave
-Tono: intenso, disruptivo, aspiracional
+| Campo | Uso |
+|---|---|
+| `main_text` | Titular potente (1 frase, máx. ~15 palabras) |
+| `bullets` | Lista de tips/pasos/errores/datos (slides 2-5 obligatorio) |
+| `secondary_text` | Frase complementaria, takeaway o dato extra |
+| `content_type` | gancho, mito, consecuencia, metodo, profundidad, resumen, cta |
+| `visual_suggestion` | Layout para IA — incluir "lista vertical con bullets" si aplica |
 
-**Formato 2 — Noticia Urgente:**
-Titular tipo breaking news → desarrollo → declaración fuerte → consecuencia → solución → CTA
-Tono: dramático, creíble, persuasivo
+## 5 formatos probados
 
-**Formato 3 — Cómic / Narrativo:**
-Historia de frustración del cliente → descubrimiento de solución → transformación → CTA
-Diálogos cortos y potentes. Funciona muy bien para mostrar transformación de cliente.
+**Metafórico:** gancho → mito vs realidad con bullets → tips accionables → resumen → CTA
+**Noticia urgente:** titular breaking → desarrollo con datos → solución → CTA
+**Cómic:** historia con diálogos → descubrimiento → transformación → CTA
+**Minimalista premium:** confesión → aprendizajes en lista → amateur vs pro → CTA
+**Recursos ocultos:** curiosidad → recursos descritos parcialmente → CTA DMs
 
-**Formato 4 — Minimalista Premium:**
-Confesión poderosa → contexto → qué aprendí → qué cambió → amateur vs pro → CTA
-Tono: seguro, dominante, estratégico
+## Reglas de copy
 
-**Formato 5 — Recursos Ocultos (genera DMs):**
-Gancho de curiosidad → 4 prompts/recursos descritos sin mostrarlos completos → CTA "comentá [PALABRA]"
-Funciona porque genera curiosidad extrema sin resolver del todo
+**Densidad de valor:**
+- Al menos 3 slides con bullets
+- Cada bullet debe ser específico — nada genérico ("esforzate más", "creé en vos")
+- Reacción buscada: "No sabía eso" o "Lo puedo aplicar hoy"
 
-## Reglas de copy para carruseles
+**Balance valor / CTA:**
+- Dar aprendizaje real en slides 2-6
+- El entregable del CTA profundiza o systematiza — no regalarlo todo en el carrusel
 
-**Regla de insight (no de valor):**
-- MAL: dar la receta completa que resuelve el problema
-- BIEN: mostrar que tenés la receta y dar una perspectiva que cambia el paradigma
-> "Nunca dar la zanahoria. Mostrar que la tenés."
-
-**Regla de lenguaje:**
-- Directo como si hablaras con alguien de 16 años
-- Un solo concepto central por carrusel
-- Tono emocional, verdad incómoda — NUNCA frase motivacional genérica
+**Lenguaje:**
+- Directo, claro, verdad incómoda
+- Un concepto central por carrusel
 - Frases cortas con ritmo
-
-**Regla de propuesta de valor:**
-Cada slide tiene que generar esta reacción: "No había pensado eso" o "Eso me pasa exactamente"
-Si no genera ninguna de las dos, el slide es relleno.
