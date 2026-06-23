@@ -33,8 +33,10 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - Face profile: referencia visual para KIE image_input
 
 ### Pendiente antes de primer usuario ⚠️
-- [ ] Deploy VPS (bloqueado hasta restaurar créditos Hostinger — IP: 2.24.73.213)
-- [ ] SMTP configurado para email de bienvenida con temp_password
+- [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
+- [ ] Resend para email de bienvenida con temp_password (reemplaza SMTP manual, 3,000 emails/mes gratis)
+- [ ] Sentry para tracking de errores en producción (KIE, scraping, agentes background)
+- [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
 - [ ] Fix race condition scrape IG background (save_data concurrente con brief)
 
@@ -142,4 +144,14 @@ Propuesta de valor Fase 3: sistema de agencia completo a precio de herramienta.
 - **Dashboard:** HTML vanilla, endpoints REST
 - **Infra:** Ubuntu 24.04 VPS Hostinger, nginx, systemd
 - **Pagos:** Gumroad webhook → provisión automática
+- **Email:** Resend (transaccional — bienvenida, recuperación de contraseña)
+- **Errores:** Sentry (tracking producción)
+- **DNS/SSL:** Cloudflare
 - **Futuro:** Meta Graph API (publish + ads), GHL API, Fireflies/tl;dv API, Creatomate/Runway
+
+### Stack evaluado y descartado (23 jun 2026)
+Lista de herramientas "stack para startups" revisada contra la arquitectura real de RIMA (monolito FastAPI con tareas async de fondo en VPS, no serverless):
+- **Vercel** — no aplica, RIMA usa tareas largas (scraping, KIE) incompatibles con timeouts serverless
+- **Supabase / Clerk** — no aplica, ya hay SQLite por cliente + JWT + Google OAuth funcionando
+- **Stripe / Hotmart** — no urgente, Gumroad ya validado end-to-end; reevaluar en Fase 2 al subir a USD
+- **PostHog / Upstash / Pinecone** — prematuro, requiere usuarios reales o rediseño de arquitectura
