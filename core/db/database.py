@@ -551,6 +551,15 @@ def get_imagen_por_url(cliente_id: str, archivo_url: str) -> Optional[dict]:
     return row_to_dict(row)
 
 
+def delete_imagen_por_url(cliente_id: str, archivo_url: str) -> bool:
+    with db(cliente_id) as conn:
+        cur = conn.execute(
+            "DELETE FROM imagenes WHERE cliente_id = ? AND archivo_url = ?",
+            (cliente_id, archivo_url),
+        )
+    return cur.rowcount > 0
+
+
 def get_marca_visual(cliente_id: str) -> dict:
     cliente = get_cliente(cliente_id)
     if not cliente:

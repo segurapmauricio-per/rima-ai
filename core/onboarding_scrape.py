@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Optional
 
 from core.gemini_client import gemini
+from core.brief_analysis import analyze_brief_from_ig
 from agents.market_research.agent import market_research_agent, _norm_username
 
 SCRAPE_POSTS_LIMIT = 20
@@ -158,11 +159,11 @@ def _fallback_insights(profile: dict, posts: list, types_count: dict) -> dict:
             "historias_estilo_pct": round(100 * types_count.get("image", 0) / total),
             "descripcion": "Mix de formatos según feed reciente",
         },
-        "oferta_detectada": bio.split("\n")[0][:200] if bio else "",
+        "oferta_detectada": "",
         "problema_detectado": "",
         "resultado_prometido": "",
-        "cliente_ideal": profile.get("business_category") or "",
-        "forma_de_hablar": "Cercano y profesional",
+        "cliente_ideal": "",
+        "forma_de_hablar": "",
         "muletillas": [],
         "temas_frecuentes": [],
         "destacados_inferidos": [],
@@ -249,7 +250,10 @@ def run_client_scrape(username: str, cliente_id: str, brand: Optional[dict] = No
             "username": _norm_username(username),
         }
 
-    insights = _analyze_with_gemini(scrape_data.get("profile") or {}, scrape_data.get("posts") or [])
+    profile = scrape_data.get("profile") or {}
+    posts = scrape_data.get("posts") or []
+    insights = _analyze_with_gemini(profile, posts)
+    insights["brief"] = analyze_brief_from_ig(profile, posts, insights)
     marca = build_marca_from_scrape(scrape_data, insights, brand)
 
     from core.db import init_db, set_marca_visual, create_or_update_cliente, get_cliente

@@ -78,6 +78,16 @@ class ImageAnalysisAgent:
         # Analyze with Gemini Vision
         vision_analysis = self._analyze_with_gemini(image_path, safe_zone_px, text_blocks, category)
 
+        if vision_analysis.get("_analysis_failed"):
+            # No persistir metadata basura: el matcher de visual_composer scorea
+            # descripción/tags y un error guardado envenena la biblioteca.
+            return {
+                "error": vision_analysis.get("description", "Análisis fallido"),
+                "filename": path.name,
+                "category": category,
+                "analysis_failed": True,
+            }
+
         # Build final metadata
         meta = {
             "filename": path.name,
@@ -224,7 +234,7 @@ Responde SOLO con este JSON (sin texto adicional):
             from google.genai import types as genai_types
 
             response = self.client.models.generate_content(
-                model="google/gemini-2.5-flash",
+                model=os.getenv("GEMINI_VISION_MODEL", "google/gemini-2.5-flash"),
                 contents=[
                     genai_types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
                     prompt,
@@ -243,6 +253,7 @@ Responde SOLO con este JSON (sin texto adicional):
 
         except Exception as e:
             return {
+                "_analysis_failed": True,
                 "description": f"Error al analizar imagen: {e}",
                 "gesture_direction": "ninguno",
                 "gesture_text_zone": None,
@@ -264,7 +275,9 @@ Responde SOLO con este JSON (sin texto adicional):
             return []
 
         results = []
-        for img_file in img_dir.glob("*.{jpg,jpeg,png,webp}"):
+        for img_file in sorted(img_dir.iterdir()):
+            if img_file.suffix.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
+                continue
             meta_file = img_dir / f"{img_file.name}.meta.json"
             if not meta_file.exists():
                 result = self.analyze(str(img_file), brand, category)

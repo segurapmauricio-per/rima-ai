@@ -27,6 +27,8 @@
     .drop-zone{border:2px dashed rgba(124,58,237,0.35);border-radius:14px;padding:24px;text-align:center;cursor:pointer;transition:all .2s}
     .drop-zone:hover{border-color:rgba(124,58,237,0.6);background:rgba(124,58,237,0.05)}
     .thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid rgba(255,255,255,0.1)}
+    .thumb-wrap{position:relative;width:56px;height:56px}
+    .thumb-del{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#DC2626;border:1px solid rgba(255,255,255,0.2);color:#fff;font-size:12px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
     .check-ok{color:#34D399}.check-pending{color:#64748B}
   </style>
 </head>
@@ -72,7 +74,7 @@
     <!-- 3 Brief -->
     <div class="step-panel glass rounded-2xl p-6" id="step-3">
       <h2 class="text-sm font-semibold text-white mb-1">Tu negocio</h2>
-      <p class="text-[11px] text-slate-500 mb-4">RIMA necesita esto antes de armar tu plan de contenido.</p>
+      <p class="text-[11px] text-slate-500 mb-4">RIMA necesita esto antes de armar tu plan de contenido. Revisá los campos sugeridos por IA — completá lo que falte.</p>
       <div class="space-y-3 max-h-[48vh] overflow-y-auto pr-1">
         <div><label class="text-[10px] text-slate-500 font-bold">Nombre *</label><input id="b-name" class="f-input mt-1" /></div>
         <div><label class="text-[10px] text-slate-500 font-bold">Servicio u oferta *</label><textarea id="b-service" class="f-textarea mt-1" rows="2"></textarea></div>
@@ -128,7 +130,7 @@
       <img id="face-preview" class="hidden w-24 h-24 rounded-xl object-cover mx-auto mb-3 border border-white/10" alt="preview" />
       <p id="face-error" class="text-[11px] text-red-400 hidden"></p>
       <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitFace()">Continuar</button>
-      <button type="button" class="w-full mt-2 py-2 text-[11px] text-slate-500" id="skip-face" onclick="goStep(7)" style="display:none">Omitir por ahora →</button>
+      <button type="button" class="w-full mt-2 py-2 text-[11px] text-slate-500" id="skip-face" onclick="goStep(7)">Omitir por ahora →</button>
     </div>
 
     <!-- 7 Resumen -->
@@ -211,7 +213,13 @@ function startScrapePoll(){
     try{
       var s=await fetch('/api/onboarding/status').then(function(r){return r.json();});
       if(s.scrape_status==='done'){clearInterval(STATE.scrapePoll);applyScrapeToForm(s);setTimeout(function(){goStep(3);},500);}
-      else if(s.scrape_status==='error'){clearInterval(STATE.scrapePoll);hideScrapeProgress();}
+      else if(s.scrape_status==='error'){
+        clearInterval(STATE.scrapePoll);hideScrapeProgress();
+        var err=document.getElementById('ig-error');
+        err.textContent=(s.scrape_error||'No pudimos encontrar ese perfil de Instagram')+'. Podés continuar y completar los datos manualmente.';
+        err.classList.remove('hidden');
+        setTimeout(function(){goStep(3);},1500);
+      }
     }catch(e){}
   },2500);
 }
@@ -255,7 +263,18 @@ async function refreshPhotosCount(){
   STATE.photosCount=me.photos_count||0;document.getElementById('photos-count').textContent=STATE.photosCount;
   var imgs=await fetch('/api/images?category=historias').then(function(r){return r.json();});
   var box=document.getElementById('photos-thumbs');box.innerHTML='';
-  (imgs.images||[]).slice(0,8).forEach(function(img){var im=document.createElement('img');im.className='thumb';im.src=img.url||'';box.appendChild(im);});
+  (imgs.images||[]).forEach(function(img){
+    var wrap=document.createElement('div');wrap.className='thumb-wrap';
+    var im=document.createElement('img');im.className='thumb';im.src=img.url||'';im.alt=img.original||img.name||'';
+    var del=document.createElement('button');del.type='button';del.className='thumb-del';del.title='Eliminar';del.textContent='×';
+    del.addEventListener('click',async function(e){
+      e.stopPropagation();
+      if(!confirm('¿Eliminar esta foto?'))return;
+      await fetch('/api/images/historias/'+encodeURIComponent(img.name),{method:'DELETE'});
+      await refreshPhotosCount();
+    });
+    wrap.appendChild(im);wrap.appendChild(del);box.appendChild(wrap);
+  });
 }
 
 async function submitPhotos(){

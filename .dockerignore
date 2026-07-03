@@ -2,6 +2,7 @@
 .env.local
 .env.production
 *.env
+secrets/
 data/
 logs/
 __pycache__/

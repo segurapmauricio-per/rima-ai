@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request, Header, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -18,8 +18,6 @@ import calendar as cal_module
 import re
 import urllib.request
 import asyncio
-import smtplib
-from email.message import EmailMessage
 from datetime import datetime
 
 from core.auth import (
@@ -66,6 +64,17 @@ from core.onboarding import (
     min_photos_for_plan, face_profile_required,
 )
 from core.onboarding_scrape import run_client_scrape
+from core.dashboard_stats import get_dashboard_stats
+from core.referentes_discovery import discover_similar_referentes
+from core.referentes_discovery_preview import get_preview_suggestions
+from core.activation_flow import (
+    get_tour_state, mark_tour_seen, get_activation_state,
+    start_activation, advance_activation, skip_activation,
+    reset_activation_on_onboarding_complete, ensure_dashboard_flags,
+    get_referentes_discovery_state, mark_referentes_discovery_running,
+    save_referentes_discovery_result, mark_referentes_discovery_shown,
+    mark_referentes_anchor_ready,
+)
 from core.face_profile import save_face_profile, load_face_profile, has_face_profile
 from core.imagenes_cliente import (
     cliente_images_dir,
@@ -170,9 +179,9 @@ SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;fl
       <p id="rima-brand-handle" style="font-size:10px;color:#475569;margin:0">@fitlifestudio_mx</p></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)"><p style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">12.4K</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2)"><p style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">48</p><p style="font-size:8px;color:#475569;margin:0">Msg.</p></div>
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p style="font-size:11px;font-weight:700;color:#34D399;margin:0">$18K</p><p style="font-size:8px;color:#475569;margin:0">Ventas</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)"><p id="rima-kpi-followers" style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2)"><p id="rima-kpi-refs" style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Refs.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p id="rima-kpi-plan" style="font-size:11px;font-weight:700;color:#34D399;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Plan</p></div>
     </div>
   </div>
   <nav id="rima-nav" style="flex:1 1 auto;min-height:0;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>
@@ -279,6 +288,179 @@ SHARED_CSS = """
   #rima-nav a[data-locked="1"]::after {
     content: '🔒'; margin-left: auto; font-size: 10px;
   }
+
+  /* Tour guiado del dashboard */
+  #rima-tour-overlay {
+    position: fixed; inset: 0; z-index: 99980; display: none;
+    background: rgba(5, 5, 12, 0.55); backdrop-filter: blur(2px);
+  }
+  #rima-tour-overlay.show { display: block; }
+  #rima-tour-card {
+    position: fixed; z-index: 99981; max-width: 320px; width: calc(100% - 32px);
+    padding: 16px 18px; border-radius: 16px;
+    background: #12121C; border: 1px solid rgba(124,58,237,0.45);
+    box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+    display: none;
+  }
+  #rima-tour-card.show { display: block; }
+  #rima-tour-card h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #fff; }
+  #rima-tour-card p { margin: 0 0 12px; font-size: 11px; line-height: 1.5; color: #94A3B8; }
+  #rima-tour-card .tour-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  #rima-tour-card .tour-btn {
+    padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 600;
+    border: none; cursor: pointer; font-family: inherit;
+  }
+  #rima-tour-card .tour-btn-primary {
+    background: linear-gradient(135deg,#7C3AED,#6D28D9); color: #fff;
+  }
+  #rima-tour-card .tour-btn-ghost {
+    background: transparent; color: #94A3B8; border: 1px solid rgba(255,255,255,0.1);
+  }
+  #rima-tour-dismiss {
+    display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 10px;
+    font-size: 10px; color: #64748B; cursor: pointer;
+  }
+  #rima-nav [data-coming-soon="1"] { opacity: 0.45; cursor: not-allowed !important; pointer-events: none; }
+  #rima-nav .nav-soon-badge {
+    margin-left: auto; font-size: 8px; font-weight: 600; padding: 2px 6px;
+    border-radius: 10px; color: #FBBF24; background: rgba(245,158,11,0.12);
+    border: 1px solid rgba(245,158,11,0.25);
+  }
+  .rima-tour-highlight {
+    position: relative; z-index: 99982 !important;
+    box-shadow: 0 0 0 2px rgba(124,58,237,0.9), 0 0 24px rgba(124,58,237,0.35) !important;
+    border-radius: 10px !important;
+  }
+
+  /* Flujo guiado post-onboarding */
+  #rima-activation {
+    position: fixed; inset: 0; z-index: 99970; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(5, 5, 12, 0.78); backdrop-filter: blur(6px);
+  }
+  #rima-activation.show { display: flex; }
+  #rima-activation .act-card {
+    position: relative;
+    width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
+    background: #12121C; border: 1px solid rgba(124,58,237,0.35);
+    border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  #rima-activation #act-close {
+    position: absolute; top: 14px; left: 16px; width: 26px; height: 26px;
+    border: none; background: transparent; color: #64748B; font-size: 18px;
+    line-height: 1; cursor: pointer; border-radius: 8px;
+  }
+  #rima-activation #act-close:hover { color: #F1F5F9; background: rgba(255,255,255,0.06); }
+  #rima-activation h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #fff; }
+  #rima-activation .act-sub { font-size: 11px; color: #94A3B8; margin: 0 0 16px; line-height: 1.5; }
+  #rima-activation .act-step { font-size: 10px; color: #64748B; margin: 0 0 12px 30px; }
+  #rima-activation .ref-chip {
+    display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03); margin-bottom: 8px; cursor: pointer;
+  }
+  #rima-activation .ref-chip.on { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.1); }
+  #rima-activation .act-input {
+    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px; padding: 10px 12px; color: #F1F5F9; font-size: 12px; margin-bottom: 10px;
+  }
+  #rima-activation .act-progress {
+    height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); margin: 12px 0 16px;
+  }
+  #rima-activation .act-progress > div {
+    height: 100%; border-radius: 2px; background: linear-gradient(90deg,#7C3AED,#06B6D4);
+    transition: width .3s;
+  }
+  #rima-activation .act-actions {
+    display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 18px;
+  }
+  #rima-activation #act-primary {
+    width: 100%; max-width: 280px; padding: 14px 20px; border-radius: 14px;
+    font-size: 13px; font-weight: 700; border: none; cursor: pointer; font-family: inherit;
+    color: #fff; background: linear-gradient(135deg,#22C55E,#16A34A);
+    box-shadow: 0 8px 24px rgba(34,197,94,0.3);
+  }
+  #rima-activation #act-primary::after { content: ' →'; }
+  #rima-activation #act-skip-all {
+    align-self: flex-end; padding: 4px 8px; border-radius: 8px;
+    font-size: 10px; font-weight: 500; border: none; cursor: pointer; font-family: inherit;
+    color: #64748B; background: transparent;
+  }
+  #rima-activation #act-skip-all:hover { color: #94A3B8; }
+  #rima-activation .act-ref-induction {
+    background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
+  }
+  #rima-activation .act-induct-title {
+    font-size: 12px; font-weight: 700; color: #E2E8F0; margin: 0 0 10px;
+  }
+  #rima-activation .act-induct-list {
+    margin: 0 0 10px; padding-left: 18px; font-size: 11px; color: #94A3B8; line-height: 1.55;
+  }
+  #rima-activation .act-induct-hint { font-size: 10px; color: #64748B; margin: 0; }
+
+  /* Popup descubrimiento referentes (día 3+) */
+  #rima-ref-discovery {
+    position: fixed; inset: 0; z-index: 99965; display: none;
+    align-items: center; justify-content: center; padding: 20px;
+    background: rgba(5, 5, 12, 0.78); backdrop-filter: blur(6px);
+  }
+  #rima-ref-discovery.show { display: flex; }
+  #rima-ref-discovery .disc-card {
+    position: relative;
+    width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
+    background: #12121C; border: 1px solid rgba(6,182,212,0.35);
+    border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+  }
+  #rima-ref-discovery #disc-close {
+    position: absolute; top: 14px; right: 16px; width: 26px; height: 26px;
+    border: none; background: transparent; color: #64748B; font-size: 18px;
+    line-height: 1; cursor: pointer; border-radius: 8px;
+  }
+  #rima-ref-discovery #disc-close:hover { color: #F1F5F9; background: rgba(255,255,255,0.06); }
+  #rima-ref-preview-btn {
+    position: fixed; bottom: 20px; right: 20px; z-index: 99950;
+    padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(6,182,212,0.4);
+    background: rgba(6,182,212,0.12); color: #67E8F9; font-size: 11px; font-weight: 600;
+    cursor: pointer; font-family: inherit; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  #rima-ref-preview-btn:hover {
+    background: rgba(6,182,212,0.2); border-color: rgba(6,182,212,0.55); color: #A5F3FC;
+  }
+  #rima-ref-discovery h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #fff; }
+  #rima-ref-discovery .disc-sub { font-size: 11px; color: #94A3B8; margin: 0 0 16px; line-height: 1.5; }
+  .ref-verified-row {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.03); margin-bottom: 8px;
+  }
+  .ref-verified-row.selected { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.1); }
+  .ref-verified-row .ref-avatar {
+    width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
+    background: rgba(255,255,255,0.06); flex-shrink: 0;
+  }
+  .ref-verified-row .ref-info { flex: 1; min-width: 0; }
+  .ref-verified-row .ref-info a {
+    font-size: 12px; font-weight: 600; color: #fff; text-decoration: none;
+  }
+  .ref-verified-row .ref-info a:hover { color: #A78BFA; text-decoration: underline; }
+  .ref-verified-row .ref-motivo { font-size: 10px; color: #94A3B8; margin: 3px 0 0; }
+  .ref-verified-row .ref-check {
+    width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; accent-color: #7C3AED;
+  }
+  #rima-ref-discovery .disc-actions {
+    display: flex; flex-direction: column; gap: 10px; margin-top: 18px;
+  }
+  #rima-ref-discovery #disc-primary {
+    width: 100%; padding: 14px 20px; border-radius: 14px; font-size: 13px; font-weight: 700;
+    border: none; cursor: pointer; font-family: inherit; color: #fff;
+    background: linear-gradient(135deg,#7C3AED,#06B6D4);
+  }
+  #rima-ref-discovery #disc-dismiss {
+    align-self: center; padding: 6px 10px; border: none; background: transparent;
+    font-size: 11px; color: #64748B; cursor: pointer; font-family: inherit;
+  }
+  #rima-ref-discovery #disc-dismiss:hover { color: #94A3B8; }
 </style>
 """
 
@@ -298,9 +480,9 @@ SHARED_JS = """
     { label:'Calendario',            href:'/calendario',   group:'COMENCEMOS', color:'violet',  icon:'M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5' },
     { label:'Contenido',             href:'/contenido',    group:'COMENCEMOS', color:'pink',    icon:'M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z' },
     { label:'Estudio de mercado',    href:'/mercado',      group:'COMENCEMOS', color:'sky',     icon:'M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z' },
-    { label:'META Ads',              href:'/meta',         group:'COMENCEMOS', color:'blue',    icon:'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z', filled:true },
-    { label:'Ventas',                href:'/ventas',       group:'COMENCEMOS', color:'emerald', icon:'M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941' },
-    { label:'Landing',               href:'/landing',      group:'COMENCEMOS', color:'amber',   icon:'M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z' },
+    { label:'META Ads',              href:'/meta',         group:'COMENCEMOS', color:'blue',    icon:'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z', filled:true, comingSoon:true },
+    { label:'Ventas',                href:'/ventas',       group:'COMENCEMOS', color:'emerald', icon:'M2.25 18L9 11.25l4.306 4.307a11.95 11.95 0 015.814-5.519l2.74-1.22m0 0l-5.94-2.28m5.94 2.28l-2.28 5.941', comingSoon:true },
+    { label:'Landing',               href:'/landing',      group:'COMENCEMOS', color:'amber',   icon:'M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z', comingSoon:true },
     { label:'InformaciÃ³n de la marca', href:'/marca',      group:'MI NEGOCIO', color:'violet',  icon:'M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z' },
     { label:'Referencias',           href:'/referencias',  group:'MI NEGOCIO', color:'rose',    icon:'M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244' },
     { label:'ImÃ¡genes',              href:'/imagenes',     group:'MI NEGOCIO', color:'cyan',    icon:'M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z' },
@@ -326,8 +508,11 @@ SHARED_JS = """
     orange:'#FB923C', slate:'#94A3B8',
   };
 
+  var TOUR_SLUG = {'/home':'dashboard','/calendario':'calendario','/contenido':'contenido','/mercado':'mercado','/marca':'marca','/referencias':'referencias','/imagenes':'imagenes','/videos':'videos','/credenciales':'credenciales'};
+
   function buildNavItem(item) {
     var isActive = item.href === currentPath || (item.href !== '/' && currentPath.startsWith(item.href));
+    var coming = !!item.comingSoon;
     var bg = isActive
       ? 'background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)'
       : 'background:transparent;border-color:transparent';
@@ -342,16 +527,23 @@ SHARED_JS = """
     var badge = item.badge
       ? '<span style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:#FBBF24;flex-shrink:0"></span>'
       : '';
+    if (coming) badge = '<span class="nav-soon-badge">Próximamente</span>';
 
-    var el = document.createElement('div');
-    el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;border:1px solid;cursor:pointer;transition:all .18s;' + bg;
+    var el = document.createElement(coming ? 'div' : 'a');
+    if (!coming) el.href = item.href;
+    var tourSlug = TOUR_SLUG[item.href];
+    if (tourSlug) el.setAttribute('data-rima-tour', tourSlug);
+    if (coming) el.setAttribute('data-coming-soon', '1');
+    el.style.cssText = 'display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;border:1px solid;text-decoration:none;transition:all .18s;' + bg + (coming ? ';opacity:0.45;cursor:not-allowed' : ';cursor:pointer');
     if (isActive) el.dataset.active = '1';
     el.innerHTML = '<div style="width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:'+iconBg+'">'+svgContent+'</div>'
-      + '<span style="font-size:11px;'+textColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+item.label+'</span>'
+      + '<span style="font-size:11px;'+textColor+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">'+item.label+'</span>'
       + badge;
-    el.addEventListener('click', function() { window.location.href = item.href; });
-    el.addEventListener('mouseover', function() { if (!this.dataset.active) this.style.background = 'rgba(255,255,255,0.05)'; });
-    el.addEventListener('mouseout',  function() { if (!this.dataset.active) this.style.background = 'transparent'; });
+    if (!coming) {
+      el.addEventListener('click', function(e) { window.location.href = item.href; });
+      el.addEventListener('mouseover', function() { if (!this.dataset.active) this.style.background = 'rgba(255,255,255,0.05)'; });
+      el.addEventListener('mouseout',  function() { if (!this.dataset.active) this.style.background = 'transparent'; });
+    }
     return el;
   }
 
@@ -381,9 +573,9 @@ SHARED_JS = """
       + '<p id="rima-brand-handle" style="font-size:10px;color:#475569;margin:0">@fitlifestudio_mx</p>'
       + '</div></div>'
       + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">'
-      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">12.4K</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>'
-      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">48</p><p style="font-size:8px;color:#475569;margin:0">Msg.</p></div>'
-      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p style="font-size:11px;font-weight:700;color:#34D399;margin:0">$18K</p><p style="font-size:8px;color:#475569;margin:0">Ventas</p></div>'
+      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p id="rima-kpi-followers" style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>'
+      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p id="rima-kpi-refs" style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Refs.</p></div>'
+      + '<div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.15)"><p id="rima-kpi-plan" style="font-size:11px;font-weight:700;color:#34D399;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Plan</p></div>'
       + '</div></div>';
 
     // Nav
@@ -686,9 +878,16 @@ SHARED_JS = """
   function bootSidebar() {
     initUserMenu();
     loadUserSession();
+    loadDashboardStats();
     var path = window.location.pathname;
     if (path === '/credenciales') { loadCredentials(); }
     else { loadBrand(); loadProfile(); }
+    if (path === '/home') loadHomeDashboard();
+    if (document.getElementById('rima-nav')) {
+      initDashboardTour();
+      ensureRefPreviewButton();
+      setTimeout(maybeShowReferentesDiscovery, 1500);
+    }
   }
   window.addEventListener('DOMContentLoaded', bootSidebar);
   if (document.readyState !== 'loading') { bootSidebar(); }
@@ -829,10 +1028,603 @@ SHARED_JS = """
     btn.disabled = false;
   };
 
+  // ── KPIs reales del cliente (sidebar) ──
+  async function loadDashboardStats() {
+    try {
+      var r = await fetch('/api/dashboard/stats', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      var s = await r.json();
+      setUserBarText('rima-kpi-followers', s.followers_label || '—');
+      setUserBarText('rima-kpi-refs', String(s.referentes_count != null ? s.referentes_count : '—'));
+      var planTxt = s.publicaciones_total ? (s.publicaciones_total + ' pzas') : '—';
+      setUserBarText('rima-kpi-plan', planTxt);
+    } catch(e) {}
+  }
+
+  // ── /home — KPIs y saludo con datos reales ──
+  async function loadHomeDashboard() {
+    var greet = document.getElementById('home-greeting');
+    if (!greet) return;
+    try {
+      var brand = {}, stats = {};
+      var rb = await fetch('/api/brand', { credentials: 'same-origin' });
+      if (rb.ok) brand = await rb.json();
+      var rs = await fetch('/api/dashboard/stats', { credentials: 'same-origin' });
+      if (rs.ok) stats = await rs.json();
+      var name = brand.brand_name || stats.brand_name || 'tu negocio';
+      var first = name.split(' ')[0];
+      var h = new Date().getHours();
+      var saludo = h < 12 ? 'Buenos días' : (h < 19 ? 'Buenas tardes' : 'Buenas noches');
+      greet.textContent = saludo + ', ' + first + ' 👋';
+      var sub = document.getElementById('home-subtitle');
+      if (sub) {
+        var parts = [];
+        var now = new Date();
+        parts.push(now.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long' }));
+        if (stats.publicaciones_pendientes > 0) {
+          parts.push(stats.publicaciones_pendientes + ' pieza' + (stats.publicaciones_pendientes === 1 ? '' : 's') + ' pendiente' + (stats.publicaciones_pendientes === 1 ? '' : 's'));
+        } else if (stats.publicaciones_total > 0) {
+          parts.push(stats.publicaciones_total + ' piezas en tu plan');
+        } else {
+          parts.push('Completá el flujo de activación para generar tu plan');
+        }
+        sub.textContent = parts.join(' · ');
+      }
+      setUserBarText('home-kpi-followers', stats.followers_label || '—');
+      setUserBarText('home-kpi-refs', String(stats.referentes_count != null ? stats.referentes_count : '0'));
+      setUserBarText('home-kpi-pubs', stats.publicaciones_total ? String(stats.publicaciones_total) : '0');
+      setUserBarText('home-kpi-pending', stats.publicaciones_pendientes != null ? String(stats.publicaciones_pendientes) : '0');
+      var fuerza = stats.fuerza_promedio_pct != null ? stats.fuerza_promedio_pct + '%' : '—';
+      setUserBarText('home-kpi-fuerza', fuerza);
+      var subRefs = document.getElementById('home-kpi-refs-sub');
+      if (subRefs) subRefs.textContent = stats.referentes_count ? 'perfiles activos' : 'sin referentes aún';
+      var subPubs = document.getElementById('home-kpi-pubs-sub');
+      if (subPubs) subPubs.textContent = stats.publicaciones_total ? 'en calendario' : 'generá tu plan';
+    } catch(e) {}
+  }
+
+  // ── Tour guiado del menú (1ª y 2ª visita) ──
+  var TOUR_HREFS = {
+    dashboard: '/home', calendario: '/calendario', contenido: '/contenido', mercado: '/mercado',
+    marca: '/marca', referencias: '/referencias', imagenes: '/imagenes', videos: '/videos', credenciales: '/credenciales'
+  };
+  var TOUR_STEPS = [
+    { slug: 'dashboard', title: 'Dashboard', text: 'Vista general de tu negocio, agentes y pendientes del mes.' },
+    { slug: 'calendario', title: 'Calendario', text: 'Plan de contenido del mes generado por RIMA (reels, carruseles, historias).' },
+    { slug: 'contenido', title: 'Contenido', text: 'Piezas generadas listas para validar: historias, carruseles y reels.' },
+    { slug: 'mercado', title: 'Estudio de mercado', text: 'Referentes de tu nicho analizados — benchmark de fuerza y patrones ganadores.' },
+    { slug: 'marca', title: 'Información de la marca', text: 'Brief del negocio: oferta, cliente ideal, problema y resultado principal.' },
+    { slug: 'referencias', title: 'Referencias', text: 'Perfiles de Instagram referentes que RIMA modela para tu contenido.' },
+    { slug: 'imagenes', title: 'Imágenes', text: 'Biblioteca de fotos tuyas y de tu negocio para generación visual.' },
+    { slug: 'videos', title: 'Videos', text: 'Clips y material de video para reels.' },
+    { slug: 'credenciales', title: 'Credenciales', text: 'Conexiones externas (Meta, etc.) cuando las actives.' }
+  ];
+
+  var tourIdx = 0, tourHighlight = null;
+
+  function ensureTourDom() {
+    if (!document.getElementById('rima-tour-overlay')) {
+      var ov = document.createElement('div');
+      ov.id = 'rima-tour-overlay';
+      document.body.appendChild(ov);
+      var card = document.createElement('div');
+      card.id = 'rima-tour-card';
+      card.innerHTML = '<h4 id="rima-tour-title"></h4><p id="rima-tour-text"></p>'
+        + '<div class="tour-actions"><button type="button" class="tour-btn tour-btn-ghost" id="rima-tour-skip">Omitir</button>'
+        + '<button type="button" class="tour-btn tour-btn-primary" id="rima-tour-next">Siguiente</button></div>'
+        + '<label id="rima-tour-dismiss"><input type="checkbox" id="rima-tour-dismiss-cb" /> No volver a mostrar</label>';
+      document.body.appendChild(card);
+      document.getElementById('rima-tour-skip').onclick = function() { endTour(true); };
+      document.getElementById('rima-tour-next').onclick = function() {
+        if (tourIdx >= TOUR_STEPS.length - 1) {
+          endTour(false);
+          return;
+        }
+        tourIdx++;
+        sessionStorage.setItem('rima_tour_active', '1');
+        sessionStorage.setItem('rima_tour_idx', String(tourIdx));
+        var nextSlug = TOUR_STEPS[tourIdx].slug;
+        var href = TOUR_HREFS[nextSlug] || '/home';
+        window.location.href = href + '?tour=1';
+      };
+    }
+  }
+
+  function clearTourHighlight() {
+    if (tourHighlight) { tourHighlight.classList.remove('rima-tour-highlight'); tourHighlight = null; }
+  }
+
+  function showTourStep() {
+    ensureTourDom();
+    var step = TOUR_STEPS[tourIdx];
+    var target = document.querySelector('[data-rima-tour="' + step.slug + '"]');
+    clearTourHighlight();
+    document.getElementById('rima-tour-overlay').classList.add('show');
+    var card = document.getElementById('rima-tour-card');
+    card.classList.add('show');
+    document.getElementById('rima-tour-title').textContent = step.title + ' (' + (tourIdx + 1) + '/' + TOUR_STEPS.length + ')';
+    document.getElementById('rima-tour-text').textContent = step.text;
+    document.getElementById('rima-tour-next').textContent = tourIdx >= TOUR_STEPS.length - 1 ? 'Listo' : 'Siguiente';
+    if (target) {
+      tourHighlight = target;
+      target.classList.add('rima-tour-highlight');
+      target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      var rect = target.getBoundingClientRect();
+      var top = Math.min(window.innerHeight - 200, rect.bottom + 12);
+      var left = Math.min(window.innerWidth - 340, Math.max(16, rect.left));
+      card.style.top = top + 'px';
+      card.style.left = left + 'px';
+    } else {
+      card.style.top = '20%';
+      card.style.left = '50%';
+      card.style.transform = 'translateX(-50%)';
+    }
+  }
+
+  async function endTour(skipped) {
+    clearTourHighlight();
+    sessionStorage.removeItem('rima_tour_active');
+    sessionStorage.removeItem('rima_tour_idx');
+    document.getElementById('rima-tour-overlay').classList.remove('show');
+    document.getElementById('rima-tour-card').classList.remove('show');
+    var permanent = document.getElementById('rima-tour-dismiss-cb') && document.getElementById('rima-tour-dismiss-cb').checked;
+    try {
+      await fetch('/api/dashboard/tour/dismiss', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dismiss_permanent: !!permanent })
+      });
+    } catch(e) {}
+    if (window.location.search.indexOf('tour=1') >= 0) {
+      var clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+    if (window.location.pathname === '/home') maybeShowActivation();
+    setTimeout(maybeShowReferentesDiscovery, 800);
+  }
+
+  function resumeTourIfActive() {
+    var params = new URLSearchParams(window.location.search);
+    if (sessionStorage.getItem('rima_tour_active') !== '1' && params.get('tour') !== '1') return false;
+    var idx = parseInt(sessionStorage.getItem('rima_tour_idx') || '0', 10);
+    if (isNaN(idx) || idx < 0) idx = 0;
+    if (idx >= TOUR_STEPS.length) idx = TOUR_STEPS.length - 1;
+    tourIdx = idx;
+    sessionStorage.setItem('rima_tour_active', '1');
+    sessionStorage.setItem('rima_tour_idx', String(tourIdx));
+    setTimeout(showTourStep, 500);
+    return true;
+  }
+
+  async function initDashboardTour() {
+    var path = window.location.pathname;
+    if (path === '/onboarding' || path === '/login') return;
+    if (!document.getElementById('rima-nav')) return;
+    if (window.RIMA_USER && window.RIMA_USER.role === 'admin') return;
+    if (resumeTourIfActive()) return;
+    try {
+      var r = await fetch('/api/dashboard/tour', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      var t = await r.json();
+      if (!t.should_show) {
+        if (path === '/home') maybeShowActivation();
+        setTimeout(maybeShowReferentesDiscovery, 800);
+        return;
+      }
+      tourIdx = 0;
+      sessionStorage.setItem('rima_tour_active', '1');
+      sessionStorage.setItem('rima_tour_idx', '0');
+      var startHref = TOUR_HREFS[TOUR_STEPS[0].slug] || '/home';
+      if (path !== startHref) {
+        window.location.href = startHref + '?tour=1';
+        return;
+      }
+      setTimeout(showTourStep, 600);
+    } catch(e) {}
+  }
+
+  // ── Flujo guiado post-onboarding ──
+  var ACT = { step: 1 };
+
+  function ensureActivationDom() {
+    if (document.getElementById('rima-activation')) return;
+    var el = document.createElement('div');
+    el.id = 'rima-activation';
+    el.innerHTML = '<div class="act-card">'
+      + '<button type="button" id="act-close" aria-label="Cerrar">×</button>'
+      + '<p class="act-step" id="act-step-label">Paso 1 de 4</p>'
+      + '<h3 id="act-title">Configurá tus referentes</h3>'
+      + '<p class="act-sub" id="act-sub"></p>'
+      + '<div class="act-progress"><div id="act-progress-bar" style="width:25%"></div></div>'
+      + '<div id="act-body"></div>'
+      + '<div class="act-actions">'
+      + '<button type="button" id="act-primary">Continuar</button>'
+      + '<button type="button" id="act-skip-all">Omitir →→→</button>'
+      + '</div></div>';
+    document.body.appendChild(el);
+    document.getElementById('act-skip-all').onclick = async function() {
+      await fetch('/api/activation/skip', { method: 'POST' });
+      el.classList.remove('show');
+      setTimeout(maybeShowReferentesDiscovery, 600);
+    };
+    document.getElementById('act-close').onclick = async function() {
+      await fetch('/api/activation/skip', { method: 'POST' });
+      el.classList.remove('show');
+      setTimeout(maybeShowReferentesDiscovery, 600);
+    };
+    document.getElementById('act-primary').onclick = runActivationPrimary;
+  }
+
+  function setActProgress(step) {
+    var pct = Math.round((step / 4) * 100);
+    var bar = document.getElementById('act-progress-bar');
+    if (bar) bar.style.width = pct + '%';
+    var lbl = document.getElementById('act-step-label');
+    if (lbl) lbl.textContent = 'Paso ' + step + ' de 4';
+  }
+
+  async function maybeShowActivation() {
+    if (window.RIMA_USER && window.RIMA_USER.role === 'admin') return;
+    try {
+      var r = await fetch('/api/activation/status', { credentials: 'same-origin' });
+      if (!r.ok) return;
+      var s = await r.json();
+      if (!s.should_show) return;
+      ACT.step = s.step || 1;
+      if (s.referentes_confirmed && ACT.step < 2) ACT.step = 2;
+      if (s.market_done && ACT.step < 3) ACT.step = 3;
+      if (s.calendar_done && ACT.step < 4) ACT.step = 4;
+      ensureActivationDom();
+      await fetch('/api/activation/start', { method: 'POST' });
+      renderActivationStep();
+      document.getElementById('rima-activation').classList.add('show');
+    } catch(e) {}
+  }
+
+  function renderActivationStep() {
+    setActProgress(ACT.step);
+    var title = document.getElementById('act-title');
+    var sub = document.getElementById('act-sub');
+    var body = document.getElementById('act-body');
+    var btn = document.getElementById('act-primary');
+    btn.disabled = false;
+    btn.textContent = 'Continuar';
+    if (ACT.step === 1) {
+      title.textContent = 'Referentes de tu nicho';
+      sub.textContent = 'Agregá perfiles de Instagram que querés modelar. Podés omitir y hacerlo más adelante.';
+      body.innerHTML = '<div class="act-ref-induction">'
+        + '<p class="act-induct-title">¿Qué perfiles conviene agregar?</p>'
+        + '<ul class="act-induct-list">'
+        + '<li>Mismo nicho o nicho adyacente al tuyo</li>'
+        + '<li>Cuentas medianas con buen contenido educativo o de ventas</li>'
+        + '<li>Perfiles que ya hacen lo que querés lograr con tu marca</li>'
+        + '</ul>'
+        + '<p class="act-induct-hint">Escribí cada @ separado por coma o espacio (ej: @coach_ejemplo).</p>'
+        + '</div>'
+        + '<input class="act-input" id="act-custom-refs" placeholder="@perfil1, @perfil2 (opcional)" />';
+    } else if (ACT.step === 2) {
+      title.textContent = 'Estudio de mercado';
+      sub.textContent = 'Analizamos el contenido de tus referentes para detectar patrones ganadores.';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Listo para ejecutar el agente.</p>';
+      btn.textContent = 'Ejecutar estudio de mercado';
+    } else if (ACT.step === 3) {
+      title.textContent = 'Plan mensual';
+      sub.textContent = 'Generamos tu calendario de contenido para los próximos 30 días.';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Un click y RIMA arma el plan del mes.</p>';
+      btn.textContent = 'Generar calendario';
+    } else {
+      title.textContent = 'Plan semanal';
+      sub.textContent = 'Con el estudio y el calendario listos, activamos las propuestas de esta semana.';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Último paso: orquestador semanal.</p>';
+      btn.textContent = 'Generar plan semanal';
+    }
+  }
+
+  async function runActivationPrimary() {
+    var btn = document.getElementById('act-primary');
+    var status = document.getElementById('act-status');
+    if (ACT.step === 1) {
+      var customRaw = (document.getElementById('act-custom-refs') || {}).value || '';
+      var custom = customRaw.split(/[,\\s]+/).map(function(x) { return x.replace('@','').trim(); }).filter(Boolean);
+      if (!custom.length) {
+        try {
+          var pr = await fetch('/api/referentes/profiles');
+          var pd = pr.ok ? await pr.json() : {};
+          if ((pd.instagram || []).length) {
+            await fetch('/api/activation/step', {
+              method: 'POST', headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ step: 2, referentes_confirmed: true })
+            });
+            ACT.step = 2;
+            renderActivationStep();
+            return;
+          }
+          if (window.rimaToast) rimaToast('Elegí al menos un referente o agregá un @', 'error');
+          return;
+        } catch(ex) {
+          if (window.rimaToast) rimaToast('Elegí al menos un referente', 'error');
+          return;
+        }
+      }
+      btn.disabled = true;
+      btn.textContent = 'Guardando…';
+      try {
+        var r = await fetch('/api/referentes/confirm-activation', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usernames: [], custom_usernames: custom })
+        });
+        var d = await r.json();
+        if (!r.ok) throw new Error(d.detail || 'Error');
+        ACT.step = 2;
+        renderActivationStep();
+        if (window.rimaToast) rimaToast('Referentes guardados');
+      } catch(e) {
+        if (window.rimaToast) rimaToast(e.message || 'Error', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Continuar';
+      }
+      return;
+    }
+    if (ACT.step === 2) {
+      btn.disabled = true;
+      btn.textContent = 'Analizando…';
+      if (status) status.textContent = 'Esto puede tardar varios minutos. No cierres la ventana.';
+      try {
+        var r2 = await fetch('/api/referentes/scrape', { method: 'POST' });
+        var d2 = await r2.json();
+        if (!r2.ok) throw new Error(d2.detail || 'Error en estudio de mercado');
+        if (d2.job_id) {
+          // Corre en background — polling hasta terminar
+          while (true) {
+            await new Promise(function(res) { setTimeout(res, 5000); });
+            var jr = await fetch('/api/jobs/' + d2.job_id);
+            var jd = await jr.json();
+            if (!jr.ok) throw new Error(jd.detail || 'Error consultando el estudio');
+            if (jd.status === 'done') break;
+            if (jd.status === 'error') throw new Error(jd.error || 'Error en estudio de mercado');
+          }
+        }
+        await fetch('/api/activation/step', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 3, market_done: true })
+        });
+        ACT.step = 3;
+        renderActivationStep();
+        if (window.rimaToast) rimaToast('Estudio de mercado listo');
+      } catch(e) {
+        if (status) status.textContent = e.message || 'Error';
+        btn.disabled = false;
+        btn.textContent = 'Ejecutar estudio de mercado';
+      }
+      return;
+    }
+    if (ACT.step === 3) {
+      btn.disabled = true;
+      btn.textContent = 'Generando plan…';
+      if (status) status.textContent = 'Creando calendario del mes…';
+      try {
+        var r3 = await fetch('/api/calendar/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        var d3 = await r3.json();
+        if (!r3.ok) throw new Error(d3.detail || 'Error al generar calendario');
+        await fetch('/api/activation/step', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 4, calendar_done: true })
+        });
+        ACT.step = 4;
+        renderActivationStep();
+        loadDashboardStats();
+        if (window.rimaToast) rimaToast('Calendario generado (' + (d3.count || 0) + ' piezas)');
+      } catch(e) {
+        if (status) status.textContent = e.message || 'Error';
+        btn.disabled = false;
+        btn.textContent = 'Generar calendario';
+      }
+      return;
+    }
+    if (ACT.step === 4) {
+      btn.disabled = true;
+      btn.textContent = 'Iniciando semana…';
+      if (status) status.textContent = 'Generando propuestas semanales…';
+      try {
+        var brandR = await fetch('/api/brand');
+        var brand = brandR.ok ? await brandR.json() : {};
+        var brandName = brand.brand_name || 'default';
+        var r4 = await fetch('/api/agent/weekly/start', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand: brandName, skip_scrape: true })
+        });
+        var d4 = await r4.json();
+        if (!r4.ok) throw new Error(d4.detail || 'Error en plan semanal');
+        await fetch('/api/activation/step', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ step: 4, weekly_done: true })
+        });
+        document.getElementById('rima-activation').classList.remove('show');
+        if (window.rimaToast) rimaToast('¡Listo! Revisá tu contenido en Contenido.');
+        setTimeout(maybeShowReferentesDiscovery, 600);
+      } catch(e) {
+        if (status) status.textContent = e.message || 'Error';
+        btn.disabled = false;
+        btn.textContent = 'Generar plan semanal';
+      }
+    }
+  }
+
+  // ── Descubrimiento referentes (día 3+) ──
+  var DISC = { selected: {}, suggestions: [], isPreview: false };
+
+  function ensureRefDiscoveryDom() {
+    if (document.getElementById('rima-ref-discovery')) return;
+    var el = document.createElement('div');
+    el.id = 'rima-ref-discovery';
+    el.innerHTML = '<div class="disc-card">'
+      + '<button type="button" id="disc-close" aria-label="Cerrar">×</button>'
+      + '<h3 id="disc-title">RIMA encontró referentes para vos</h3>'
+      + '<p class="disc-sub" id="disc-sub">Perfiles verificados de tu nicho. Marcá los que quieras agregar o cerrá para después.</p>'
+      + '<div id="disc-list"></div>'
+      + '<div class="disc-actions">'
+      + '<button type="button" id="disc-primary">Agregar seleccionados</button>'
+      + '<button type="button" id="disc-dismiss">Ahora no</button>'
+      + '</div></div>';
+    document.body.appendChild(el);
+    document.getElementById('disc-close').onclick = dismissRefDiscovery;
+    document.getElementById('disc-dismiss').onclick = dismissRefDiscovery;
+    document.getElementById('disc-primary').onclick = confirmRefDiscovery;
+  }
+
+  function renderRefDiscoveryList(suggestions) {
+    DISC.suggestions = suggestions || [];
+    DISC.selected = {};
+    var list = document.getElementById('disc-list');
+    if (!list) return;
+    list.innerHTML = '';
+    DISC.suggestions.forEach(function(s) {
+      DISC.selected[s.username] = true;
+      var row = document.createElement('div');
+      row.className = 'ref-verified-row selected';
+      row.dataset.user = s.username;
+      var pic = s.profile_pic_url || '';
+      var igUrl = s.profile_url || ('https://www.instagram.com/' + s.username + '/');
+      var displayName = s.full_name || s.nombre_nicho || s.username;
+      var avatar = pic
+        ? '<img class="ref-avatar" src="' + pic + '" alt="" />'
+        : '<div class="ref-avatar"></div>';
+      row.innerHTML = avatar
+        + '<div class="ref-info"><a href="' + igUrl + '" target="_blank" rel="noopener">@' + s.username
+        + '</a><p class="ref-motivo">' + (s.motivo || displayName) + '</p></div>'
+        + '<input type="checkbox" class="ref-check" checked data-user="' + s.username + '" />';
+      var cb = row.querySelector('.ref-check');
+      cb.onclick = function(e) {
+        e.stopPropagation();
+        var on = cb.checked;
+        DISC.selected[s.username] = on;
+        row.classList.toggle('selected', on);
+      };
+      list.appendChild(row);
+    });
+  }
+
+  function showRefDiscoveryPopup(suggestions, preview) {
+    ensureRefDiscoveryDom();
+    DISC.isPreview = !!preview;
+    var title = document.getElementById('disc-title');
+    var sub = document.getElementById('disc-sub');
+    if (DISC.isPreview) {
+      if (title) title.textContent = 'Vista previa — referentes sugeridos';
+      if (sub) sub.textContent = 'Así se verá el aviso cuando RIMA encuentre perfiles verificados (día 3+).';
+    } else {
+      if (title) title.textContent = 'RIMA encontró referentes para vos';
+      if (sub) sub.textContent = 'Perfiles verificados de tu nicho. Marcá los que quieras agregar o cerrá para después.';
+    }
+    renderRefDiscoveryList(suggestions);
+    document.getElementById('rima-ref-discovery').classList.add('show');
+  }
+
+  async function dismissRefDiscovery() {
+    document.getElementById('rima-ref-discovery').classList.remove('show');
+    if (DISC.isPreview) { DISC.isPreview = false; return; }
+    try { await fetch('/api/referentes/discovery/dismiss', { method: 'POST' }); } catch(e) {}
+  }
+
+  async function confirmRefDiscovery() {
+    var picked = Object.keys(DISC.selected).filter(function(k) { return DISC.selected[k]; });
+    if (!picked.length) {
+      if (window.rimaToast) rimaToast('Elegí al menos un referente o tocá Ahora no', 'error');
+      return;
+    }
+    if (DISC.isPreview) {
+      document.getElementById('rima-ref-discovery').classList.remove('show');
+      DISC.isPreview = false;
+      if (window.rimaToast) rimaToast('Vista previa — no se guardaron referentes');
+      return;
+    }
+    var btn = document.getElementById('disc-primary');
+    btn.disabled = true;
+    btn.textContent = 'Guardando…';
+    try {
+      var r = await fetch('/api/referentes/discovery/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usernames: picked })
+      });
+      var d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Error');
+      document.getElementById('rima-ref-discovery').classList.remove('show');
+      if (window.rimaToast) rimaToast('Referentes agregados (' + (d.added || 0) + ')');
+      loadDashboardStats();
+    } catch(e) {
+      if (window.rimaToast) rimaToast(e.message || 'Error', 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Agregar seleccionados';
+    }
+  }
+
+  async function maybeShowReferentesDiscovery() {
+    if (window.location.pathname === '/onboarding' || window.location.pathname === '/login') return;
+    if (!document.getElementById('rima-nav')) return;
+    if (window.RIMA_USER && window.RIMA_USER.role === 'admin') return;
+    var tourOv = document.getElementById('rima-tour-overlay');
+    if (tourOv && tourOv.classList.contains('show')) return;
+    var act = document.getElementById('rima-activation');
+    if (act && act.classList.contains('show')) return;
+    try {
+      var r = await fetch('/api/referentes/discovery');
+      if (!r.ok) return;
+      var d = await r.json();
+      if (d.status === 'running') {
+        setTimeout(maybeShowReferentesDiscovery, 4000);
+        return;
+      }
+      if (!d.should_show_popup) return;
+      showRefDiscoveryPopup(d.suggestions || [], false);
+    } catch(e) {}
+  }
+
+  async function previewRefDiscovery() {
+    try {
+      var r = await fetch('/api/referentes/discovery/preview');
+      if (!r.ok) return;
+      var d = await r.json();
+      showRefDiscoveryPopup(d.suggestions || [], true);
+    } catch(e) {}
+  }
+
+  function ensureRefPreviewButton() {
+    if (!document.getElementById('rima-nav')) return;
+    var params = new URLSearchParams(window.location.search);
+    var email = (window.RIMA_USER && window.RIMA_USER.email) || '';
+    var isTest = /@test\\.com$/i.test(email);
+    var forcePreview = params.get('preview_discovery') === '1';
+    if (!isTest && !forcePreview) return;
+    if (!document.getElementById('rima-ref-preview-btn')) {
+      var btn = document.createElement('button');
+      btn.id = 'rima-ref-preview-btn';
+      btn.type = 'button';
+      btn.textContent = 'Ver popup referentes';
+      btn.title = 'Vista previa del aviso de referentes (día 3+)';
+      btn.onclick = previewRefDiscovery;
+      document.body.appendChild(btn);
+    }
+    if (forcePreview) setTimeout(previewRefDiscovery, 600);
+  }
+
 })();
 </script>
 """
 
+
+COMING_SOON_ROUTES = {"/meta", "/ventas", "/landing"}
+
+TOUR_SLUG_BY_HREF = {
+    "/home": "dashboard",
+    "/calendario": "calendario",
+    "/contenido": "contenido",
+    "/mercado": "mercado",
+    "/marca": "marca",
+    "/referencias": "referencias",
+    "/imagenes": "imagenes",
+    "/videos": "videos",
+    "/credenciales": "credenciales",
+}
 
 NAV_ITEMS_PY = [
     ("Dashboard",            "/home",         "COMENCEMOS", "violet",  "M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"),
@@ -876,6 +1668,10 @@ def _build_nav_html(current_path: str) -> str:
         html += f'<div style="margin-bottom:12px"><p style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0">{g}</p><div style="display:flex;flex-direction:column;gap:2px">'
         for label, href, color, icon in groups[g]:
             is_active = (href == current_path) or (href != "/" and current_path.startswith(href))
+            coming = href in COMING_SOON_ROUTES
+            tour_slug = TOUR_SLUG_BY_HREF.get(href, "")
+            tour_attr = f' data-rima-tour="{tour_slug}"' if tour_slug else ""
+            soon_attr = ' data-coming-soon="1"' if coming else ""
             if is_active:
                 bg = "background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)"
                 tc = "color:#fff;font-weight:600"
@@ -884,11 +1680,15 @@ def _build_nav_html(current_path: str) -> str:
                 tc = "color:#94A3B8;font-weight:400"
             ic = COLOR_HEX.get(color, "#A78BFA")
             ib = COLOR_BG.get(color, "rgba(124,58,237,0.15)")
+            soon_badge = '<span class="nav-soon-badge">Próximamente</span>' if coming else ""
+            tag = "div" if coming else "a"
+            href_attr = "" if coming else f' href="{href}"'
             html += (
-                f'<a href="{href}" style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;border:1px solid;text-decoration:none;transition:all .18s;{bg}">'
+                f'<{tag}{href_attr}{tour_attr}{soon_attr} style="display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:10px;border:1px solid;text-decoration:none;transition:all .18s;{bg}">'
                 f'<div style="width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{ib}">'
                 f'<svg style="width:10px;height:10px;color:{ic}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="{icon}"/></svg>'
-                f'</div><span style="font-size:11px;{tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{label}</span></a>'
+                f'</div><span style="font-size:11px;{tc};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1">{label}</span>'
+                f'{soon_badge}</{tag}>'
             )
         html += "</div></div>"
     return html
@@ -1394,6 +2194,10 @@ def delete_image(category: str, filename: str, user: dict = Depends(get_current_
     if not path.exists():
         raise HTTPException(status_code=404, detail="Archivo no encontrado")
     path.unlink()
+    from core.imagenes_cliente import archivo_url
+    from core.db import init_db, delete_imagen_por_url
+    init_db(cid)
+    delete_imagen_por_url(cid, archivo_url(cid, category, filename))
     return {"status": "deleted", "file": filename}
 
 
@@ -1674,73 +2478,8 @@ def health():
 
 # ── API: Flujo semanal + Telegram ──
 
-@app.post("/api/weekly/start")
-async def weekly_start(payload: dict, user: dict = Depends(get_current_user)):
-    """
-    Inicia el flujo semanal para un cliente.
-    Corre el scraping y manda la primera historia a Telegram.
-
-    Body: { "brand": "fitlife", "week": "W23_2026", "chat_id": 5149024498 }
-    """
-    brand    = payload.get("brand", "")
-    week     = payload.get("week", "")
-    chat_id  = payload.get("chat_id")
-    profiles = payload.get("competitor_profiles", [])
-
-    if not brand or not chat_id:
-        raise HTTPException(400, "brand y chat_id son requeridos")
-
-    # 1. Arrancar el orquestador (scraping + inicializar estado)
-    try:
-        result = weekly_agent.start_week(brand, week_label=week,
-                                          competitor_profiles=profiles)
-    except Exception as e:
-        raise HTTPException(500, f"Error iniciando semana: {e}")
-
-    # 2. Obtener la primera historia y mandarla por Telegram
-    try:
-        from bot.weekly_flow import enviar_historia
-        from telegram import Bot
-        bot = Bot(token=os.getenv("TELEGRAM_BOT_TOKEN"))
-
-        next_story = weekly_agent.next_story(brand, result["week"])
-        if not next_story.get("done"):
-            # Crear app temporal solo para enviar
-            from telegram.ext import Application as TGApp
-            tg_app = TGApp.builder().token(os.getenv("TELEGRAM_BOT_TOKEN")).build()
-            await tg_app.initialize()
-
-            await bot.send_message(
-                chat_id=chat_id,
-                text=(
-                    f"🚀 *¡Tu semana de contenido está lista!*\n\n"
-                    f"Vamos a revisar el copy pieza por pieza.\n"
-                    f"Son {next_story['total_stories']} historias, "
-                    f"unos minutos de tu tiempo y RIMA se encarga del resto."
-                ),
-                parse_mode="Markdown"
-            )
-
-            await enviar_historia(
-                tg_app, chat_id, brand, result["week"],
-                next_story["story_index"],
-                next_story["total_stories"],
-                next_story["slot"],
-                next_story.get("proposals", [])
-            )
-            await tg_app.shutdown()
-
-    except Exception as e:
-        # No fallar si Telegram falla — el estado ya fue guardado
-        print(f"Warning Telegram: {e}")
-
-    return {
-        "status": "started",
-        "brand": brand,
-        "week": result["week"],
-        "stage": result["stage"],
-        "message": "Flujo semanal iniciado. Primera historia enviada por Telegram."
-    }
+# /api/weekly/start (flujo Telegram legacy) eliminado Jul 2026.
+# Usar POST /api/agent/weekly/start (pipeline SQLite del dashboard).
 
 
 # â"€â"€ Webhook Lemon Squeezy â"€â"€
@@ -1827,30 +2566,41 @@ def _verify_gumroad_seller(seller_id: str) -> bool:
     return bool(GUMROAD_SELLER_ID) and seller_id == GUMROAD_SELLER_ID
 
 
-SMTP_HOST = os.getenv("SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-EMAIL_FROM = os.getenv("EMAIL_FROM", SMTP_USER)
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+# onboarding@resend.dev funciona sin verificar dominio propio (piloto). Para
+# producción con dominio propio: verificar el dominio en Resend y setear
+# EMAIL_FROM a una dirección de ese dominio.
+EMAIL_FROM = os.getenv("EMAIL_FROM", "RIMA AI <onboarding@resend.dev>")
 APP_LOGIN_URL = os.getenv("APP_LOGIN_URL", "https://rima.n8n-ghl.com/login")
 
 
 def _send_email_sync(to_email: str, subject: str, body: str) -> None:
-    msg = EmailMessage()
-    msg["From"] = EMAIL_FROM
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.set_content(body)
-
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASSWORD)
-        server.send_message(msg)
+    """Envía vía Resend API (reemplaza SMTP Gmail — no depende de tu password
+    personal de Google, que revoca los App Passwords cada vez que la cambiás)."""
+    payload = json.dumps({
+        "from": EMAIL_FROM,
+        "to": [to_email],
+        "subject": subject,
+        "text": body,
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+            # Sin User-Agent, Cloudflare devuelve 403 (error 1010, bloqueo anti-bot)
+            "User-Agent": "RIMA-AI/1.0",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        resp.read()
 
 
 async def send_welcome_email(to_email: str, name: str, temp_password: str) -> None:
-    if not (SMTP_HOST and SMTP_USER and SMTP_PASSWORD):
-        print(f"[RIMA] SMTP no configurado, omitiendo correo de bienvenida a {to_email}")
+    if not RESEND_API_KEY:
+        print(f"[RIMA] RESEND_API_KEY no configurada, omitiendo correo de bienvenida a {to_email}")
         return
 
     subject = "Tu cuenta RIMA AI está lista"
@@ -2038,25 +2788,35 @@ class SalesDMRequest(BaseModel):
 
 @app.post("/api/agent/market-research")
 def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_current_user)):
-    try:
-        data = load_data()
-        email = user.get("email", "")
-        brand = get_user_brand(data, email)
-        brand_slug = cliente_id_from_brand(brand)
-        brief = req.brand_brief if req.brand_brief else _brand_brief_from_brand(
-            brand, user_plan=get_user_plan(data, email)
-        )
-        profiles = req.competitor_profiles or active_ig_usernames(data, email)
+    """Market research en background — devuelve {job_id}; polling en /api/jobs/{id}."""
+    from core.jobs import start_job, running_job_for
+
+    data = load_data()
+    email = user.get("email", "")
+    brand = get_user_brand(data, email)
+    brand_slug = cliente_id_from_brand(brand)
+    brief = req.brand_brief if req.brand_brief else _brand_brief_from_brand(
+        brand, user_plan=get_user_plan(data, email)
+    )
+    profiles = req.competitor_profiles or active_ig_usernames(data, email)
+    hashtags = req.hashtags
+
+    existing = running_job_for("market_research", email)
+    if existing:
+        return {"ok": True, "job_id": existing, "status": "running", "already_running": True}
+
+    def _run():
         result = market_research_agent.run(
             brand=brand_slug,
             brand_brief=brief,
             competitor_profiles=profiles,
-            hashtags=req.hashtags,
+            hashtags=hashtags,
             cliente_id=brand_slug,
         )
         if email and result.get("profile_meta"):
-            sync_ig_profiles_from_meta(data, email, result["profile_meta"])
-            save_data(data)
+            d = load_data()
+            sync_ig_profiles_from_meta(d, email, result["profile_meta"])
+            save_data(d)
         try:
             from core.db import init_db
             from core.marca_visual import sync_from_market_research
@@ -2064,9 +2824,10 @@ def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_cur
             sync_from_market_research(brand_slug, result, brief)
         except Exception:
             pass
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return result
+
+    job_id = start_job("market_research", _run, owner=email)
+    return {"ok": True, "job_id": job_id, "status": "running"}
 
 
 @app.get("/api/market-research/latest")
@@ -2157,12 +2918,18 @@ class ReferenteProfileRequest(BaseModel):
 
 
 @app.post("/api/referentes/profiles")
-def api_add_referente_profile(req: ReferenteProfileRequest, user: dict = Depends(get_current_user)):
+def api_add_referente_profile(
+    req: ReferenteProfileRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
     data = load_data()
     email = user.get("email", "")
     plataforma = req.plataforma if req.plataforma in ("instagram", "youtube") else "instagram"
     try:
         profile = add_profile(data, email, plataforma, req.model_dump())
+        if plataforma == "instagram":
+            _maybe_schedule_referentes_discovery(data, email, background_tasks)
         save_data(data)
         return {"ok": True, "profile": profile}
     except ValueError as e:
@@ -2193,23 +2960,25 @@ def api_delete_referente_profile(profile_id: str, plataforma: str = "instagram",
     return {"ok": True}
 
 
-@app.post("/api/referentes/scrape")
-def api_referentes_scrape(user: dict = Depends(get_current_user)):
-    """Actualización manual — consume 1 crédito semanal (se renueva cada lunes)."""
+@app.get("/api/jobs/{job_id}")
+def api_job_status(job_id: str, user: dict = Depends(get_current_user)):
+    """Polling de jobs en background (scrape, market research, batches KIE)."""
+    from core.jobs import get_job
+    job = get_job(job_id, owner=user.get("email", ""))
+    if job is None:
+        raise HTTPException(404, "Job no encontrado")
+    return {
+        "id": job["id"],
+        "kind": job["kind"],
+        "status": job["status"],
+        "result": job["result"] if job["status"] == "done" else None,
+        "error": job["error"],
+    }
+
+
+def _run_scrape_for_user(email: str, slug: str, brief: dict, profiles: list) -> dict:
+    """Cuerpo del scrape manual — corre en background via core.jobs."""
     data = load_data()
-    email = user.get("email", "")
-    try:
-        remaining = consume_manual_scrape(data, email)
-    except ValueError as e:
-        raise HTTPException(429, str(e))
-
-    brand = get_user_brand(data, email)
-    slug = cliente_id_from_brand(brand)
-    brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
-    profiles = active_ig_usernames(data, email)
-    if not profiles:
-        raise HTTPException(400, "Agrega al menos un perfil de Instagram activo en Referencias")
-
     try:
         result = market_research_agent.run(
             brand=slug,
@@ -2218,7 +2987,8 @@ def api_referentes_scrape(user: dict = Depends(get_current_user)):
             cliente_id=slug,
         )
         # Actualizar referentes: foto, seguidores, nicho, último scrape
-        user_rec = data["users"][email]
+        data = load_data()  # releer: el scrape tarda minutos y otros requests escriben
+        user_rec = data["users"].get(email, {})
         now_label = datetime.now().strftime("Lun %d %b · %H:%M")
         if result.get("profile_meta"):
             sync_ig_profiles_from_meta(data, email, result["profile_meta"])
@@ -2229,22 +2999,60 @@ def api_referentes_scrape(user: dict = Depends(get_current_user)):
         save_data(data)
         return {
             "ok": True,
-            "manual_remaining": remaining,
             "posts_analyzed": result.get("posts_analyzed", 0),
             "transcripts_ok": result.get("transcripts_ok", 0),
             "deep_analyzed": result.get("deep_analyzed", 0),
             "analysis_preview": (result.get("analysis") or "")[:300],
         }
-    except Exception as e:
+    except Exception:
         # Devolver crédito si falló el scrape
-        user_rec = data["users"][email]
+        data = load_data()
+        user_rec = data["users"].get(email, {})
         scraping = user_rec.setdefault("scraping", {})
         scraping["manual_remaining"] = min(
             MANUAL_SCRAPE_CREDITS,
             scraping.get("manual_remaining", 0) + 1,
         )
         save_data(data)
-        raise HTTPException(500, str(e))
+        raise
+
+
+@app.post("/api/referentes/scrape")
+def api_referentes_scrape(user: dict = Depends(get_current_user)):
+    """Actualización manual — consume 1 crédito semanal (se renueva cada lunes).
+
+    Corre en background: devuelve {job_id} de inmediato; la UI hace polling a
+    GET /api/jobs/{job_id} (el scrape tarda varios minutos y detrás de nginx
+    el request síncrono daba timeout).
+    """
+    from core.jobs import start_job, running_job_for
+
+    data = load_data()
+    email = user.get("email", "")
+
+    existing = running_job_for("referentes_scrape", email)
+    if existing:
+        return {"ok": True, "job_id": existing, "status": "running", "already_running": True}
+
+    brand = get_user_brand(data, email)
+    slug = cliente_id_from_brand(brand)
+    brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
+    profiles = active_ig_usernames(data, email)
+    if not profiles:
+        raise HTTPException(400, "Agrega al menos un perfil de Instagram activo en Referencias")
+
+    try:
+        remaining = consume_manual_scrape(data, email)
+    except ValueError as e:
+        raise HTTPException(429, str(e))
+    save_data(data)  # persistir el crédito consumido antes de lanzar el job
+
+    job_id = start_job(
+        "referentes_scrape",
+        lambda: _run_scrape_for_user(email, slug, brief, profiles),
+        owner=email,
+    )
+    return {"ok": True, "job_id": job_id, "status": "running", "manual_remaining": remaining}
 
 
 # ── Endpoint: Calendario mensual de contenido ──
@@ -2369,6 +3177,44 @@ def api_update_status(pub_id: str, payload: dict, user: dict = Depends(get_curre
     update_publicacion_status(cid, pub_id, status)
     return {"ok": True, "pub_id": pub_id, "status": status}
 
+def _notify_pieza_lista(cliente_id: str, pub: dict, email: str) -> None:
+    """Registra en `notificaciones` y avisa por email que una pieza quedó lista
+    para publicar (status produccion_aprobada). No debe romper la aprobación."""
+    try:
+        from core.db import create_notificacion
+        from core.jobs import start_job
+
+        tipo = (pub.get("tipo") or "pieza").lower()
+        fecha = pub.get("fecha") or ""
+        tematica = pub.get("tematica") or ""
+        mensaje = {
+            "titulo": f"Tu {tipo} está lista para publicar",
+            "fecha_programada": fecha,
+            "tematica": tematica,
+        }
+        create_notificacion(
+            cliente_id, pub.get("id", ""), "aviso_reel" if tipo == "reel" else "produccion",
+            etapa="produccion_aprobada", mensaje=mensaje, canal="email",
+        )
+
+        if email and RESEND_API_KEY:
+            asunto = f"RIMA AI — Tu {tipo} está lista para publicar"
+            cuerpo = (
+                f"Hola,\n\n"
+                f"Tu {tipo}{f' del {fecha}' if fecha else ''} ya está aprobada y lista para subir a Instagram.\n"
+                f"{f'Temática: {tematica}.' if tematica else ''}\n\n"
+                f"Descargá los archivos finales desde la sección Contenido: {APP_LOGIN_URL.replace('/login', '/contenido')}\n\n"
+                f"Equipo RIMA AI"
+            )
+            start_job(
+                "notif_email",
+                lambda: _send_email_sync(email, asunto, cuerpo),
+                owner=email,
+            )
+    except Exception as e:
+        print(f"[RIMA] Warning notificación pieza lista {pub.get('id')}: {e}")
+
+
 @app.patch("/api/publicaciones/{pub_id}/aprobar")
 def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_user)):
     from core.db import update_publicacion_field, update_publicacion_status, get_publicacion
@@ -2395,6 +3241,9 @@ def api_aprobar(pub_id: str, payload: dict, user: dict = Depends(get_current_use
         update_publicacion_status(cid, pub_id, new_status)
         brand_name = get_user_brand(load_data(), user.get("email", "")).get("brand_name") or "default"
         sync_weekly_state_from_db(cid, brand_name, pub.get("fecha"))
+
+    if new_status == "produccion_aprobada":
+        _notify_pieza_lista(cid, pub, user.get("email", ""))
 
     render_info = None
     if campo == "visual" and new_status == "produccion_aprobada":
@@ -2853,9 +3702,32 @@ def elegir_referente(pub_id: str, req: ElegirReferenteRequest,
     brief = _brand_brief_from_brand(brand_dict, user_plan=get_user_plan(data, email))
     try:
         if req.generar_copy:
-            result = weekly_agent.generate_copy_for_publicacion(
-                cid, brand_name, pub_id, req.alternativa_index, brand_brief=brief,
+            # Guard doble-click: dos requests simultáneos generaban copy dos
+            # veces (dos llamadas Gemini) pisándose el copy_json.
+            from core.jobs import running_job_for, start_job, get_job
+            import time as _time
+
+            job_kind = f"copy_{pub_id}"
+            if running_job_for(job_kind, email):
+                raise HTTPException(409, "Ya se está generando el copy de esta pieza")
+
+            job_id = start_job(
+                job_kind,
+                lambda: weekly_agent.generate_copy_for_publicacion(
+                    cid, brand_name, pub_id, req.alternativa_index, brand_brief=brief,
+                ),
+                owner=email,
             )
+            # Esperar inline (una generación de copy tarda ~10-30s, tolerable
+            # para el request): el job actúa solo como lock anti-duplicado.
+            while True:
+                job = get_job(job_id, owner=email)
+                if job is None or job["status"] == "error":
+                    raise HTTPException(500, (job or {}).get("error") or "Error generando copy")
+                if job["status"] == "done":
+                    result = job["result"]
+                    break
+                _time.sleep(1)
         else:
             from core.db import get_publicacion, update_publicacion_field, update_publicacion_status
             pub = get_publicacion(cid, pub_id)
@@ -3249,32 +4121,47 @@ def api_generar_carrusel_ia(pub_id: str, req: GenerarCarruselIARequest,
     copy_j = attached["copy_json"]
     slides = prod.get("slides") or slides
 
-    batch = generate_carousel_batch(
-        cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
-        slide_indices=req.slide_indices,
-        skip_existing=not req.regenerar_todo,
-        copy_json=copy_j,
-    )
-    prod["slides"] = batch.get("slides") or slides
-    prod["kie_batch_at"] = datetime.now().isoformat()
-    if batch.get("carousel_plan"):
-        prod["carousel_plan"] = batch["carousel_plan"]
-        copy_j["carousel_plan"] = batch["carousel_plan"]
-    prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
-    update_publicacion_field(cid, pub_id, "produccion_json", prod)
-    update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+    # Generación KIE en background: 7 slides × ~20s c/u superan cualquier
+    # timeout de proxy. La UI hace polling a /api/jobs/{job_id}.
+    from core.jobs import start_job, running_job_for
 
-    return {
-        "ok": batch.get("ok", False),
-        "generated": batch.get("generated", 0),
-        "total_targets": batch.get("total_targets", 0),
-        "results": batch.get("results", []),
-        "errors": batch.get("errors", []),
-        "modo_visual": "texto_integrado",
-        "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
-        "carousel_plan": prod.get("carousel_plan"),
-        "produccion": prod,
-    }
+    job_kind = f"kie_carrusel_{pub_id}"
+    existing = running_job_for(job_kind, email)
+    if existing:
+        return {"ok": True, "job_id": existing, "status": "running", "already_running": True}
+
+    slide_indices = req.slide_indices
+    skip_existing = not req.regenerar_todo
+
+    def _run():
+        batch = generate_carousel_batch(
+            cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
+            slide_indices=slide_indices,
+            skip_existing=skip_existing,
+            copy_json=copy_j,
+        )
+        prod["slides"] = batch.get("slides") or slides
+        prod["kie_batch_at"] = datetime.now().isoformat()
+        if batch.get("carousel_plan"):
+            prod["carousel_plan"] = batch["carousel_plan"]
+            copy_j["carousel_plan"] = batch["carousel_plan"]
+        prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
+        update_publicacion_field(cid, pub_id, "produccion_json", prod)
+        update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+        return {
+            "ok": batch.get("ok", False),
+            "generated": batch.get("generated", 0),
+            "total_targets": batch.get("total_targets", 0),
+            "results": batch.get("results", []),
+            "errors": batch.get("errors", []),
+            "modo_visual": "texto_integrado",
+            "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
+            "carousel_plan": prod.get("carousel_plan"),
+            "produccion": prod,
+        }
+
+    job_id = start_job(job_kind, _run, owner=email)
+    return {"ok": True, "job_id": job_id, "status": "running"}
 
 
 @app.post("/api/publicaciones/{pub_id}/elegir-copy")
@@ -3396,33 +4283,47 @@ def api_generar_historia_ia(pub_id: str, req: GenerarHistoriaIARequest,
                 s.pop("archivo_url", None)
                 s.pop("image_id", None)
 
-    batch = generate_story_batch(
-        cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
-        slide_indices=req.slide_indices,
-        skip_existing=not req.regenerar_todo,
-        copy_json=copy_j,
-    )
-    prod["slides"] = batch.get("slides") or slides
-    prod["kie_batch_at"] = datetime.now().isoformat()
-    if batch.get("story_plan"):
-        prod["story_plan"] = batch["story_plan"]
-        copy_j["story_plan"] = batch["story_plan"]
-    prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
-    prod["modo_visual"] = "fondo_limpio"
-    update_publicacion_field(cid, pub_id, "produccion_json", prod)
-    update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+    # Generación KIE en background (igual que carrusel) — polling en /api/jobs/{id}
+    from core.jobs import start_job, running_job_for
 
-    return {
-        "ok": batch.get("ok", False),
-        "generated": batch.get("generated", 0),
-        "total_targets": batch.get("total_targets", 0),
-        "results": batch.get("results", []),
-        "errors": batch.get("errors", []),
-        "modo_visual": "fondo_limpio",
-        "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
-        "story_plan": prod.get("story_plan"),
-        "produccion": prod,
-    }
+    job_kind = f"kie_historia_{pub_id}"
+    existing = running_job_for(job_kind, email)
+    if existing:
+        return {"ok": True, "job_id": existing, "status": "running", "already_running": True}
+
+    slide_indices = req.slide_indices
+    skip_existing = not req.regenerar_todo
+
+    def _run():
+        batch = generate_story_batch(
+            cid, pub_id, pub, slides, UPLOADS_DIR, style_guide,
+            slide_indices=slide_indices,
+            skip_existing=skip_existing,
+            copy_json=copy_j,
+        )
+        prod["slides"] = batch.get("slides") or slides
+        prod["kie_batch_at"] = datetime.now().isoformat()
+        if batch.get("story_plan"):
+            prod["story_plan"] = batch["story_plan"]
+            copy_j["story_plan"] = batch["story_plan"]
+        prod["kie_model"] = batch.get("modelo_kie") or kie_client.model_imagen()
+        prod["modo_visual"] = "fondo_limpio"
+        update_publicacion_field(cid, pub_id, "produccion_json", prod)
+        update_publicacion_field(cid, pub_id, "copy_json", copy_j)
+        return {
+            "ok": batch.get("ok", False),
+            "generated": batch.get("generated", 0),
+            "total_targets": batch.get("total_targets", 0),
+            "results": batch.get("results", []),
+            "errors": batch.get("errors", []),
+            "modo_visual": "fondo_limpio",
+            "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
+            "story_plan": prod.get("story_plan"),
+            "produccion": prod,
+        }
+
+    job_id = start_job(job_kind, _run, owner=email)
+    return {"ok": True, "job_id": job_id, "status": "running"}
 
 
 @app.get("/api/agent/weekly/status/{brand}/{week}")
@@ -3433,97 +4334,9 @@ def weekly_status(brand: str, week: str, user: dict = Depends(get_current_user))
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/agent/weekly/next-story")
-def weekly_next_story(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        return JSONResponse(content=weekly_agent.next_story(req.brand, req.week))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/approve-story")
-def weekly_approve_story(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        result = weekly_agent.approve_story(
-            brand=req.brand, week=req.week,
-            story_index=req.index,
-            chosen_proposal=req.chosen_proposal,
-            feedback=req.feedback,
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/next-carousel")
-def weekly_next_carousel(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        return JSONResponse(content=weekly_agent.next_carousel(req.brand, req.week))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/approve-carousel-referent")
-def weekly_approve_carousel_referent(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        result = weekly_agent.approve_carousel_referent(
-            brand=req.brand, week=req.week,
-            carousel_index=req.index,
-            chosen_referent=req.chosen_referent,
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/approve-carousel-copy")
-def weekly_approve_carousel_copy(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        result = weekly_agent.approve_carousel_copy(
-            brand=req.brand, week=req.week,
-            carousel_index=req.index,
-            feedback=req.feedback,
-            changes_requested=req.changes_requested,
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/next-reel")
-def weekly_next_reel(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        return JSONResponse(content=weekly_agent.next_reel(req.brand, req.week))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/approve-reel-referent")
-def weekly_approve_reel_referent(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        result = weekly_agent.approve_reel_referent(
-            brand=req.brand, week=req.week,
-            reel_index=req.index,
-            chosen_referent=req.chosen_referent,
-            topic_override=req.topic_override or None,
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@app.post("/api/agent/weekly/approve-reel-copy")
-def weekly_approve_reel_copy(req: WeeklyApprovalRequest, user: dict = Depends(get_current_user)):
-    try:
-        result = weekly_agent.approve_reel_copy(
-            brand=req.brand, week=req.week,
-            reel_index=req.index,
-            feedback=req.feedback,
-            changes_requested=req.changes_requested,
-        )
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+# Flujo legacy Telegram (next-story/approve-*) eliminado Jul 2026 — operaba sobre
+# weekly_state.json desconectado de SQLite. El pipeline vigente es
+# /api/agent/weekly/start + /elegir-referente + /aprobar (ver rima-contenido).
 
 
 # ── Client Memory Endpoints ──
@@ -3594,6 +4407,7 @@ async def _background_scrape(email: str, username: str) -> None:
                 "posts_count": result.get("posts_count", 0),
                 "insights": result.get("insights"),
                 "marca_visual": result.get("marca_visual"),
+                "profile": result.get("profile"),
             }
         else:
             user["onboarding_scrape"] = {
@@ -3682,8 +4496,25 @@ def api_onboarding_step(payload: dict, user: dict = Depends(get_current_user)):
     return {"ok": True, "onboarding_step": rec["onboarding_step"]}
 
 
+def _analyze_face_profile_background(dest_path: str, brand_name: str, cid: str, url: str) -> None:
+    try:
+        analisis = image_analysis_agent.analyze(dest_path, brand_name, "branding")
+        from core.db import set_imagen_analisis, get_imagen_por_url
+        from core.imagenes_cliente import usable_para_from_meta
+        img = get_imagen_por_url(cid, url)
+        if img:
+            set_imagen_analisis(
+                cid, img["id"], analisis,
+                usable_para=usable_para_from_meta("branding", analisis),
+                tags=analisis.get("tags", []),
+            )
+    except Exception as e:
+        print(f"[RIMA] face profile analyze: {e}")
+
+
 @app.post("/api/onboarding/face-profile")
 async def api_onboarding_face_profile(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user),
 ):
@@ -3708,24 +4539,10 @@ async def api_onboarding_face_profile(
     url = archivo_url(cid, "branding", unique_name)
     register_uploaded_image(cid, "branding", unique_name)
 
-    analisis = {}
-    try:
-        analisis = image_analysis_agent.analyze(str(dest), brand_name, "branding")
-        from core.db import set_imagen_analisis, get_imagen_por_url
-        from core.imagenes_cliente import usable_para_from_meta
-        img = get_imagen_por_url(cid, url)
-        if img:
-            set_imagen_analisis(
-                cid, img["id"], analisis,
-                usable_para=usable_para_from_meta("branding", analisis),
-                tags=analisis.get("tags", []),
-            )
-    except Exception as e:
-        print(f"[RIMA] face profile analyze: {e}")
-
     profile = save_face_profile(
-        cid, url, filename=unique_name, analisis=analisis, brand_name=brand_name,
+        cid, url, filename=unique_name, analisis={}, brand_name=brand_name,
     )
+    background_tasks.add_task(_analyze_face_profile_background, str(dest), brand_name, cid, url)
     return {"ok": True, "face_profile": profile, "url": url}
 
 
@@ -3746,8 +4563,291 @@ def api_onboarding_complete(user: dict = Depends(get_current_user)):
     rec["onboarding_completed"] = True
     rec["onboarding_step"] = 0
     rec["must_change_password"] = False
+    reset_activation_on_onboarding_complete(rec)
     save_data(d)
-    return {"ok": True, "redirect": "/home"}
+    return {"ok": True, "redirect": "/home", "start_activation": True}
+
+
+# ── Dashboard: KPIs, tour y activación ─────────────────────────────────────
+
+@app.get("/api/dashboard/stats")
+def api_dashboard_stats(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or user.get("sub") or "").strip().lower()
+    return get_dashboard_stats(data, email)
+
+
+@app.get("/api/dashboard/tour")
+def api_dashboard_tour(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    if ensure_dashboard_flags(rec):
+        save_data(data)
+    return get_tour_state(rec)
+
+
+class TourDismissRequest(BaseModel):
+    dismiss_permanent: bool = False
+
+
+@app.post("/api/dashboard/tour/dismiss")
+def api_dashboard_tour_dismiss(body: TourDismissRequest, user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = mark_tour_seen(rec, dismiss_permanent=body.dismiss_permanent)
+    save_data(data)
+    return {"ok": True, **state}
+
+
+@app.get("/api/activation/status")
+def api_activation_status(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    ob = get_onboarding_state(data, email)
+    if ensure_dashboard_flags(rec):
+        save_data(data)
+    return {
+        **get_activation_state(rec, bool(ob.get("onboarding_completed"))),
+        **get_tour_state(rec),
+    }
+
+
+@app.post("/api/activation/start")
+def api_activation_start(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = start_activation(rec)
+    save_data(data)
+    return {"ok": True, **state}
+
+
+@app.post("/api/activation/skip")
+def api_activation_skip(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = skip_activation(rec)
+    save_data(data)
+    return {"ok": True, **state}
+
+
+class ActivationStepRequest(BaseModel):
+    step: int = 1
+    referentes_confirmed: bool = False
+    market_done: bool = False
+    calendar_done: bool = False
+    weekly_done: bool = False
+
+
+@app.post("/api/activation/step")
+def api_activation_step(body: ActivationStepRequest, user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = advance_activation(
+        rec,
+        body.step,
+        referentes_confirmed=body.referentes_confirmed,
+        market_done=body.market_done,
+        calendar_done=body.calendar_done,
+        weekly_done=body.weekly_done,
+    )
+    save_data(data)
+    return {"ok": True, **state}
+
+
+def _run_referentes_discovery_background(email: str) -> None:
+    """Scrapea referentes del cliente y busca perfiles similares (oferta + ancla)."""
+    try:
+        from core.referentes_verify import fetch_profile_meta
+
+        data = load_data()
+        rec = data.get("users", {}).get(email)
+        if not rec:
+            return
+        brand = get_user_brand(data, email)
+        existing = active_ig_usernames(data, email)
+        if not existing:
+            return
+
+        meta = fetch_profile_meta(existing)
+        sync_ig_profiles_from_meta(data, email, meta)
+        save_data(data)
+
+        suggestions = discover_similar_referentes(brand, existing, limit=4)
+        existing_set = {u.lower() for u in existing}
+        suggestions = [s for s in suggestions if s["username"] not in existing_set]
+
+        data = load_data()
+        rec = data.setdefault("users", {}).setdefault(email, {})
+        save_referentes_discovery_result(rec, suggestions)
+        save_data(data)
+    except Exception as e:
+        print(f"[RIMA] referentes discovery: {e}")
+        try:
+            data = load_data()
+            rec = data.get("users", {}).get(email)
+            if rec:
+                save_referentes_discovery_result(rec, [])
+                save_data(data)
+        except Exception:
+            pass
+
+
+def _maybe_schedule_referentes_discovery(
+    data: dict,
+    email: str,
+    background_tasks: BackgroundTasks | None,
+) -> None:
+    """Encola descubrimiento solo si día 3+, tiene referentes y aún no se generó."""
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    ensure_dashboard_flags(rec)
+    ref_count = len(active_ig_usernames(data, email))
+    if ref_count <= 0:
+        return
+    mark_referentes_anchor_ready(rec)
+    state = get_referentes_discovery_state(rec, ref_count)
+    if not state.get("should_generate"):
+        return
+    mark_referentes_discovery_running(rec)
+    if background_tasks is not None:
+        background_tasks.add_task(_run_referentes_discovery_background, email)
+
+
+@app.get("/api/referentes/discovery/preview")
+def api_referentes_discovery_preview(user: dict = Depends(get_current_user)):
+    return {"preview": True, "suggestions": get_preview_suggestions()}
+
+
+@app.get("/api/referentes/discovery")
+def api_referentes_discovery(
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    if ensure_dashboard_flags(rec):
+        save_data(data)
+    ref_count = len(active_ig_usernames(data, email))
+    state = get_referentes_discovery_state(rec, ref_count)
+    if state.get("should_generate"):
+        mark_referentes_discovery_running(rec)
+        save_data(data)
+        background_tasks.add_task(_run_referentes_discovery_background, email)
+        state = get_referentes_discovery_state(rec, ref_count)
+    return state
+
+
+class ReferentesDiscoveryConfirmRequest(BaseModel):
+    usernames: List[str] = []
+
+
+@app.post("/api/referentes/discovery/confirm")
+def api_referentes_discovery_confirm(
+    body: ReferentesDiscoveryConfirmRequest,
+    user: dict = Depends(get_current_user),
+):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    disc = rec.get("referentes_discovery") or {}
+    by_user = {s["username"]: s for s in (disc.get("suggestions") or [])}
+    added = []
+    seen = set()
+    for raw in body.usernames or []:
+        user_name = (raw or "").strip().lstrip("@").lower()
+        if not user_name or user_name in seen:
+            continue
+        seen.add(user_name)
+        sug = by_user.get(user_name, {})
+        try:
+            profile = add_profile(data, email, "instagram", {
+                "username": user_name,
+                "nombre_nicho": sug.get("nombre_nicho") or sug.get("full_name") or user_name,
+                "estado": "activo",
+            })
+            if sug.get("profile_pic_url"):
+                update_profile(data, email, "instagram", profile["id"], {
+                    "profile_pic_url": sug["profile_pic_url"],
+                    "ig_url": sug.get("profile_url") or f"https://www.instagram.com/{user_name}/",
+                })
+            added.append(profile)
+        except ValueError:
+            break
+    mark_referentes_discovery_shown(rec)
+    save_data(data)
+    return {"ok": True, "added": len(added), "profiles": added}
+
+
+@app.post("/api/referentes/discovery/dismiss")
+def api_referentes_discovery_dismiss(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = mark_referentes_discovery_shown(rec)
+    save_data(data)
+    return {"ok": True, **state}
+
+
+@app.get("/api/referentes/suggest")
+def api_referentes_suggest(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    brand = get_user_brand(data, email)
+    existing = active_ig_usernames(data, email)
+    if not existing:
+        raise HTTPException(
+            status_code=400,
+            detail="Agregá al menos un referente antes de buscar perfiles similares.",
+        )
+    suggestions = discover_similar_referentes(brand, existing, limit=4)
+    return {"suggestions": suggestions}
+
+
+class ReferentesConfirmRequest(BaseModel):
+    usernames: List[str] = []
+    custom_usernames: List[str] = []
+
+
+@app.post("/api/referentes/confirm-activation")
+def api_referentes_confirm_activation(
+    body: ReferentesConfirmRequest,
+    background_tasks: BackgroundTasks,
+    user: dict = Depends(get_current_user),
+):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    added = []
+    seen = set()
+    for raw in list(body.usernames or []) + list(body.custom_usernames or []):
+        user_name = (raw or "").strip().lstrip("@").lower()
+        if not user_name or user_name in seen:
+            continue
+        seen.add(user_name)
+        try:
+            profile = add_profile(data, email, "instagram", {
+                "username": user_name,
+                "nombre_nicho": user_name,
+                "estado": "activo",
+            })
+            added.append(profile)
+        except ValueError:
+            break
+    advance_activation(rec, 2, referentes_confirmed=len(added) > 0 or bool(active_ig_usernames(data, email)))
+    _maybe_schedule_referentes_discovery(data, email, background_tasks)
+    save_data(data)
+    return {
+        "ok": True,
+        "added": len(added),
+        "profiles": added,
+        **get_activation_state(rec, True),
+    }
 
 
 # ── Auth routes ──────────────────────────────────────────────────────────────

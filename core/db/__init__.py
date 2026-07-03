@@ -28,6 +28,7 @@ from .database import (
     get_imagenes_para,
     get_imagen,
     get_imagen_por_url,
+    delete_imagen_por_url,
     get_marca_visual,
     set_marca_visual,
     # Notificaciones

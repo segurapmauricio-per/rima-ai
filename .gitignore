@@ -4,6 +4,9 @@
 .env.production
 *.env
 
+# Credenciales de Google Cloud — NUNCA subir al repo
+secrets/
+
 # Data local
 data/
 logs/
@@ -27,3 +30,12 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Git worktrees (roadmap paralelo) — nunca commitear
+.worktrees/
+
+# Cache de índice Graphify — se regenera con graphify update
+graphify-out/
+
+# Cookies de prueba local
+cookies*.txt

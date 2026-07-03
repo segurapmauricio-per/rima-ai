@@ -9,6 +9,7 @@ from core.gemini_client import gemini
 from core.brand_knowledge import K_REEL_COPY
 from core.client_store import load_memory, load_referents_db, load_content_calendar, update_memory
 from core.weekly_helpers import format_slot_context_for_copy
+from core.marca_visual import contexto_marca_para_copy, idioma_cliente, idioma_cliente_label
 import json
 from datetime import datetime
 
@@ -86,10 +87,12 @@ class ReelCopyAgent:
         }
 
     def run(self, reel_slot: dict, brand_brief: dict, brand: str,
-            referent: dict = None, topic_override: str = None) -> dict:
+            referent: dict = None, topic_override: str = None,
+            marca: dict = None) -> dict:
         """
         Step 2: Generate reel idea + copy once client picks referent.
         topic_override: if client wanted to change the topic
+        marca: marca_visual del cliente (idioma + tono) — igual que carousel/story
         """
         memory = load_memory(brand)
         tone_notes = "\n".join(memory.get("tone_preferences", [])) or "Directo y auténtico"
@@ -100,7 +103,7 @@ class ReelCopyAgent:
             reel_slot = {**reel_slot, "topic": topic_override}
 
         idea = self._generate_idea(reel_slot, brand_brief, referent, tone_notes,
-                                   disliked, preferred_formats)
+                                   disliked, preferred_formats, marca=marca)
 
         result = {
             "agent": self.name,
@@ -116,7 +119,10 @@ class ReelCopyAgent:
         return result
 
     def _generate_idea(self, slot: dict, brief: dict, referent: dict,
-                       tone_notes: str, disliked: str, preferred_formats: list) -> dict:
+                       tone_notes: str, disliked: str, preferred_formats: list,
+                       marca: dict = None) -> dict:
+        idioma_label = idioma_cliente_label(brief, marca)
+        marca_context = contexto_marca_para_copy(marca, brief)
         referent_context = ""
         slot_context = format_slot_context_for_copy(slot, referent)
         if referent:
@@ -153,6 +159,9 @@ REEL:
 TONO DEL CLIENTE: {tone_notes}
 PALABRAS A EVITAR: {disliked}
 FORMATOS PREFERIDOS: {formats_hint}
+IDIOMA: TODO el copy (titulo, hook, development, social_proof, cta, recording_notes)
+en {idioma_label} — no mezclar idiomas salvo nombres propios.
+{marca_context}
 
 {referent_context}
 

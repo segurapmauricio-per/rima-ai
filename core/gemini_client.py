@@ -6,14 +6,10 @@ from datetime import datetime
 
 load_dotenv(override=True)
 
-# Vertex AI con Application Default Credentials (gcloud auth application-default login)
-# Usa scope cloud-platform â€” compatible con proyectos de organizaciÃ³n Google Cloud
+# Vertex AI con Service Account (GOOGLE_APPLICATION_CREDENTIALS) — usa los créditos
+# de prueba de Google Cloud, no la facturación prepago de AI Studio.
 _project = os.getenv("GOOGLE_CLOUD_PROJECT", "rima-ai-498117")
-client = genai.Client(
-    vertexai=True,
-    project=_project,
-    location="us-central1"
-)
+client = genai.Client(vertexai=True, project=_project, location="us-central1")
 
 
 class GeminiClient:

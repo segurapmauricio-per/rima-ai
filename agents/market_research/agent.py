@@ -59,6 +59,8 @@ def calculate_metrics(post: dict, creator_avg_views_10: float = 0) -> dict:
     Calcula las métricas alineadas con el schema de referentes_contenido:
       fuerza             = (vistas + comentarios*10) / seguidores
       engagement         = (likes + comentarios*2 + guardados*3) / vistas
+                           (guardados suele venir 0: apify~instagram-scraper no expone
+                           savesCount — el término queda por si el actor lo agrega)
       ratio_conversacion = comentarios / vistas
       relevancia         = vistas / avg_vistas_últimas_10 del creador
       engagement_score   = fuerza * (1 + relevancia)  ← para rankear
@@ -206,6 +208,7 @@ def _fallback_analisis(post: dict) -> dict:
     cat = infer_categoria(post)
     enfoque = {"ventas": "Ventas", "educacion": "Educación", "conexion": "Conexión"}.get(cat, "Educación")
     return {
+        "analisis_origen": "fallback",  # heurístico, NO análisis Gemini — la UI puede distinguirlo
         "hook": hook,
         "hook_hablado": hook_h or hook,
         "tipo_angulo": "Problema" if cat == "ventas" else ("Mentalidad" if cat == "conexion" else "Resultado"),
@@ -633,7 +636,18 @@ class MarketResearchAgent:
 
         return {"posts": posts}
 
+    # Espera máxima total por un run de Apify (waitForFinish inicial + polling)
+    APIFY_MAX_WAIT_S = 600
+    APIFY_POLL_INTERVAL_S = 10
+
     def _apify_run(self, actor_input: dict, limit: int = 250, actor_id: str = ACTOR_POSTS) -> list:
+        """Ejecuta un actor y espera a que TERMINE antes de leer el dataset.
+
+        Antes se leía el dataset tras waitForFinish=120 sin verificar el estado:
+        con 5+ perfiles el scrape tarda más y devolvía resultados parciales o
+        vacíos en silencio. Ahora se hace polling hasta SUCCEEDED (o error).
+        """
+        import time as _time
         url = (
             f"https://api.apify.com/v2/acts/{actor_id}/runs"
             f"?token={_apify_token()}&waitForFinish=120"
@@ -645,6 +659,28 @@ class MarketResearchAgent:
         )
         with urllib.request.urlopen(req, timeout=150) as resp:
             run_data = json.loads(resp.read()).get("data", {})
+
+        run_id = run_data.get("id", "")
+        status = run_data.get("status", "")
+        waited = 120
+
+        while status in ("READY", "RUNNING") and run_id and waited < self.APIFY_MAX_WAIT_S:
+            _time.sleep(self.APIFY_POLL_INTERVAL_S)
+            waited += self.APIFY_POLL_INTERVAL_S
+            status_url = f"https://api.apify.com/v2/actor-runs/{run_id}?token={_apify_token()}"
+            try:
+                with urllib.request.urlopen(status_url, timeout=30) as resp:
+                    run_data = json.loads(resp.read()).get("data", {})
+                status = run_data.get("status", "")
+            except Exception as e:
+                print(f"[MarketResearchAgent] Warning polling run {run_id}: {e}")
+                break
+
+        if status and status != "SUCCEEDED":
+            raise RuntimeError(
+                f"Run Apify {actor_id} terminó en estado {status} "
+                f"(esperado SUCCEEDED tras {waited}s)"
+            )
 
         dataset_id = run_data.get("defaultDatasetId", "")
         if not dataset_id:
@@ -660,15 +696,29 @@ class MarketResearchAgent:
     # ── Análisis Gemini ────────────────────────────────────────────────────────
 
     def _transcribe_deep_queue(self, posts: list) -> int:
-        """Capa 1.5 — transcribe reels de la cola capa 2 vía Gemini multimodal."""
+        """Capa 1.5 — transcribe reels de la cola capa 2 vía Gemini multimodal.
+
+        Descargas del CDN en paralelo (antes secuenciales: con ~20 videos de
+        hasta 25MB era el cuello de botella de toda la corrida); transcripción
+        Gemini secuencial para no golpear rate limits.
+        """
+        from concurrent.futures import ThreadPoolExecutor
+
+        targets = [
+            p for p in posts
+            if _is_video_post(p) and (p.get("_video_url") or "")
+        ]
+        if not targets:
+            print(f"[MarketResearchAgent] Capa 1.5: 0/{len(posts)} transcripciones")
+            return 0
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            downloads = list(pool.map(
+                lambda p: _download_video(p.get("_video_url") or ""), targets
+            ))
+
         ok = 0
-        for post in posts:
-            if not _is_video_post(post):
-                continue
-            url = post.get("_video_url") or ""
-            if not url:
-                continue
-            video_bytes = _download_video(url)
+        for post, video_bytes in zip(targets, downloads):
             if not video_bytes:
                 continue
             try:
@@ -693,6 +743,16 @@ class MarketResearchAgent:
             batch_analyses = self._request_post_analyses_batch(
                 batch, batch_start, brand_brief
             )
+            if not batch_analyses and len(batch) > 1:
+                # Batch entero sin parsear (JSON truncado/malformado): reintento
+                # en mitades para no perder los 8 análisis de golpe.
+                half = len(batch) // 2
+                batch_analyses = self._request_post_analyses_batch(
+                    batch[:half], batch_start, brand_brief
+                )
+                batch_analyses.update(self._request_post_analyses_batch(
+                    batch[half:], batch_start + half, brand_brief
+                ))
             for local_i, post in enumerate(batch):
                 global_idx = batch_start + local_i
                 item = (

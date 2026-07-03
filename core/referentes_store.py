@@ -24,14 +24,12 @@ def get_user_plan(data: dict, email: str) -> str:
 
 def get_user_brand(data: dict, email: str) -> dict:
     user = data.get("users", {}).get(email, {})
-    if user.get("brand"):
-        return dict(user["brand"])
-    return dict(data.get("brand", {}))
+    return dict(user.get("brand") or {})
 
 
 def set_user_brand(data: dict, email: str, brand: dict) -> dict:
     user = get_user_record(data, email)
-    existing = dict(user.get("brand") or data.get("brand") or {})
+    existing = dict(user.get("brand") or {})
     existing.update(brand)
     user["brand"] = existing
     return existing

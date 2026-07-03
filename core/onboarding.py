@@ -246,28 +246,20 @@ def onboarding_complete_missing(brand: dict, cliente_id: str, plan: str) -> list
 
 def apply_scrape_to_brand(brand: dict, scrape_result: dict) -> dict:
     """Mezcla insights del scrape IG en el objeto brand para prellenar wizard."""
+    from core.brief_analysis import analyze_brief_from_ig, brief_fields_for_brand
+
     brand = dict(brand)
     insights = scrape_result.get("insights") or {}
     profile = scrape_result.get("profile") or {}
+    posts = scrape_result.get("posts") or []
 
-    if profile.get("biography") and not brand.get("brand_service"):
-        brand["brand_service"] = profile["biography"][:300]
+    brief = insights.get("brief")
+    if not brief and (profile or insights):
+        brief = analyze_brief_from_ig(profile, posts, insights)
 
-    oferta = insights.get("oferta_detectada") or ""
-    if oferta and not brand.get("brand_price"):
-        brand["brand_price"] = oferta
-
-    problema = insights.get("problema_detectado") or ""
-    if problema and not brand.get("brand_problem"):
-        brand["brand_problem"] = problema
-
-    resultado = insights.get("resultado_prometido") or ""
-    if resultado and not brand.get("brand_result"):
-        brand["brand_result"] = resultado
-
-    cliente = insights.get("cliente_ideal") or ""
-    if cliente and not brand.get("brand_ideal_client"):
-        brand["brand_ideal_client"] = cliente
+    for key, val in brief_fields_for_brand(brief).items():
+        if not brand.get(key):
+            brand[key] = val
 
     tono = insights.get("forma_de_hablar") or insights.get("tono") or ""
     if tono:
@@ -281,5 +273,12 @@ def apply_scrape_to_brand(brand: dict, scrape_result: dict) -> dict:
     if username:
         brand["brand_ig"] = f"@{username.lstrip('@')}"
         brand["ig_username"] = username.lstrip("@")
+
+    if not brand.get("brand_name"):
+        full_name = (profile.get("full_name") or "").strip()
+        if full_name:
+            brand["brand_name"] = full_name
+        elif username:
+            brand["brand_name"] = username.lstrip("@")
 
     return brand

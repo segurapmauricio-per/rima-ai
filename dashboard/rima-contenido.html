@@ -1061,6 +1061,20 @@ window.confirmarGenerarIA = async function() {
   }
 };
 
+// Polling de jobs KIE en background (los batches tardan 1-5 min; el endpoint
+// devuelve {job_id} de inmediato y acá esperamos el resultado real).
+async function esperarJobKie(data) {
+  if (!data.job_id) return data;  // respuesta síncrona legacy
+  while (true) {
+    await new Promise(function(res) { setTimeout(res, 5000); });
+    var jr = await fetch('/api/jobs/' + data.job_id);
+    var jd = await jr.json().catch(function(){ return {}; });
+    if (!jr.ok) throw new Error(jd.detail || 'Error consultando el job');
+    if (jd.status === 'done') return jd.result || {};
+    if (jd.status === 'error') throw new Error(jd.error || 'Error en generación KIE');
+  }
+}
+
 window.generarCarruselCompleto = async function(pubId, btn) {
   if (!confirm('Se generarán las slides pendientes con KIE AI (Nano Banana Pro).\n'
     + 'Costo aproximado: ~$0.09 USD por slide.\n\n¿Continuar?')) {
@@ -1077,6 +1091,7 @@ window.generarCarruselCompleto = async function(pubId, btn) {
     });
     var data = await r.json().catch(function(){ return {}; });
     if (!r.ok) throw new Error(data.detail || r.statusText);
+    data = await esperarJobKie(data);
     if (!data.ok && !data.generated) throw new Error((data.errors && data.errors[0] && data.errors[0].reason) || data.reason || 'Error KIE');
     window.rimaToast && rimaToast(
       'Carrusel generado: ' + (data.generated || 0) + ' slides con IA',
@@ -1107,6 +1122,7 @@ window.generarHistoriaCompleto = async function(pubId, btn) {
     });
     var data = await r.json().catch(function(){ return {}; });
     if (!r.ok) throw new Error(data.detail || r.statusText);
+    data = await esperarJobKie(data);
     if (!data.ok && !data.generated) throw new Error((data.errors && data.errors[0] && data.errors[0].reason) || data.reason || 'Error KIE');
     window.rimaToast && rimaToast(
       'Historia generada: ' + (data.generated || 0) + ' slides con IA',

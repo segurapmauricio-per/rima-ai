@@ -24,17 +24,9 @@ Reglas de generación (sos un planificador ESTRATÉGICO, no un copywriter):
 - Hablas SIEMPRE un nivel por encima del cliente objetivo (regla 80/20)
 - Escribe en español LATAM"""
 
-# Límites semanales de volumen de contenido por tier de plan contratado.
-# Básico/start confirmado por el cliente: 3 reels + 1 carrusel + 3 secuencias de
-# historias por semana. Pro/Max son una escala razonable sobre esa base — ajustar
-# si el cliente define cifras oficiales distintas.
-PLAN_LIMITS = {
-    "basico": {"reels": 3, "carruseles": 1, "historias": 3},
-    "basic":  {"reels": 3, "carruseles": 1, "historias": 3},
-    "start":  {"reels": 3, "carruseles": 1, "historias": 3},
-    "pro":    {"reels": 5, "carruseles": 2, "historias": 5},
-    "max":    {"reels": 9, "carruseles": 3, "historias": 7},
-}
+# Límites semanales por plan — fuente única: core/plan_limits.py::CONTENT_WEEKLY.
+# (Antes había una copia local que podía divergir al cambiar un plan.)
+from core.plan_limits import CONTENT_WEEKLY as PLAN_LIMITS
 
 PLAN_DAYS = 30                    # ventana del plan: 30 días corridos anclados al lunes de esta semana
 WEEK_DAYS = 7                     # bloque de programación alineado a semanas calendario (lun-dom)
@@ -656,10 +648,13 @@ Solo el JSON, sin texto adicional antes ni después.
         return slots
 
     def _save(self, result: dict, business_name: str, label: str):
-        os.makedirs("logs/content", exist_ok=True)
+        from pathlib import Path
+        # Ruta anclada al proyecto — en VPS/systemd el cwd no es la raíz del repo
+        log_dir = Path(__file__).resolve().parents[2] / "logs" / "content"
+        log_dir.mkdir(parents=True, exist_ok=True)
         label_slug = label.replace(" ", "_").replace("-", "").lower()
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"logs/content/{business_name}_{label_slug}_{ts}.json"
+        filename = str(log_dir / f"{business_name}_{label_slug}_{ts}.json")
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
 

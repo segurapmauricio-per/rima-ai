@@ -699,7 +699,19 @@ async function runMarket() {
       body: JSON.stringify({ competitor_profiles: refs, hashtags: [] })
     });
     if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
-    const data = await res.json();
+    let data = await res.json();
+    if (data.job_id) {
+      // Corre en background — polling hasta terminar (scrape + Gemini tardan minutos)
+      addLog('<div style="margin-bottom:12px"><span class="log-tag tag-info">JOB</span>Corriendo en background (job ' + data.job_id + ')…</div>');
+      while (true) {
+        await new Promise(r => setTimeout(r, 5000));
+        const jr = await fetch('/api/jobs/' + data.job_id);
+        const jd = await jr.json();
+        if (!jr.ok) throw new Error(jd.detail || 'Error consultando el job');
+        if (jd.status === 'done') { data = jd.result || {}; break; }
+        if (jd.status === 'error') throw new Error(jd.error || 'Error en market research');
+      }
+    }
     setStatus('market', 'done');
     document.getElementById('last-market').textContent = 'OK · ' + ts();
     renderResult(data);
@@ -807,16 +819,10 @@ async function runStoryCopy() {
   addLog(`<div style="margin-bottom:12px"><span class="log-tag tag-info">CONFIG</span>Tipo: <span class="log-str">"${tipo}"</span></div>`);
 
   try {
-    const res = await fetch('/api/agent/weekly/next-carousel', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ story_type: tipo })
-    });
-    if (!res.ok) { const e = await res.json().catch(()=>({detail:res.statusText})); throw new Error(e.detail); }
-    const data = await res.json();
-    setStatus('story-copy', 'done');
-    document.getElementById('last-story-copy').textContent = 'OK · ' + ts();
-    renderResult(data);
+    // Endpoint legacy /api/agent/weekly/next-carousel eliminado (jul 2026).
+    // El copy de historias se genera desde /contenido: Orquestador semanal +
+    // "Modelar esta" en cada pieza (POST /elegir-referente).
+    throw new Error('Flujo movido a /contenido — corré el Orquestador semanal y usá "Modelar esta" en cada pieza.');
   } catch(e) {
     setStatus('story-copy', 'error');
     document.getElementById('last-story-copy').textContent = 'Error · ' + ts();

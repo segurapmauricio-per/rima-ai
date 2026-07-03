@@ -134,6 +134,27 @@ Copy: temática/enfoque fijos del plan mensual; idioma desde `marca_visual`; key
 - GET /api/imagenes?uso=
 
 ## Estado actual
+- [x] **Sprint robustez agentes (Jul 2, local):** revisión completa de las 7 áreas + fixes:
+  (1) Apify: verificación de estado del run + polling hasta SUCCEEDED (antes leía datasets
+  parciales en silencio si el scrape tardaba >120s); descargas de video en paralelo (4 workers).
+  (2) Capa 2: análisis fallback marcado con `analisis_origen: "fallback"`; retry en mitades
+  si un batch Gemini entero falla el parseo. (3) `PLAN_LIMITS` unificado en
+  `core/plan_limits.CONTENT_WEEKLY` (antes duplicado en content agent). (4) `reel_copy`
+  ahora recibe `marca` e idioma (antes solo carousel/story — reels salían en español para
+  clientes en otro idioma). (5) `image_analysis`: fix glob roto en `analyze_batch` (pathlib
+  no soporta `{}`— nunca matcheó nada) y los errores de Vision ya NO se persisten como
+  metadata. (6) Flujo legacy Telegram eliminado (métodos next_story/approve_* del weekly
+  agent + 8 endpoints + /api/weekly/start viejo). (7) **Jobs en background** (`core/jobs.py`
+  + `GET /api/jobs/{id}`): /api/referentes/scrape, /api/agent/market-research y los batch
+  KIE (generar-carrusel-ia / generar-historia-ia) devuelven `{job_id}` al instante y la UI
+  hace polling — antes corrían síncronos (5-15 min) y en VPS darían 502/504. (8) Guard
+  anti doble-click en elegir-referente (lock por job). (9) Notificación al pasar a
+  `produccion_aprobada`: fila en tabla `notificaciones` + email (Etapa 3 de
+  CAMBIOS_SOLICITADOS). **Verificado E2E con scrape real** (vilmanunez/juanlombana,
+  negocio_pro): 60 posts, 21/21 análisis Gemini, 5 transcripciones, calendario 42 piezas,
+  weekly 3 propuestas, copy reel+historia, 1 imagen KIE vía job, render final, notificación
+  en DB. **Pendiente: regenerar Gmail App Password** (SMTP devuelve 535 BadCredentials —
+  el de jun-15 fue revocado); considerar migrar a Resend (ya en roadmap Fase 0).
 - [x] Login JWT en produccion con HTTPS
 - [x] Deploy en VPS con nginx + systemd
 - [x] claude-mem activo (memoria persistente entre sesiones)

@@ -334,7 +334,12 @@ class WeeklyAgent:
                 "cta_deliverable": copy_result.get("cta_deliverable", ""),
             }
         else:
-            copy_result = reel_copy_agent.run(slot, brief, brand, referent=referent)
+            from core.db import get_marca_visual
+            from core.marca_visual import normalizar_marca
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+            copy_result = reel_copy_agent.run(
+                slot, brief, brand, referent=referent, marca=marca,
+            )
             idea = copy_result.get("idea") or {}
             copy_json = {
                 "etapa": "copy",
@@ -406,231 +411,9 @@ class WeeklyAgent:
             skip_pub_id=skip_pub_id, tipo=tipo,
         )
 
-    def next_story(self, brand: str, week: str) -> dict:
-        """Get the next story proposal. Called iteratively until all stories approved."""
-        state = load_weekly_state(brand, week) or {}
-        brief = load_brief(brand) or {}
-
-        # Auto-cargar stories del calendario si el estado está vacío
-        if not state.get("stories"):
-            month = state.get("month") or datetime.now().strftime("%B_%Y").lower()
-            calendar = load_content_calendar(brand, month)
-            if calendar:
-                slots = self._extract_week_slots(calendar, week)
-                state["stories"]   = [s for s in slots if s.get("type") == "historia"]
-                state["carousels"] = [s for s in slots if s.get("type") == "carrusel"]
-                state["reels"]     = [s for s in slots if s.get("type") == "reel"]
-                state["week"]      = week
-                state["brand"]     = brand
-                state.setdefault("stage", "stories_copy")
-                save_weekly_state(brand, week, state)
-
-        stories = state.get("stories", [])
-        idx = state.get("current_story_index", 0)
-
-        if idx >= len(stories):
-            # All stories done → move to carousels
-            state["stage"] = "carousels_referents"
-            state["copy_stage"] = "carousels"
-            save_weekly_state(brand, week, state)
-            return {
-                "stage": "carousels_referents",
-                "message": "Historias completadas. Pasamos a los carruseles.",
-                "done": True,
-            }
-
-        slot = stories[idx]
-        research_summary = state.get("market_research_summary", "")
-        proposals = story_copy_agent.run(slot, brief, brand, research_summary)
-
-        return {
-            "agent": "story_copy",
-            "brand": brand,
-            "week": week,
-            "story_index": idx,
-            "total_stories": len(stories),
-            "slot": slot,
-            "proposals": proposals.get("proposals", []),
-            "message": (
-                f"Historia {idx + 1}/{len(stories)} — "
-                f"{slot.get('date', '')} ({slot.get('story_type', '')})"
-            ),
-            "next_action": "POST /api/agent/weekly/approve-story con {story_index, chosen_proposal, feedback}",
-        }
-
-    def approve_story(self, brand: str, week: str, story_index: int,
-                      chosen_proposal: dict, feedback: str = "") -> dict:
-        """Record story approval and advance index."""
-        state = load_weekly_state(brand, week) or {}
-        state.setdefault("story_approvals", {})[str(story_index)] = {
-            "approved": chosen_proposal,
-            "feedback": feedback,
-            "approved_at": datetime.now().isoformat(),
-        }
-        state["current_story_index"] = story_index + 1
-
-        # Learn from feedback
-        if feedback:
-            story_copy_agent.apply_feedback(brand, feedback, chosen_proposal)
-
-        save_weekly_state(brand, week, state)
-        return {"status": "approved", "next_story_index": story_index + 1}
-
-    def next_carousel(self, brand: str, week: str) -> dict:
-        """Get referent options for next carousel."""
-        state = load_weekly_state(brand, week)
-        brief = load_brief(brand) or {}
-        carousels = state.get("carousels", [])
-        idx = state.get("current_carousel_index", 0)
-
-        if idx >= len(carousels):
-            state["stage"] = "reels_referents"
-            save_weekly_state(brand, week, state)
-            return {"stage": "reels_referents", "message": "Carruseles listos.", "done": True}
-
-        slot = carousels[idx]
-        referents = carousel_copy_agent.propose_referents(slot, brand, brief)
-
-        return {
-            "agent": "carousel_copy",
-            "brand": brand,
-            "week": week,
-            "carousel_index": idx,
-            "total_carousels": len(carousels),
-            "slot": slot,
-            "referent_options": referents.get("options", []),
-            "message": referents.get("message", ""),
-            "next_action": "POST /api/agent/weekly/approve-carousel-referent con {carousel_index, chosen_referent}",
-        }
-
-    def approve_carousel_referent(self, brand: str, week: str, carousel_index: int,
-                                   chosen_referent: dict) -> dict:
-        """Generate carousel copy after referent is chosen."""
-        state = load_weekly_state(brand, week)
-        brief = load_brief(brand) or {}
-        carousels = state.get("carousels", [])
-        slot = carousels[carousel_index]
-
-        cid = brand.lower().replace(" ", "_")
-        from core.db import get_marca_visual
-        from core.marca_visual import normalizar_marca
-        marca = normalizar_marca(get_marca_visual(cid))
-        copy_result = carousel_copy_agent.run(
-            slot, brief, brand, referent=chosen_referent, marca=marca,
-        )
-
-        state.setdefault("carousel_approvals", {})[str(carousel_index)] = {
-            "referent": chosen_referent,
-            "copy": copy_result,
-            "status": "pending",
-        }
-        save_weekly_state(brand, week, state)
-
-        return {
-            "agent": "carousel_copy",
-            "carousel_index": carousel_index,
-            "slides": copy_result.get("slides", []),
-            "next_action": "POST /api/agent/weekly/approve-carousel-copy",
-        }
-
-    def approve_carousel_copy(self, brand: str, week: str, carousel_index: int,
-                               feedback: str = "", changes_requested: str = "") -> dict:
-        """Finalize carousel copy approval."""
-        state = load_weekly_state(brand, week) or {}
-        approvals = state.setdefault("carousel_approvals", {})
-
-        if changes_requested and str(carousel_index) in approvals:
-            # Re-generate with feedback
-            brief = load_brief(brand) or {}
-            approvals[str(carousel_index)]["status"] = "revision"
-            carousel_copy_agent.apply_feedback(brand, changes_requested)
-
-        else:
-            if str(carousel_index) in approvals:
-                approvals[str(carousel_index)]["status"] = "approved"
-                approvals[str(carousel_index)]["approved_at"] = datetime.now().isoformat()
-            state["current_carousel_index"] = carousel_index + 1
-
-        save_weekly_state(brand, week, state)
-        return {"status": "approved", "next_carousel_index": carousel_index + 1}
-
-    def next_reel(self, brand: str, week: str) -> dict:
-        """Get referent options for next reel."""
-        state = load_weekly_state(brand, week)
-        brief = load_brief(brand) or {}
-        reels = state.get("reels", [])
-        idx = state.get("current_reel_index", 0)
-
-        if idx >= len(reels):
-            state["stage"] = "production"
-            save_weekly_state(brand, week, state)
-            return {"stage": "production", "message": "Reels listos. Pasamos a producción.", "done": True}
-
-        slot = reels[idx]
-        referents = reel_copy_agent.propose_referents(slot, brand, brief)
-
-        return {
-            "agent": "reel_copy",
-            "brand": brand,
-            "week": week,
-            "reel_index": idx,
-            "total_reels": len(reels),
-            "slot": slot,
-            "referent_options": referents.get("options", []),
-            "message": referents.get("message", ""),
-            "can_change_topic": True,
-            "next_action": "POST /api/agent/weekly/approve-reel-referent",
-        }
-
-    def approve_reel_referent(self, brand: str, week: str, reel_index: int,
-                               chosen_referent: dict, topic_override: str = None) -> dict:
-        """Generate reel idea after referent (and optional topic change) is chosen."""
-        state = load_weekly_state(brand, week)
-        brief = load_brief(brand) or {}
-        reels = state.get("reels", [])
-        slot = reels[reel_index]
-
-        if topic_override:
-            # Update calendar slot topic
-            slot["topic"] = topic_override
-            reels[reel_index] = slot
-            state["reels"] = reels
-
-        idea_result = reel_copy_agent.run(slot, brief, brand,
-                                          referent=chosen_referent,
-                                          topic_override=topic_override)
-
-        state.setdefault("reel_approvals", {})[str(reel_index)] = {
-            "referent": chosen_referent,
-            "idea": idea_result,
-            "topic_changed": bool(topic_override),
-            "status": "pending",
-        }
-        save_weekly_state(brand, week, state)
-
-        return {
-            "agent": "reel_copy",
-            "reel_index": reel_index,
-            "idea": idea_result.get("idea", {}),
-            "next_action": "POST /api/agent/weekly/approve-reel-copy",
-        }
-
-    def approve_reel_copy(self, brand: str, week: str, reel_index: int,
-                           feedback: str = "", changes_requested: str = "") -> dict:
-        """Finalize reel idea approval."""
-        state = load_weekly_state(brand, week) or {}
-        approvals = state.setdefault("reel_approvals", {})
-
-        if changes_requested:
-            reel_copy_agent.apply_feedback(brand, changes_requested)
-
-        if str(reel_index) in approvals and not changes_requested:
-            approvals[str(reel_index)]["status"] = "approved"
-            approvals[str(reel_index)]["approved_at"] = datetime.now().isoformat()
-            state["current_reel_index"] = reel_index + 1
-
-        save_weekly_state(brand, week, state)
-        return {"status": "approved", "next_reel_index": reel_index + 1}
+    # Métodos legacy del flujo Telegram (next_story/approve_*) eliminados Jul 2026:
+    # operaban sobre weekly_state.json + load_referents_db (JSON), desconectados del
+    # pipeline SQLite vigente (start_week + generate_copy_for_publicacion).
 
     def get_weekly_status(self, brand: str, week: str) -> dict:
         """Return current state of the weekly workflow."""
@@ -678,14 +461,6 @@ class WeeklyAgent:
             "complete": "Semana completada",
         }
         return actions.get(stage, "Estado desconocido")
-
-    def _extract_week_slots(self, calendar: dict, week: str) -> list:
-        """Extract slots for a specific week from the monthly calendar."""
-        all_slots = calendar.get("calendar", [])
-        # Try to match by week number
-        week_num = int(week.replace("W", "").split("_")[0]) if "W" in week else 1
-        week_slots = [s for s in all_slots if s.get("semana") == week_num]
-        return week_slots if week_slots else all_slots[:7]  # fallback: first week
 
     def _run_scraping(self, brand: str, brief: dict, week: str,
                       competitor_profiles: list) -> dict:
