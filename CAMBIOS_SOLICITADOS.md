@@ -368,6 +368,45 @@ No implementar ahora — son features de Fase 2/3 del `ROADMAP.md`, pero convien
 - **Landing (Fase 2):** la paleta de colores y tipografía de 4.15-A ya cubren "colores y estilos" — faltaría un campo de **estructura de oferta** tipo Value Stack (qué incluye el programa/servicio en capas) para que la landing no repita el mismo copy genérico que el contenido de Instagram, y un campo de **CTA principal** (agendar llamada / comprar directo / dejar WhatsApp) que hoy no existe en ningún lado del brief.
 - **Recomendación general:** cuando se aborden estas 3 fases, extender `marca_visual`/brief con un bloque nuevo `comercial: { objecciones: [], tono_cierre: "", value_stack: [], cta_principal: "", presupuesto_ads_mensual: "", objetivo_ads: "" }` en vez de mezclarlo con `comunicacion`/`visual` — separa claramente "cómo hablo en redes" de "cómo vendo/cierro", que son cosas relacionadas pero distintas.
 
+### 4.16 Dashboard `/home` conectado a datos reales — **IMPLEMENTADO 7-jul-2026**
+
+**Hallazgo:** la sección principal de `/home` (Estado de los agentes, Pendientes, Esta semana) era **100% HTML estático** — cero JS, cero fetch. Un cliente real (Carolina, abogada) veía contenido de fitness inventado ("Rutina 5AM", "Mitos fitness", "@alexfit_mx") en su propio dashboard.
+
+**Implementado:**
+- `core/dashboard_stats.py::get_dashboard_stats()` extendido — ahora calcula, además de los KPIs que ya tenía: `calendario` (piezas del mes calendario actual + próxima pieza), `contenido` (conteos reales por tipo entre piezas en pipeline de validación), `mercado_top` (mejor referente real por score_ventas), `pendientes` (lista real: piezas esperando validación, reels por grabar, piezas programadas sin publicar — **en rojo/warning** —, y brief incompleto con % real), `esta_semana` (piezas de la semana lunes-domingo actual, con piezas atrasadas resaltadas en rojo).
+- `dashboard/rima-home.html` reescrito: las 3 tarjetas reales (Calendario/Contenido/Estudio de mercado) ahora muestran datos reales y son **clickeables** (llevan a `/calendario`, `/contenido`, `/mercado` respectivamente). Los paneles "Pendientes" y "Esta semana" se renderizan 100% desde el endpoint `/api/dashboard/stats` — ya no hay HTML estático con datos de otro cliente.
+- META Ads/Ventas/Landing siguen "Desconectado" (ya arreglado en 4.5, confirmado que sigue vivo tras el deploy).
+- Verificado con test aislado de `get_dashboard_stats()` — sin errores, estructura correcta.
+
+**Pendiente (no implementado):** "Zona 3" de `/home` (Actividad reciente + "Reel de la semana") sigue siendo mockup ("Rutina 5AM" repetido) — no se tocó en esta ronda, mismo patrón a aplicar después.
+
+### 4.17 "Ver en Instagram" también en la lista del Estudio de Mercado — **IMPLEMENTADO 7-jul-2026**
+
+El botón con el logo/gradiente de Instagram (ya agregado al modal en 4.13) ahora también aparece **al lado de "Ver copy"** en cada fila de la lista de análisis de `/mercado` — no hace falta abrir el modal para ir directo al post real.
+
+### 4.18 "Información de la marca" (`/marca`, pestaña 1 · Negocio) conectada a datos reales — **IMPLEMENTADO 7-jul-2026**
+
+**Hallazgo:** toda la página `/marca` (pestañas 1-10) es mockup sin persistencia (ya documentado en 4.15) — mostraba datos de "FitLife Studio / Carlos Mendoza" fijos en el HTML, sin relación con la cuenta real logueada.
+
+**Implementado (solo pestaña 1 · Negocio, alcance acordado):**
+- Campos conectados a datos reales ya existentes en el brief: nombre del negocio, Instagram, a quién ayudás, dolor principal — se cargan con `GET /api/brand` y quedan **en blanco** si no hay dato (no más "FitLife Studio" hardcodeado).
+- Campos nuevos que el brief no tenía (`brand_owner_name`, `brand_city_country`, `brand_niche_industria`, `brand_business_model`, `brand_time_market`, `brand_clients_count`, `brand_previous_attempts`, `brand_origin_story`) — quedan en blanco/sin seleccionar, el cliente los completa; se guardan con `POST /api/brand` al hacer clic en "Guardar cambios" (`saveForm()` ahora llama a un guardado real, antes solo mostraba el indicador visual sin persistir nada).
+- Se agregó el chip "Legal" a Industria/Nicho (antes solo tenía nichos de fitness/coaching — Carolina no tenía ninguna opción real para elegir).
+- **Pestañas 2-10 siguen sin persistencia real** — fuera de alcance de esta ronda, documentado para una etapa futura dedicada.
+
+### 4.19 `/credenciales` — sacados los datos ficticios que mostraban integraciones falsas — **IMPLEMENTADO 7-jul-2026**
+
+**Hallazgo:** Telegram e Instagram API mostraban badge "Conectado" con valores fijos falsos (`@fitlifestudio_mx`, tokens de ejemplo) — parecía una integración real y activa sin serlo. Además se encontró un **bug de arquitectura**: el endpoint existente `GET/POST /api/credentials` (`main.py` línea ~2090) guarda todo en `data["credentials"]` **global, sin namespace por cliente** — en un sistema multi-tenant, todos los clientes compartirían las mismas credenciales guardadas ahí. No se usó ese endpoint todavía (no hay wiring real), pero hay que corregir el scoping antes de conectarlo de verdad.
+
+**Implementado (solo lo seguro/rápido):**
+- Badges cambiados a "Desconectado" (Telegram) y "Pendiente" (Instagram, con nota explicando que requiere cuenta Business + revisión de app de Meta).
+- Valores fijos falsos eliminados — inputs vacíos con placeholder, o `disabled` en el caso de Instagram (todavía no hay forma de conectarlo).
+
+**No implementado (requiere trabajo real de OAuth, roadmap):**
+- Conectar Telegram de verdad (guardar chat_id/token por cliente — corregir primero el scoping de `/api/credentials`).
+- Instagram Graph API real — depende de la revisión de app de Meta (ya documentado en 4.6/ROADMAP.md Fase 2).
+- META Ads OAuth — mismo bloqueo, Fase 2.
+
 ### Orden sugerido de implementación (Etapa 4-5)
 1. 4.5 (dashboard con datos falsos) — más urgente: un cliente real no debe ver plata/conversiones inventadas.
 2. 4.3 (cambio de texto del tour, un string, cero riesgo).

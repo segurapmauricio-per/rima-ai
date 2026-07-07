@@ -197,31 +197,32 @@
           <div class="sec-divider">Datos básicos</div>
           <div class="field-group">
             <div class="field-label">Nombre del negocio / marca personal <span class="req">*</span></div>
-            <input class="f-input" placeholder="ej: FitLife Studio · Transformación90 con Juan López" value="FitLife Studio" />
+            <input id="f-brand-name" class="f-input" placeholder="ej: FitLife Studio · Transformación90 con Juan López" />
           </div>
           <div class="field-group">
             <div class="field-label">Tu nombre <span class="req">*</span></div>
-            <input class="f-input" placeholder="ej: Carlos Mendoza" value="Carlos Mendoza" />
+            <input id="f-owner-name" class="f-input" placeholder="ej: Carlos Mendoza" />
           </div>
           <div class="grid grid-cols-2 gap-3">
             <div class="field-group">
               <div class="field-label">Instagram <span class="req">*</span></div>
-              <input class="f-input" placeholder="@tunegocio" value="@fitlifestudio_mx" />
+              <input id="f-brand-ig" class="f-input" placeholder="@tunegocio" />
             </div>
             <div class="field-group">
               <div class="field-label">Ciudad / País</div>
-              <input class="f-input" placeholder="ej: CDMX, México" value="CDMX, México" />
+              <input id="f-city" class="f-input" placeholder="ej: CDMX, México" />
             </div>
           </div>
           <div class="field-group">
             <div class="field-label">Industria / Nicho</div>
-            <div class="chip-group">
-              <span class="chip selected" onclick="toggleChip(this)">Fitness</span>
+            <div class="chip-group" id="chips-industria" data-field="brand_niche_industria">
+              <span class="chip" onclick="toggleChip(this)">Fitness</span>
               <span class="chip" onclick="toggleChip(this)">Nutrición</span>
               <span class="chip" onclick="toggleChip(this)">Coaching</span>
               <span class="chip" onclick="toggleChip(this)">Negocios</span>
               <span class="chip" onclick="toggleChip(this)">Bienestar</span>
               <span class="chip" onclick="toggleChip(this)">Educación</span>
+              <span class="chip" onclick="toggleChip(this)">Legal</span>
               <span class="chip" onclick="toggleChip(this)">Inmobiliario</span>
               <span class="chip" onclick="toggleChip(this)">Otro</span>
             </div>
@@ -229,8 +230,8 @@
           <div class="grid grid-cols-2 gap-3">
             <div class="field-group">
               <div class="field-label">Modelo de negocio</div>
-              <div class="chip-group">
-                <span class="chip selected" onclick="toggleChip(this)">Done With You</span>
+              <div class="chip-group" id="chips-modelo" data-field="brand_business_model">
+                <span class="chip" onclick="toggleChip(this)">Done With You</span>
                 <span class="chip" onclick="toggleChip(this)">Done For You</span>
                 <span class="chip" onclick="toggleChip(this)">Infoproducto</span>
                 <span class="chip" onclick="toggleChip(this)">Agencia</span>
@@ -239,10 +240,10 @@
             </div>
             <div class="field-group">
               <div class="field-label">Tiempo en el mercado</div>
-              <div class="chip-group">
+              <div class="chip-group" id="chips-tiempo" data-field="brand_time_market">
                 <span class="chip" onclick="toggleChip(this)">Menos de 6m</span>
                 <span class="chip" onclick="toggleChip(this)">6–12 meses</span>
-                <span class="chip selected" onclick="toggleChip(this)">1–3 años</span>
+                <span class="chip" onclick="toggleChip(this)">1–3 años</span>
                 <span class="chip" onclick="toggleChip(this)">+3 años</span>
               </div>
             </div>
@@ -250,7 +251,7 @@
           <div class="field-group">
             <div class="field-label">Número de clientes atendidos</div>
             <div class="field-hint">Aparece en landing y VSL como prueba social.</div>
-            <input class="f-input" placeholder="ej: Más de 200 personas" value="Más de 200 personas" />
+            <input id="f-clients-count" class="f-input" placeholder="ej: Más de 200 personas" />
           </div>
         </div>
 
@@ -260,21 +261,21 @@
           <div class="field-group">
             <div class="field-label">¿A quién ayudás específicamente? <span class="req">*</span></div>
             <div class="field-hint">Nicho + segmento + situación actual. Cuanto más específico, mejor.</div>
-            <textarea class="f-textarea" rows="3" placeholder="ej: Personas de 30-50 años con trabajo sedentario en CDMX que llevan meses intentando bajar de peso sin resultados...">Personas de 30-50 años con trabajo sedentario en CDMX que llevan meses intentando bajar de peso sin resultados y no tienen tiempo para ir al gym horas al día</textarea>
+            <textarea id="f-ideal-client" class="f-textarea" rows="3" placeholder="ej: Personas de 30-50 años con trabajo sedentario en CDMX que llevan meses intentando bajar de peso sin resultados..."></textarea>
           </div>
           <div class="field-group">
             <div class="field-label">¿Cuál es el DOLOR PRINCIPAL? <span class="req">*</span></div>
             <div class="field-hint">La raíz del problema, no el síntoma.</div>
-            <textarea class="f-textarea" rows="3" placeholder="ej: Llevan meses probando sin resultados. Se sienten frustrados y ya no confían en que algo funcione para ellos">Llevan meses probando rutinas de YouTube y dietas que no se sostienen. Se sienten frustrados porque hacen esfuerzo y no ven resultados. La falta de acompañamiento es la diferencia.</textarea>
+            <textarea id="f-problem" class="f-textarea" rows="3" placeholder="ej: Llevan meses probando sin resultados. Se sienten frustrados y ya no confían en que algo funcione para ellos"></textarea>
           </div>
           <div class="field-group">
             <div class="field-label">¿Qué intentaron antes y por qué no funcionó?</div>
-            <textarea class="f-textarea" rows="2" placeholder="ej: Apps de fitness, YouTube, dietas de moda — falló porque faltó personalización y seguimiento real">Apps, YouTube, dietas de redes sociales. Falló porque no había personalización ni seguimiento — cuando no ven resultados rápidos, abandonan.</textarea>
+            <textarea id="f-previous-attempts" class="f-textarea" rows="2" placeholder="ej: Apps de fitness, YouTube, dietas de moda — falló porque faltó personalización y seguimiento real"></textarea>
           </div>
           <div class="field-group">
             <div class="field-label">Historia de origen — ¿por qué empezaste este negocio?</div>
             <div class="field-hint">Humaniza la marca. Aparece en VSL y reels de autoridad.</div>
-            <textarea class="f-textarea" rows="3" placeholder="ej: Yo mismo pasé por esto. Trabajaba 10 horas al día, subí 15kg y no encontraba tiempo ni método. Ahí desarrollé el sistema que hoy uso con mis clientes"></textarea>
+            <textarea id="f-origin-story" class="f-textarea" rows="3" placeholder="ej: Yo mismo pasé por esto. Trabajaba 10 horas al día, subí 15kg y no encontraba tiempo ni método. Ahí desarrollé el sistema que hoy uso con mis clientes"></textarea>
           </div>
         </div>
 
@@ -1112,6 +1113,71 @@
 </script>
 
 <script>
+// ── Pestaña 1 · Negocio — conectada a datos reales (GET/POST /api/brand) ──
+// El resto de las pestañas (2-10) todavía no tiene persistencia real — ver
+// CAMBIOS_SOLICITADOS.md 4.15 para el detalle de ese hallazgo.
+(function () {
+  function chipSeleccionado(groupId) {
+    var el = document.querySelector('#' + groupId + ' .chip.selected');
+    return el ? el.textContent.trim() : '';
+  }
+  function seleccionarChip(groupId, valor) {
+    if (!valor) return;
+    var chips = document.querySelectorAll('#' + groupId + ' .chip');
+    chips.forEach(function (c) {
+      if (c.textContent.trim() === valor) c.classList.add('selected');
+      else c.classList.remove('selected');
+    });
+  }
+
+  async function cargarNegocio() {
+    try {
+      var r = await fetch('/api/brand');
+      var b = await r.json();
+      document.getElementById('f-brand-name').value = b.brand_name || '';
+      document.getElementById('f-owner-name').value = b.brand_owner_name || '';
+      document.getElementById('f-brand-ig').value = b.brand_ig || b.ig_username || '';
+      document.getElementById('f-city').value = b.brand_city_country || '';
+      document.getElementById('f-clients-count').value = b.brand_clients_count || '';
+      document.getElementById('f-ideal-client').value = b.brand_ideal_client || '';
+      document.getElementById('f-problem').value = b.brand_problem || '';
+      document.getElementById('f-previous-attempts').value = b.brand_previous_attempts || '';
+      document.getElementById('f-origin-story').value = b.brand_origin_story || '';
+      seleccionarChip('chips-industria', b.brand_niche_industria || '');
+      seleccionarChip('chips-modelo', b.brand_business_model || '');
+      seleccionarChip('chips-tiempo', b.brand_time_market || '');
+    } catch (e) {}
+  }
+
+  window._guardarNegocio = async function () {
+    var payload = {
+      brand_name: document.getElementById('f-brand-name').value.trim(),
+      brand_owner_name: document.getElementById('f-owner-name').value.trim(),
+      brand_ig: document.getElementById('f-brand-ig').value.trim(),
+      brand_city_country: document.getElementById('f-city').value.trim(),
+      brand_clients_count: document.getElementById('f-clients-count').value.trim(),
+      brand_ideal_client: document.getElementById('f-ideal-client').value.trim(),
+      brand_problem: document.getElementById('f-problem').value.trim(),
+      brand_previous_attempts: document.getElementById('f-previous-attempts').value.trim(),
+      brand_origin_story: document.getElementById('f-origin-story').value.trim(),
+      brand_niche_industria: chipSeleccionado('chips-industria'),
+      brand_business_model: chipSeleccionado('chips-modelo'),
+      brand_time_market: chipSeleccionado('chips-tiempo'),
+    };
+    try {
+      await fetch('/api/brand', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {}
+  };
+
+  cargarNegocio();
+})();
+</script>
+
+<script>
 // Tab navigation
 function goSec(id){
   document.querySelectorAll('.sec-panel').forEach(p=>p.classList.remove('active'));
@@ -1128,6 +1194,7 @@ function toggleChip(el){
 // Save
 function saveForm(){
   const ind = document.getElementById('save-indicator');
+  if (window._guardarNegocio) window._guardarNegocio();
   ind.classList.remove('hidden');
   setTimeout(()=>ind.classList.add('hidden'), 2500);
 }

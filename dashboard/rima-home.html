@@ -167,52 +167,51 @@
         <div class="grid grid-cols-2 gap-3">
 
           <!-- Calendario -->
-          <div class="agent-card processing">
+          <div class="agent-card" id="card-calendario" onclick="window.location.href='/calendario'" style="cursor:pointer">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(124,58,237,0.2)"><svg class="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5"/></svg></div>
-                <div><p class="text-xs font-semibold text-white">Calendario</p><p class="text-[9px] text-slate-500">Junio 2026</p></div>
+                <div><p class="text-xs font-semibold text-white">Calendario</p><p class="text-[9px] text-slate-500" id="cal-mes-label">—</p></div>
               </div>
-              <span class="badge badge-gen pulsing">Generando</span>
+              <span class="badge badge-gen">RIMA</span>
             </div>
             <div>
-              <div class="flex justify-between text-[9px] mb-1"><span class="text-slate-400">Progreso del mes</span><span class="text-violet-400">10/20 piezas</span></div>
-              <div style="height:3px;border-radius:2px;background:rgba(255,255,255,0.06)"><div style="width:50%;height:100%;border-radius:2px;background:linear-gradient(90deg,#7C3AED,#06B6D4)"></div></div>
+              <div class="flex justify-between text-[9px] mb-1"><span class="text-slate-400">Piezas este mes</span><span class="text-violet-400" id="cal-piezas-mes">—</span></div>
             </div>
-            <p class="text-[9px] text-slate-500">Próximo: Carrusel "Mitos fitness" · Jue 12 Jun</p>
+            <p class="text-[9px] text-slate-500" id="cal-proxima">Sin piezas próximas</p>
           </div>
 
           <!-- Contenido -->
-          <div class="agent-card">
+          <div class="agent-card" id="card-contenido" onclick="window.location.href='/contenido'" style="cursor:pointer">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(236,72,153,0.15)"><svg class="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15"/></svg></div>
                 <div><p class="text-xs font-semibold text-white">Contenido</p><p class="text-[9px] text-slate-500">Historias · Carruseles · Reels</p></div>
               </div>
-              <span class="badge badge-warn">3 en validación</span>
+              <span class="badge badge-warn" id="cont-en-validacion">0 en validación</span>
             </div>
             <div class="flex gap-2">
-              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.15)"><p class="text-xs font-bold text-rose-300">6</p><p class="text-[8px] text-slate-500">Historias</p></div>
-              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300">4</p><p class="text-[8px] text-slate-500">Carruseles</p></div>
-              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300">5</p><p class="text-[8px] text-slate-500">Reels</p></div>
+              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(244,63,94,0.08);border:1px solid rgba(244,63,94,0.15)"><p class="text-xs font-bold text-rose-300" id="cont-historias">0</p><p class="text-[8px] text-slate-500">Historias</p></div>
+              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.15)"><p class="text-xs font-bold text-cyan-300" id="cont-carruseles">0</p><p class="text-[8px] text-slate-500">Carruseles</p></div>
+              <div class="flex-1 rounded-lg p-2 text-center" style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.15)"><p class="text-xs font-bold text-violet-300" id="cont-reels">0</p><p class="text-[8px] text-slate-500">Reels</p></div>
             </div>
           </div>
 
           <!-- Estudio de mercado -->
-          <div class="agent-card">
+          <div class="agent-card" id="card-mercado" onclick="window.location.href='/mercado'" style="cursor:pointer">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <div class="w-8 h-8 rounded-xl flex items-center justify-center" style="background:rgba(14,165,233,0.15)"><svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"/></svg></div>
-                <div><p class="text-xs font-semibold text-white">Estudio de mercado</p><p class="text-[9px] text-slate-500">15 referentes activos</p></div>
+                <div><p class="text-xs font-semibold text-white">Estudio de mercado</p><p class="text-[9px] text-slate-500" id="mercado-refs-count">— referentes activos</p></div>
               </div>
-              <span class="badge badge-ok">Actualizado</span>
+              <span class="badge badge-ok">Real</span>
             </div>
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-[10px] font-semibold text-white">@alexfit_mx</p>
-                <p class="text-[9px] text-slate-500">Publicó reel ayer · Fuerza 18.7%</p>
+                <p class="text-[10px] font-semibold text-white" id="mercado-top-owner">Sin datos aún</p>
+                <p class="text-[9px] text-slate-500" id="mercado-top-fuerza"></p>
               </div>
-              <span class="text-[10px] font-bold" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Modelar →</span>
+              <span class="text-[10px] font-bold" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent">Ver →</span>
             </div>
           </div>
 
@@ -280,50 +279,10 @@
               <svg class="w-3.5 h-3.5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg>
               <p class="text-xs font-semibold text-white">Pendientes</p>
             </div>
-            <span class="badge badge-warn">5 items</span>
+            <span class="badge badge-warn" id="pendientes-count">0 items</span>
           </div>
-          <div class="p-3 space-y-2">
-
-            <div class="pending-item" style="border-color:rgba(6,182,212,0.25);background:rgba(6,182,212,0.05)">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(6,182,212,0.2)"><svg class="w-3 h-3 text-cyan-400" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8l-1.7 8.02c-.13.58-.47.72-.95.45l-2.6-1.92-1.26 1.21c-.14.14-.26.26-.52.26l.19-2.65 4.81-4.35c.21-.19-.04-.29-.32-.1L8.41 14.8l-2.55-.8c-.55-.17-.56-.55.12-.82l9.97-3.84c.46-.17.86.11.69.66z"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-200 truncate">3 piezas esperando validación</p>
-                <p class="text-[9px] text-cyan-400">Enviar a Telegram →</p>
-              </div>
-            </div>
-
-            <div class="pending-item">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(124,58,237,0.15)"><svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300 truncate">5 reels pendientes de grabar</p>
-                <p class="text-[9px] text-slate-500">Semana 9–13 Jun · Ver guiones</p>
-              </div>
-            </div>
-
-            <div class="pending-item" style="border-color:rgba(245,158,11,0.2)">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(245,158,11,0.15)"><svg class="w-3 h-3 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300 truncate">Pixel META — verificar</p>
-                <p class="text-[9px] text-amber-400">Setup incompleto · Credenciales</p>
-              </div>
-            </div>
-
-            <div class="pending-item">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(52,211,153,0.12)"><svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300 truncate">CSV de clientes — Lookalike</p>
-                <p class="text-[9px] text-slate-500">Para activar TOFU Lookalike</p>
-              </div>
-            </div>
-
-            <div class="pending-item">
-              <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(124,58,237,0.12)"><svg class="w-3 h-3 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-300 truncate">Brief de marca — 55% completo</p>
-                <p class="text-[9px] text-slate-500">Historia de origen faltante</p>
-              </div>
-            </div>
-
+          <div class="p-3 space-y-2" id="pendientes-list">
+            <p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Cargando…</p>
           </div>
         </div>
 
@@ -331,56 +290,10 @@
         <div class="glass rounded-2xl border border-white/5 overflow-hidden">
           <div class="px-4 py-3 border-b border-white/5">
             <p class="text-xs font-semibold text-white">Esta semana</p>
-            <p class="text-[9px] text-slate-500 mt-0.5">9–13 Jun · 5 publicaciones</p>
+            <p class="text-[9px] text-slate-500 mt-0.5" id="semana-subtitle">—</p>
           </div>
-          <div class="p-3 space-y-1.5">
-
-            <div class="activity-row">
-              <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></div>
-              <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2)"><svg class="w-3.5 h-3.5 text-violet-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-200 truncate">Reel — Rutina 5AM</p>
-                <p class="text-[9px] text-slate-500">Lun 9 Jun · Publicado ✓</p>
-              </div>
-              <span class="text-[8px] text-emerald-400 flex-shrink-0">4.2K views</span>
-            </div>
-
-            <div class="activity-row">
-              <div class="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></div>
-              <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.2)"><svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-200 truncate">Carrusel — Mitos fitness</p>
-                <p class="text-[9px] text-amber-400">Mar 10 Jun · Validación pendiente</p>
-              </div>
-            </div>
-
-            <div class="activity-row">
-              <div class="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0"></div>
-              <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.2)"><svg class="w-3.5 h-3.5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-400 truncate">Historia — Quiz membresía</p>
-                <p class="text-[9px] text-slate-600">Mié 11 Jun · Pendiente RIMA</p>
-              </div>
-            </div>
-
-            <div class="activity-row">
-              <div class="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0"></div>
-              <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.2)"><svg class="w-3.5 h-3.5 text-violet-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-400 truncate">Reel — Error proteínas</p>
-                <p class="text-[9px] text-slate-600">Jue 12 Jun · Pendiente RIMA</p>
-              </div>
-            </div>
-
-            <div class="activity-row">
-              <div class="w-1.5 h-1.5 rounded-full bg-slate-600 flex-shrink-0"></div>
-              <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:rgba(6,182,212,0.12);border:1px solid rgba(6,182,212,0.2)"><svg class="w-3.5 h-3.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159"/></svg></div>
-              <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-medium text-slate-400 truncate">Carrusel — Suplementos OK</p>
-                <p class="text-[9px] text-slate-600">Vie 13 Jun · Pendiente RIMA</p>
-              </div>
-            </div>
-
+          <div class="p-3 space-y-1.5" id="semana-list">
+            <p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Cargando…</p>
           </div>
         </div>
 
@@ -452,6 +365,106 @@
 
   </div>
 </main>
+
+<script>
+(function () {
+  var DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  var TIPO_LABEL = { reel: 'Reel', carrusel: 'Carrusel', historia: 'Historia' };
+  var STATUS_LABEL = {
+    planificado: 'Planificado', propuesta_generada: 'Propuesta lista',
+    copy_generado: 'Copy listo', copy_aprobado: 'Copy aprobado',
+    en_produccion: 'En producción', produccion_aprobada: 'Lista para publicar',
+    programado: 'Programada', publicado: 'Publicado ✓',
+  };
+
+  function fmtFechaCorta(iso) {
+    if (!iso) return '';
+    var d = new Date(iso + 'T00:00:00');
+    if (isNaN(d)) return iso;
+    return DIAS[d.getDay()].slice(0, 3) + ' ' + d.getDate();
+  }
+
+  function renderPendientes(items) {
+    var list = document.getElementById('pendientes-list');
+    var count = document.getElementById('pendientes-count');
+    count.textContent = items.length + (items.length === 1 ? ' item' : ' items');
+    if (!items.length) {
+      list.innerHTML = '<p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Sin pendientes 🎉</p>';
+      return;
+    }
+    list.innerHTML = items.map(function (it) {
+      var warn = it.warning;
+      var borderColor = warn ? 'rgba(244,63,94,0.35)' : 'rgba(255,255,255,0.06)';
+      var bg = warn ? 'rgba(244,63,94,0.06)' : 'transparent';
+      var textColor = warn ? '#FCA5A5' : '#CBD5E1';
+      return '<div class="pending-item" style="cursor:pointer;border-color:' + borderColor + ';background:' + bg + '" onclick="window.location.href=\'' + it.href + '\'">'
+        + '<div class="flex-1 min-w-0">'
+        + '<p class="text-[10px] font-medium truncate" style="color:' + textColor + '">' + it.label + '</p>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  function renderEstaSemana(items) {
+    var list = document.getElementById('semana-list');
+    var sub = document.getElementById('semana-subtitle');
+    sub.textContent = items.length + (items.length === 1 ? ' publicación' : ' publicaciones') + ' esta semana';
+    if (!items.length) {
+      list.innerHTML = '<p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Sin piezas programadas esta semana</p>';
+      return;
+    }
+    list.innerHTML = items.map(function (p) {
+      var atrasada = p.atrasada;
+      var dotColor = atrasada ? 'bg-rose-500' : (p.status === 'publicado' ? 'bg-emerald-400' : 'bg-slate-600');
+      var textClass = atrasada ? '' : 'text-slate-300';
+      var textStyle = atrasada ? 'color:#FCA5A5' : '';
+      var statusLabel = atrasada ? 'Programada sin publicar ⚠' : (STATUS_LABEL[p.status] || p.status || '');
+      return '<div class="activity-row">'
+        + '<div class="w-1.5 h-1.5 rounded-full ' + dotColor + ' flex-shrink-0"></div>'
+        + '<div class="flex-1 min-w-0">'
+        + '<p class="text-[10px] font-medium truncate ' + textClass + '" style="' + textStyle + '">' + (TIPO_LABEL[p.tipo] || p.tipo) + ' — ' + (p.tematica || 'Sin temática') + '</p>'
+        + '<p class="text-[9px]" style="' + (atrasada ? 'color:#F87171' : 'color:#64748B') + '">' + fmtFechaCorta(p.fecha) + ' · ' + statusLabel + '</p>'
+        + '</div></div>';
+    }).join('');
+  }
+
+  async function cargarDashboardStats() {
+    try {
+      var r = await fetch('/api/dashboard/stats');
+      var d = await r.json();
+
+      var cal = d.calendario || {};
+      document.getElementById('cal-mes-label').textContent = cal.mes_label || '—';
+      document.getElementById('cal-piezas-mes').textContent = (cal.piezas_mes || 0) + ' piezas';
+      var prox = document.getElementById('cal-proxima');
+      if (cal.proxima) {
+        prox.textContent = 'Próximo: ' + (TIPO_LABEL[cal.proxima.tipo] || cal.proxima.tipo) + ' — ' + (cal.proxima.tematica || '') + ' · ' + fmtFechaCorta(cal.proxima.fecha);
+      } else {
+        prox.textContent = 'Sin piezas próximas este mes';
+      }
+
+      var cont = d.contenido || {};
+      document.getElementById('cont-en-validacion').textContent = (cont.en_validacion || 0) + ' en validación';
+      document.getElementById('cont-historias').textContent = cont.historias || 0;
+      document.getElementById('cont-carruseles').textContent = cont.carruseles || 0;
+      document.getElementById('cont-reels').textContent = cont.reels || 0;
+
+      document.getElementById('mercado-refs-count').textContent = (d.referentes_count || 0) + ' referentes activos';
+      var top = d.mercado_top;
+      if (top && top.owner) {
+        document.getElementById('mercado-top-owner').textContent = '@' + top.owner;
+        document.getElementById('mercado-top-fuerza').textContent = 'Fuerza ' + top.fuerza_pct + '%';
+      } else {
+        document.getElementById('mercado-top-owner').textContent = 'Sin análisis todavía';
+        document.getElementById('mercado-top-fuerza').textContent = '';
+      }
+
+      renderPendientes(d.pendientes || []);
+      renderEstaSemana(d.esta_semana || []);
+    } catch (e) {}
+  }
+  cargarDashboardStats();
+})();
+</script>
 
 </body>
 </html>

@@ -142,35 +142,33 @@
             <p class="text-[10px] text-slate-500">Validación de contenido · notificaciones al cliente</p>
           </div>
         </div>
-        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold status-connected">Conectado</span>
+        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);color:#94A3B8">Desconectado</span>
       </div>
       <div class="px-5 py-4 space-y-4">
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-[10px] text-slate-400 font-medium block mb-1.5">Chat ID del cliente</label>
             <div class="relative">
-              <input type="text" class="cred-input connected" value="@fitlifestudio_mx" readonly />
-              <div class="absolute right-3 top-1/2 -translate-y-1/2"><svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div>
+              <input type="text" class="cred-input" placeholder="@usuario_telegram" />
             </div>
             <p class="text-[9px] text-slate-600 mt-1">Usuario de Telegram del cliente</p>
           </div>
           <div>
             <label class="text-[10px] text-slate-400 font-medium block mb-1.5">Bot Token</label>
             <div class="relative">
-              <input type="password" class="cred-input connected" value="7841234567:AAFabcdef..." readonly />
-              <div class="absolute right-3 top-1/2 -translate-y-1/2"><svg class="w-3.5 h-3.5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div>
+              <input type="password" class="cred-input" placeholder="Token generado en @BotFather" />
             </div>
             <p class="text-[9px] text-slate-600 mt-1">Token generado en @BotFather</p>
           </div>
         </div>
         <div class="flex items-center justify-between pt-1">
-          <div class="flex items-center gap-2 text-[10px] text-emerald-400">
-            <div class="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
-            Último mensaje hace 2h · 47 validaciones totales
+          <div class="flex items-center gap-2 text-[10px] text-slate-500">
+            <div class="w-1.5 h-1.5 rounded-full bg-slate-600"></div>
+            Sin conectar todavía
           </div>
           <div class="flex gap-2">
             <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer">Probar</button>
-            <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer">Editar</button>
+            <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer">Guardar</button>
           </div>
         </div>
       </div>
@@ -188,25 +186,28 @@
             <p class="text-[10px] text-slate-500">Lectura de métricas · comentarios · DMs</p>
           </div>
         </div>
-        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold status-connected">Conectado</span>
+        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.1);color:#FBBF24">Pendiente</span>
       </div>
       <div class="px-5 py-4 space-y-4">
+        <div class="rounded-lg p-3 text-[10px] text-amber-300" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.18)">
+          Requiere que tu cuenta de Instagram sea Business/Creator vinculada a una Página de Facebook, y que RIMA complete la revisión de app de Meta (proceso en curso).
+        </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-[10px] text-slate-400 font-medium block mb-1.5">Usuario conectado</label>
-            <input type="text" class="cred-input connected" value="@fitlifestudio_mx" readonly />
+            <input type="text" class="cred-input" placeholder="Sin conectar" disabled />
           </div>
           <div>
             <label class="text-[10px] text-slate-400 font-medium block mb-1.5">Business Account ID</label>
-            <input type="text" class="cred-input connected" value="17841234567890" readonly />
+            <input type="text" class="cred-input" placeholder="Sin conectar" disabled />
           </div>
         </div>
         <div class="flex items-center justify-between pt-1">
           <div class="flex flex-wrap items-center gap-2 text-[10px]">
-            <span class="text-emerald-400 font-medium">Permisos:</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(52,211,153,0.1);color:#34D399">instagram_basic</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(52,211,153,0.1);color:#34D399">read_insights</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(52,211,153,0.1);color:#34D399">manage_messages</span>
+            <span class="text-slate-500 font-medium">Permisos (cuando se conecte):</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">instagram_basic</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">read_insights</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">manage_messages</span>
           </div>
           <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer flex-shrink-0 ml-3">Editar</button>
         </div>
