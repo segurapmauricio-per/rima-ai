@@ -117,6 +117,7 @@
       <div id="photos-thumbs" class="flex flex-wrap gap-2 mb-3"></div>
       <p id="photos-error" class="text-[11px] text-red-400 hidden"></p>
       <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" id="btn-photos" onclick="submitPhotos()">Continuar</button>
+      <button type="button" class="w-full mt-2 py-2 text-[11px] text-slate-500" id="skip-photos" onclick="skipPhotos()">Omitir por ahora →</button>
     </div>
 
     <!-- 6 Foto rostro -->
@@ -282,6 +283,11 @@ async function submitPhotos(){
   await refreshPhotosCount();
   if(STATE.photosCount<STATE.minPhotos){err.textContent='Necesitás al menos '+STATE.minPhotos+' fotos ('+STATE.photosCount+' subidas)';err.classList.remove('hidden');return;}
   await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:6})});goStep(6);
+}
+
+async function skipPhotos(){
+  await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:6})});
+  goStep(6);
 }
 
 document.getElementById('upload-face').addEventListener('change',async function(e){

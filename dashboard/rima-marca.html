@@ -179,6 +179,9 @@
       <button onclick="goSec('herramientas')" id="st-herramientas" class="sec-tab">
         <span class="w-1.5 h-1.5 rounded-full bg-slate-400 flex-shrink-0"></span>10 · Herramientas
       </button>
+      <button onclick="goSec('visual')" id="st-visual" class="sec-tab">
+        <span class="w-1.5 h-1.5 rounded-full bg-fuchsia-400 flex-shrink-0"></span>11 · Identidad Visual
+      </button>
     </div>
   </div>
 
@@ -998,8 +1001,115 @@
       </div><!-- /grid herramientas -->
     </div>
 
+    <!-- ===== 11. IDENTIDAD VISUAL (tipografía + estilo fotográfico) ===== -->
+    <div id="sp-visual" class="sec-panel">
+      <div class="sec-divider">Tipografía para tu contenido</div>
+      <p class="field-hint" style="margin-bottom:12px">Elegí el par de fuentes que mejor represente tu marca — RIMA las usa en carruseles e historias generadas.</p>
+      <div id="tipografia-cards" class="grid grid-cols-2 gap-3" style="margin-bottom:24px"></div>
+
+      <div class="sec-divider">Estilo fotográfico de tus imágenes con IA</div>
+      <p class="field-hint" style="margin-bottom:12px">Define qué tipo de imágenes genera RIMA para tus carruseles e historias.</p>
+      <div id="estilo-foto-cards" class="grid grid-cols-3 gap-3"></div>
+
+      <p id="visual-save-status" style="font-size:10px;color:#34D399;margin-top:14px;display:none">Guardado ✓</p>
+    </div>
+
   </div>
 </main>
+
+<script>
+(function () {
+  var TIPOGRAFIA_ESTILOS = {
+    moderno:   { nombre: 'Moderno & Bold',      titular: 'Inter',            titular_peso: 800, cuerpo: 'Inter',       cuerpo_peso: 400, descripcion: 'Limpio, tech, alto contraste.' },
+    editorial: { nombre: 'Editorial & Premium',  titular: 'Playfair Display', titular_peso: 700, cuerpo: 'Inter',       cuerpo_peso: 400, descripcion: 'Elegante, tipo revista — servicios profesionales.' },
+    cercano:   { nombre: 'Cercano & Humano',     titular: 'Poppins',          titular_peso: 700, cuerpo: 'Nunito Sans', cuerpo_peso: 400, descripcion: 'Redondeado, cálido — coaching, bienestar, lifestyle.' },
+    urbano:    { nombre: 'Directo & Urbano',     titular: 'Montserrat',       titular_peso: 800, cuerpo: 'Roboto',      cuerpo_peso: 400, descripcion: 'Geométrico, alto impacto — fitness, ventas agresivas.' }
+  };
+  var ESTILO_FOTOGRAFICO = {
+    modelo_consistente: { nombre: 'Modelo consistente', desc: 'Un mismo personaje ficticio en todas tus piezas — RIMA fija su apariencia desde la primera generación.' },
+    paisajes:           { nombre: 'Paisajes / lifestyle', desc: 'Sin personas — escenas, objetos y texturas, con una frase o pensamiento como protagonista.' },
+    mixto:              { nombre: 'Mixto', desc: 'Sin restricción — RIMA decide según lo que pida cada pieza.' }
+  };
+
+  var fontsLoaded = {};
+  function ensureFontLoaded(family) {
+    if (fontsLoaded[family]) return;
+    fontsLoaded[family] = true;
+    var link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=' + family.replace(/ /g, '+') + ':wght@400;700;800&display=swap';
+    document.head.appendChild(link);
+  }
+
+  var STATE = { tipografia_estilo: '', estilo_fotografico: '' };
+
+  function renderTipografiaCards() {
+    var el = document.getElementById('tipografia-cards');
+    el.innerHTML = Object.keys(TIPOGRAFIA_ESTILOS).map(function (id) {
+      var e = TIPOGRAFIA_ESTILOS[id];
+      ensureFontLoaded(e.titular); ensureFontLoaded(e.cuerpo);
+      var selected = STATE.tipografia_estilo === id;
+      return '<div class="field-group" style="cursor:pointer;border:1px solid ' + (selected ? 'rgba(124,58,237,0.6)' : 'rgba(255,255,255,0.08)') + ';border-radius:12px;padding:14px;background:' + (selected ? 'rgba(124,58,237,0.08)' : 'rgba(255,255,255,0.02)') + '" onclick="window._elegirTipografia(\'' + id + '\')">'
+        + '<p style="font-family:\'' + e.titular + '\';font-weight:' + e.titular_peso + ';font-size:18px;color:#F1F5F9;margin:0 0 4px">' + e.nombre + '</p>'
+        + '<p style="font-family:\'' + e.cuerpo + '\';font-weight:' + e.cuerpo_peso + ';font-size:11px;color:#94A3B8;margin:0 0 6px">' + e.descripcion + '</p>'
+        + '<p style="font-size:9px;color:#64748B;margin:0">' + e.titular + ' ' + e.titular_peso + ' + ' + e.cuerpo + ' ' + e.cuerpo_peso + '</p>'
+        + '</div>';
+    }).join('');
+  }
+
+  function renderEstiloFotoCards() {
+    var el = document.getElementById('estilo-foto-cards');
+    el.innerHTML = Object.keys(ESTILO_FOTOGRAFICO).map(function (id) {
+      var e = ESTILO_FOTOGRAFICO[id];
+      var selected = STATE.estilo_fotografico === id;
+      return '<div class="field-group" style="cursor:pointer;border:1px solid ' + (selected ? 'rgba(6,182,212,0.6)' : 'rgba(255,255,255,0.08)') + ';border-radius:12px;padding:14px;background:' + (selected ? 'rgba(6,182,212,0.08)' : 'rgba(255,255,255,0.02)') + '" onclick="window._elegirEstiloFoto(\'' + id + '\')">'
+        + '<p style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0 0 4px">' + e.nombre + '</p>'
+        + '<p style="font-size:10px;color:#94A3B8;margin:0">' + e.desc + '</p>'
+        + '</div>';
+    }).join('');
+  }
+
+  async function guardarVisual() {
+    try {
+      await fetch('/api/marca-visual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visual: {
+          tipografia_estilo: STATE.tipografia_estilo,
+          estilo_fotografico: STATE.estilo_fotografico,
+        } }),
+      });
+      var s = document.getElementById('visual-save-status');
+      s.style.display = 'block';
+      setTimeout(function () { s.style.display = 'none'; }, 2000);
+    } catch (e) {}
+  }
+
+  window._elegirTipografia = function (id) {
+    STATE.tipografia_estilo = id;
+    renderTipografiaCards();
+    guardarVisual();
+  };
+  window._elegirEstiloFoto = function (id) {
+    STATE.estilo_fotografico = id;
+    renderEstiloFotoCards();
+    guardarVisual();
+  };
+
+  async function cargarVisual() {
+    try {
+      var r = await fetch('/api/marca-visual');
+      var d = await r.json();
+      var visual = d.visual || {};
+      STATE.tipografia_estilo = visual.tipografia_estilo || '';
+      STATE.estilo_fotografico = visual.estilo_fotografico || '';
+    } catch (e) {}
+    renderTipografiaCards();
+    renderEstiloFotoCards();
+  }
+  cargarVisual();
+})();
+</script>
 
 <script>
 // Tab navigation

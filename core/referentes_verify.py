@@ -64,11 +64,17 @@ def fetch_profile_meta(usernames: list[str]) -> dict[str, dict]:
             continue
         fc = item.get("followersCount") or item.get("followers") or 0
         pic = item.get("profilePicUrlHD") or item.get("profilePicUrl") or ""
+        full_name = (item.get("fullName") or "").strip()
+        # apify~instagram-profile-scraper devuelve un item "vacío" (0 seguidores,
+        # sin nombre) para usernames que NO existen en vez de omitirlos — sin este
+        # filtro, verify_usernames() los cuenta como perfiles reales verificados.
+        if not fc and not full_name:
+            continue
         out[user] = {
             "followers": int(fc) if fc else 0,
             "profile_pic_url": pic,
             "profile_url": item.get("url") or f"https://www.instagram.com/{user}/",
-            "full_name": (item.get("fullName") or "").strip(),
+            "full_name": full_name,
             "business_category": (
                 item.get("businessCategoryName") or item.get("category") or ""
             ).strip(),

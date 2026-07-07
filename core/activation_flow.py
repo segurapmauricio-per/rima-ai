@@ -24,6 +24,10 @@ def _default_tour() -> dict:
     return {"seen_count": 0, "dismissed": False}
 
 
+def _default_calendario_guide() -> dict:
+    return {"seen": False}
+
+
 def _default_referentes_discovery() -> dict:
     return {
         "status": "pending",
@@ -76,7 +80,23 @@ def ensure_dashboard_flags(user: dict) -> bool:
     if "referentes_discovery" not in user:
         user["referentes_discovery"] = _default_referentes_discovery()
         changed = True
+    if "calendario_guide" not in user:
+        user["calendario_guide"] = _default_calendario_guide()
+        changed = True
     return changed
+
+
+def get_calendario_guide_state(user: dict) -> dict:
+    ensure_dashboard_flags(user)
+    guide = user["calendario_guide"]
+    seen = bool(guide.get("seen"))
+    return {"seen": seen, "should_show": not seen}
+
+
+def mark_calendario_guide_seen(user: dict) -> dict:
+    ensure_dashboard_flags(user)
+    user["calendario_guide"]["seen"] = True
+    return get_calendario_guide_state(user)
 
 
 def get_tour_state(user: dict) -> dict:

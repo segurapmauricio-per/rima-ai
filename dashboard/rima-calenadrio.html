@@ -14,6 +14,19 @@
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
 
+    /* Guía de una sola vez del calendario mensual (independiente del tour genérico de 9 pasos) */
+    #calguide-overlay { position: fixed; inset: 0; z-index: 99980; display: none; background: rgba(5,5,12,0.55); backdrop-filter: blur(2px); }
+    #calguide-overlay.show { display: block; }
+    #calguide-card { position: fixed; z-index: 99981; max-width: 320px; width: calc(100% - 32px); padding: 16px 18px; border-radius: 16px; background: #12121C; border: 1px solid rgba(124,58,237,0.45); box-shadow: 0 16px 48px rgba(0,0,0,0.5); display: none; }
+    #calguide-card.show { display: block; }
+    #calguide-card h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #fff; }
+    #calguide-card p { margin: 0 0 12px; font-size: 11px; line-height: 1.5; color: #94A3B8; }
+    #calguide-card .cg-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    #calguide-card .cg-btn { padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; }
+    #calguide-card .cg-btn-primary { background: linear-gradient(135deg,#7C3AED,#6D28D9); color: #fff; }
+    #calguide-card .cg-btn-ghost { background: transparent; color: #94A3B8; border: 1px solid rgba(255,255,255,0.1); }
+    .calguide-highlight { position: relative; z-index: 99982 !important; box-shadow: 0 0 0 2px rgba(124,58,237,0.9), 0 0 24px rgba(124,58,237,0.35) !important; border-radius: 10px !important; }
+
     .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(12px); }
     .glass-hover:hover { background: rgba(255,255,255,0.07); border-color: rgba(124,58,237,0.3); transition: all .2s ease; }
     .gradient-text { background: linear-gradient(135deg, #7C3AED, #06B6D4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
@@ -160,7 +173,7 @@
           <!-- Calendar header -->
           <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
             <div class="flex items-center gap-3">
-              <div class="flex items-center gap-1.5">
+              <div class="flex items-center gap-1.5" data-calguide="month-selector">
                 <button type="button" onclick="prevMonth()" class="glass glass-hover w-7 h-7 rounded-lg flex items-center justify-center cursor-pointer">
                   <svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>
                 </button>
@@ -174,7 +187,7 @@
               <span id="cal-count" class="text-[10px] text-slate-500">–</span>
             </div>
             <!-- Leyenda -->
-            <div class="flex gap-3 text-[9px] text-slate-500">
+            <div class="flex gap-3 text-[9px] text-slate-500" data-calguide="legend">
               <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-violet-500"></span>Reel</span>
               <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-cyan-500"></span>Carrusel</span>
               <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-sm bg-rose-500"></span>Historia</span>
@@ -182,7 +195,7 @@
           </div>
 
           <!-- Grid -->
-          <div class="p-3.5">
+          <div class="p-3.5" data-calguide="grid">
             <div class="grid grid-cols-7 gap-1 mb-1">
               <div class="text-center text-[9px] font-bold text-slate-600 py-1">LUN</div>
               <div class="text-center text-[9px] font-bold text-slate-600 py-1">MAR</div>
@@ -210,7 +223,7 @@
       <div style="display:flex;flex-direction:column;gap:12px;position:sticky;top:0">
 
         <!-- Stats card con 3 sub-estados por tipo -->
-        <div class="glass rounded-2xl border border-violet-500/20 p-4 glow-violet">
+        <div class="glass rounded-2xl border border-violet-500/20 p-4 glow-violet" data-calguide="progreso">
           <div class="flex items-center gap-2 mb-4">
             <div class="w-5 h-5 rounded-full bg-violet-500/20 flex items-center justify-center">
               <div class="w-2 h-2 rounded-full bg-violet-400 status-dot-processing"></div>
@@ -1277,9 +1290,96 @@ document.addEventListener('keydown', function(e) {
   }
 });
 
+// ── Guía de una sola vez del calendario (independiente del tour genérico) ──
+var CG_STEPS = [
+  { sel: '[data-calguide="legend"]', title: 'Colores por tipo de pieza',
+    text: 'Violeta = Reel, celeste = Carrusel, rosa = Historia. Así distinguís de un vistazo qué vas a grabar o publicar cada día.' },
+  { sel: '[data-calguide="month-selector"]', title: 'Navegá entre meses',
+    text: 'Tu plan cubre 30 días. Usá las flechas para ver el mes anterior o el siguiente sin perder lo ya generado.' },
+  { sel: '[data-calguide="grid"]', title: 'Hacé clic en cualquier pieza',
+    text: 'Cada casillero del mes es una pieza planificada. Tocala para ver el detalle y, más adelante, aprobar el copy y la producción.' },
+  { sel: '[data-calguide="progreso"]', title: 'Progreso del mes',
+    text: 'Acá ves cuántas piezas de cada tipo ya están publicadas, programadas o todavía pendientes.' },
+  { sel: '[data-rima-tour="contenido"]', title: 'Tu contenido aparece en Contenido',
+    text: 'Cuando el agente semanal termine de mezclar tu estudio de mercado con este plan, las piezas listas para revisar van a aparecer acá.',
+    finalHref: '/contenido' },
+];
+var cgIdx = 0, cgHighlight = null;
+
+function cgEnsureDom() {
+  if (document.getElementById('calguide-overlay')) return;
+  var ov = document.createElement('div');
+  ov.id = 'calguide-overlay';
+  document.body.appendChild(ov);
+  var card = document.createElement('div');
+  card.id = 'calguide-card';
+  card.innerHTML = '<h4 id="cg-title"></h4><p id="cg-text"></p>'
+    + '<div class="cg-actions"><button type="button" class="cg-btn cg-btn-ghost" id="cg-skip">Omitir</button>'
+    + '<button type="button" class="cg-btn cg-btn-primary" id="cg-next">Siguiente</button></div>';
+  document.body.appendChild(card);
+  document.getElementById('cg-skip').onclick = function() { cgEnd(); };
+  document.getElementById('cg-next').onclick = function() {
+    var isLast = cgIdx >= CG_STEPS.length - 1;
+    if (isLast) { cgEnd(CG_STEPS[cgIdx].finalHref); return; }
+    cgIdx++;
+    cgShowStep();
+  };
+}
+
+function cgClearHighlight() {
+  if (cgHighlight) { cgHighlight.classList.remove('calguide-highlight'); cgHighlight = null; }
+}
+
+function cgShowStep() {
+  cgEnsureDom();
+  var step = CG_STEPS[cgIdx];
+  var target = document.querySelector(step.sel);
+  cgClearHighlight();
+  document.getElementById('calguide-overlay').classList.add('show');
+  var card = document.getElementById('calguide-card');
+  card.classList.add('show');
+  document.getElementById('cg-title').textContent = step.title + ' (' + (cgIdx + 1) + '/' + CG_STEPS.length + ')';
+  document.getElementById('cg-text').textContent = step.text;
+  document.getElementById('cg-next').textContent = cgIdx >= CG_STEPS.length - 1 ? 'Ir a Contenido' : 'Siguiente';
+  if (target) {
+    cgHighlight = target;
+    target.classList.add('calguide-highlight');
+    target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    var rect = target.getBoundingClientRect();
+    var top = Math.min(window.innerHeight - 200, rect.bottom + 12);
+    var left = Math.min(window.innerWidth - 340, Math.max(16, rect.left));
+    card.style.top = top + 'px';
+    card.style.left = left + 'px';
+  } else {
+    card.style.top = '20%'; card.style.left = '50%'; card.style.transform = 'translateX(-50%)';
+  }
+}
+
+async function cgEnd(navigateTo) {
+  cgClearHighlight();
+  var overlay = document.getElementById('calguide-overlay');
+  var card = document.getElementById('calguide-card');
+  if (overlay) overlay.classList.remove('show');
+  if (card) card.classList.remove('show');
+  try { await fetch('/api/calendario/guide/dismiss', { method: 'POST' }); } catch(e) {}
+  if (navigateTo) window.location.href = navigateTo;
+}
+
+async function maybeShowCalendarioGuide() {
+  if (!items.length) return;
+  try {
+    var r = await fetch('/api/calendario/guide');
+    if (!r.ok) return;
+    var s = await r.json();
+    if (!s.should_show) return;
+    cgIdx = 0;
+    setTimeout(cgShowStep, 500);
+  } catch(e) {}
+}
+
 // ── Init ──
 initEnfoqueBar();
-loadItems();
+loadItems().then(maybeShowCalendarioGuide);
 
 })();
 </script>

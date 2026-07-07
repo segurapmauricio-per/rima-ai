@@ -56,6 +56,8 @@ def build_style_guide(marca: Optional[dict], brief: Optional[dict],
     }
     if hints.get("tono"):
         base["tono_marca"] = hints["tono"]
+    if hints.get("estilo_fotografico") in ("paisajes", "modelo_consistente"):
+        base["direccion_personaje"] = hints["estilo_fotografico"]
     return merge_style_guide_from_marca(base, marca, brief)
 
 
@@ -152,6 +154,14 @@ def generate_carousel_batch(
             reference_url = s["kie_reference_url"]
             break
 
+    direccion_personaje = style_guide.get("direccion_personaje") or ""
+    personaje_ref = marca.get("visual", {}).get("imagen_personaje_url") or ""
+    paisaje_suffix = (
+        ", sin personas ni rostros en cuadro, priorizar escena/paisaje/objeto "
+        "con una frase o pensamiento como elemento central"
+        if direccion_personaje == "paisajes" else ""
+    )
+
     results = []
     generated = 0
     errors = []
@@ -163,8 +173,13 @@ def generate_carousel_batch(
             or slide.get("prompt_sugerido")
             or build_integrated_prompt(slide, style_guide, idx, total, slot_context)
         )
+        if paisaje_suffix:
+            prompt = (prompt or "") + paisaje_suffix
         ratio = slide.get("ratio") or "1:1"
-        ref = reference_url if idx > 0 else None
+        if direccion_personaje == "modelo_consistente":
+            ref = reference_url or personaje_ref or None
+        else:
+            ref = reference_url if idx > 0 else None
 
         res = kie_client.generate_image(
             prompt, ratio,
@@ -209,6 +224,11 @@ def generate_carousel_batch(
         })
         slide.pop("match_score", None)
         reference_url = res.get("image_url") or reference_url
+        if direccion_personaje == "modelo_consistente" and not personaje_ref and res.get("image_url"):
+            from core.db import set_marca_visual
+            marca.setdefault("visual", {})["imagen_personaje_url"] = res["image_url"]
+            set_marca_visual(cliente_id, marca)
+            personaje_ref = res["image_url"]
         generated += 1
         results.append({
             "slide_index": idx,

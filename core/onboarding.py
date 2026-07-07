@@ -222,8 +222,9 @@ def onboarding_assets_status(cliente_id: str, plan: str) -> dict:
     face_ok = has_face_profile(cliente_id)
     face_req = face_profile_required(plan)
     missing = []
-    if photos < min_photos:
-        missing.append(f"Subí al menos {min_photos} fotos para historias ({photos}/{min_photos})")
+    # Fotos de historias: el cliente puede omitir este paso desde el onboarding
+    # (botón "Omitir por ahora") y subirlas después desde /imagenes — no bloquea
+    # completar el onboarding, solo se informa como pendiente (photos_ok).
     if face_req and not face_ok:
         missing.append("Subí tu foto de rostro (referencia para IA)")
     return {

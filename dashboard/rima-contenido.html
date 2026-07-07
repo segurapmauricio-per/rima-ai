@@ -197,12 +197,37 @@
     </div>
     <div class="rima-modal-body">
       <p id="modal-bib-subtitle" style="font-size:10px;color:#64748B;margin:0 0 10px"></p>
+      <label for="modal-bib-upload" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;margin-bottom:10px;border:1px dashed rgba(124,58,237,0.35);border-radius:8px;cursor:pointer;font-size:11px;color:#A78BFA;background:rgba(124,58,237,0.05)">
+        <span id="modal-bib-upload-label">+ Subir imagen (ej: captura de tu Instagram)</span>
+        <input type="file" id="modal-bib-upload" accept="image/*" class="hidden" onchange="subirImagenBiblioteca(this)" />
+      </label>
       <div id="modal-bib-grid" class="bib-grid"></div>
       <p id="modal-bib-empty" style="display:none;font-size:11px;color:#64748B;text-align:center;padding:24px 0">No hay imágenes analizadas en la biblioteca</p>
     </div>
     <div class="rima-modal-footer">
       <button type="button" class="slide-acc-btn" onclick="cerrarModalBiblioteca()">Cancelar</button>
       <button type="button" id="modal-bib-confirm" class="slide-acc-btn primary" disabled onclick="confirmarImagenBiblioteca()">Usar imagen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox: ver imagen de slide en grande -->
+<div id="modal-imagen-grande" class="rima-modal-overlay" onclick="cerrarImagenGrande()" style="cursor:zoom-out">
+  <img id="modal-imagen-grande-img" src="" alt="" style="max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 24px 80px rgba(0,0,0,0.6)" />
+</div>
+
+<!-- Modal: confirmar generación con IA (reemplaza confirm() nativo del navegador) -->
+<div id="modal-confirm-ia" class="rima-modal-overlay" onclick="if(event.target===this)_resolverConfirmIA(false)">
+  <div class="rima-modal" role="dialog" aria-labelledby="modal-confirm-ia-title" style="max-width:380px">
+    <div class="rima-modal-header">
+      <p id="modal-confirm-ia-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">✨ Generar con inteligencia artificial</p>
+    </div>
+    <div class="rima-modal-body">
+      <p id="modal-confirm-ia-text" style="font-size:11px;color:#94A3B8;line-height:1.6;margin:0"></p>
+    </div>
+    <div class="rima-modal-footer">
+      <button type="button" class="slide-acc-btn" onclick="_resolverConfirmIA(false)">Cancelar</button>
+      <button type="button" class="slide-acc-btn primary" onclick="_resolverConfirmIA(true)">Generar</button>
     </div>
   </div>
 </div>
@@ -692,7 +717,7 @@ function propuestaSection(pub) {
   if (!enPropuesta && !sinReferentesPlan) return '';
   if (!alts.length) return propuestaEmptyHtml(pub, prop);
   var pubTipo = pub.tipo || 'reel';
-  var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">';
+  var html = '<div data-propuesta-block="' + escAttr(pub.id) + '" style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">';
   html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 4px">';
   if (pubTipo === 'historia') {
     html += 'Elegí el ángulo estratégico para esta historia';
@@ -760,8 +785,18 @@ function propuestaSection(pub) {
 }
 
 window.elegirReferente = async function(pubId, idx, btn) {
-  btn.disabled = true;
-  btn.textContent = 'Generando copy...';
+  // Bloquear TODAS las opciones del bloque (incluida "Otras opciones") apenas
+  // se elige una — evita elegir dos alternativas a la vez mientras se genera
+  // el copy. Las tarjetas siguen visibles, solo los botones quedan inactivos.
+  var block = document.querySelector('[data-propuesta-block="' + pubId + '"]');
+  var siblingBtns = block ? block.querySelectorAll('.aprobar-btn') : [btn];
+  var originalTexts = [];
+  siblingBtns.forEach(function(b) {
+    originalTexts.push(b.textContent);
+    b.disabled = true;
+    if (b === btn) b.textContent = 'Generando copy...';
+    else b.style.opacity = '0.45';
+  });
   try {
     var r = await fetch('/api/publicaciones/' + pubId + '/elegir-referente', {
       method: 'POST',
@@ -771,8 +806,11 @@ window.elegirReferente = async function(pubId, idx, btn) {
     if (!r.ok) { var e = await r.json().catch(function(){return{detail:r.statusText};}); throw new Error(e.detail); }
     await fetchAndRender();
   } catch(e) {
-    btn.disabled = false;
-    btn.textContent = 'Modelar esta';
+    siblingBtns.forEach(function(b, i) {
+      b.disabled = false;
+      b.style.opacity = '';
+      b.textContent = originalTexts[i];
+    });
     window.rimaToast && rimaToast('Error: ' + e.message, 'error');
   }
 };
@@ -971,6 +1009,60 @@ window.abrirModalBiblioteca = async function(pubId, slideIndex, slideLabel) {
   }
 };
 
+// Reemplaza confirm() nativo por un modal propio, más sutil y acorde a la marca.
+window._confirmIAResolve = null;
+window.confirmarConIA = function(texto) {
+  document.getElementById('modal-confirm-ia-text').textContent = texto;
+  document.getElementById('modal-confirm-ia').classList.add('open');
+  return new Promise(function(resolve) { window._confirmIAResolve = resolve; });
+};
+window._resolverConfirmIA = function(valor) {
+  document.getElementById('modal-confirm-ia').classList.remove('open');
+  if (window._confirmIAResolve) { window._confirmIAResolve(valor); window._confirmIAResolve = null; }
+};
+
+window.abrirImagenGrande = function(url) {
+  document.getElementById('modal-imagen-grande-img').src = url;
+  document.getElementById('modal-imagen-grande').classList.add('open');
+};
+window.cerrarImagenGrande = function() {
+  document.getElementById('modal-imagen-grande').classList.remove('open');
+  document.getElementById('modal-imagen-grande-img').src = '';
+};
+
+window.subirImagenBiblioteca = async function(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  var m = window._slideModal;
+  var pub = (allPubs || []).find(function(p) { return p.id === m.pubId; });
+  var category = pub && pub.tipo === 'historia' ? 'historias' : 'carruseles';
+  var label = document.getElementById('modal-bib-upload-label');
+  var labelOrig = label.textContent;
+  label.textContent = 'Subiendo…';
+  try {
+    var fd = new FormData();
+    fd.append('files', file);
+    fd.append('category', category);
+    var r = await fetch('/api/images/upload', { method: 'POST', body: fd });
+    var data = await r.json().catch(function(){ return {}; });
+    if (!r.ok) throw new Error(data.detail || 'Error al subir la imagen');
+    var errores = data.errors || [];
+    if (errores.length) throw new Error(errores[0].error || 'Error al subir la imagen');
+    var subida = (data.saved || [])[0];
+    if (!subida || !subida.id) throw new Error('No se pudo procesar la imagen subida');
+    // Recargar biblioteca y auto-seleccionar la imagen recién subida
+    await abrirModalBiblioteca(m.pubId, m.slideIndex, document.getElementById('modal-bib-subtitle').textContent);
+    var nuevoItem = document.querySelector('#modal-bib-grid .bib-item[data-image-id="' + subida.id + '"]');
+    if (nuevoItem) { nuevoItem.scrollIntoView({ block: 'nearest' }); seleccionarBibItem(nuevoItem, subida.id); }
+    window.rimaToast && rimaToast('Imagen subida', 'success');
+  } catch(e) {
+    window.rimaToast && rimaToast('Error: ' + e.message, 'error');
+  } finally {
+    label.textContent = labelOrig;
+    input.value = '';
+  }
+};
+
 window.seleccionarBibItem = function(el, imageId) {
   document.querySelectorAll('#modal-bib-grid .bib-item').forEach(function(n) { n.classList.remove('selected'); });
   el.classList.add('selected');
@@ -1076,8 +1168,7 @@ async function esperarJobKie(data) {
 }
 
 window.generarCarruselCompleto = async function(pubId, btn) {
-  if (!confirm('Se generarán las slides pendientes con KIE AI (Nano Banana Pro).\n'
-    + 'Costo aproximado: ~$0.09 USD por slide.\n\n¿Continuar?')) {
+  if (!(await confirmarConIA('Vas a generar imágenes con inteligencia artificial, a la medida de tu carrusel — coherentes entre sí y con la identidad visual de tu marca.'))) {
     return;
   }
   btn.disabled = true;
@@ -1106,9 +1197,7 @@ window.generarCarruselCompleto = async function(pubId, btn) {
 };
 
 window.generarHistoriaCompleto = async function(pubId, btn) {
-  if (!confirm('Se generarán las slides pendientes con KIE AI (formato 9:16).\n'
-    + 'Las fotos de tu biblioteca se mantienen; solo se generan las faltantes.\n'
-    + 'Costo aproximado: ~$0.09 USD por slide.\n\n¿Continuar?')) {
+  if (!(await confirmarConIA('Vas a generar imágenes con inteligencia artificial, a la medida de tu historia. Tus fotos de biblioteca se mantienen — solo completamos lo que falta.'))) {
     return;
   }
   btn.disabled = true;
@@ -1589,8 +1678,8 @@ function produccionSection(pub) {
       var promptDefault = promptParaSlide(s, pub);
       html += '<div style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-top:1px solid rgba(245,158,11,0.1)">';
       if ((s.image_source === 'cliente' || s.image_source === 'generada_ia') && s.archivo_url) {
-        html += '<img src="' + esc(s.archivo_url) + '" alt="" loading="lazy" '
-          + 'style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid rgba(245,158,11,0.25)">';
+        html += '<img src="' + esc(s.archivo_url) + '" alt="" loading="lazy" onclick="abrirImagenGrande(\'' + escAttr(s.archivo_url) + '\')" '
+          + 'style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid rgba(245,158,11,0.25);cursor:zoom-in">';
       } else {
         html += '<div style="width:44px;height:44px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;'
           + 'background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.35)">'
@@ -1620,7 +1709,6 @@ function produccionSection(pub) {
       html += '</div></div>';
     });
     if (pub.tipo === 'carrusel' && pendientes > 0) {
-      var costoEst = pendientes * 0.09;
       html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2)">';
       html += '<p style="font-size:9px;color:#C4B5FD;margin:0 0 6px;line-height:1.45">'
         + 'Generación automática: prompts con texto integrado y coherencia visual '
@@ -1628,11 +1716,10 @@ function produccionSection(pub) {
       html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#7C3AED,#A78BFA)" '
         + 'onclick="generarCarruselCompleto(\'' + pub.id + '\',this)">'
         + 'Generar carrusel completo con IA'
-        + (pendientes ? ' (' + pendientes + ' pendientes · ~$' + costoEst.toFixed(2) + ')' : '')
+        + (pendientes ? ' (' + pendientes + ' pendientes)' : '')
         + '</button></div>';
     }
     if (pub.tipo === 'historia' && pendientes > 0) {
-      var costoEstH = pendientes * 0.09;
       html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">';
       html += '<p style="font-size:9px;color:#A5B4FC;margin:0 0 6px;line-height:1.45">'
         + 'Generación híbrida: mantiene fotos de biblioteca y genera con KIE las slides '
@@ -1640,7 +1727,7 @@ function produccionSection(pub) {
       html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#4338CA,#6366F1)" '
         + 'onclick="generarHistoriaCompleto(\'' + pub.id + '\',this)">'
         + 'Generar historia completa con IA'
-        + (pendientes ? ' (' + pendientes + ' pendientes · ~$' + costoEstH.toFixed(2) + ')' : '')
+        + (pendientes ? ' (' + pendientes + ' pendientes)' : '')
         + '</button></div>';
     }
   } else {

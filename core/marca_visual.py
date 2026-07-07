@@ -24,12 +24,63 @@ MARCA_VISUAL_VACIA = {
         "colores_primarios": [],
         "colores_secundarios": [],
         "tipografias": [],
+        "tipografia_estilo": "",
         "estilo_imagen": "",
+        "estilo_fotografico": "",
+        "imagen_personaje_url": "",
         "tipos_toma": [],
         "imagen_marca_url": "",
     },
     "imagen_marca_id": None,
 }
+
+# Catálogo de estilos tipográficos elegibles (Google Fonts, ya cargadas por el
+# dashboard) — reemplaza la adivinanza de Gemini sobre el scrape de IG por una
+# elección real del cliente. id -> (titular, cuerpo, descripción).
+TIPOGRAFIA_ESTILOS = {
+    "moderno": {
+        "nombre": "Moderno & Bold",
+        "titular": "Inter", "titular_peso": "800",
+        "cuerpo": "Inter", "cuerpo_peso": "400",
+        "descripcion": "Limpio, tech, alto contraste.",
+    },
+    "editorial": {
+        "nombre": "Editorial & Premium",
+        "titular": "Playfair Display", "titular_peso": "700",
+        "cuerpo": "Inter", "cuerpo_peso": "400",
+        "descripcion": "Elegante, tipo revista — servicios profesionales.",
+    },
+    "cercano": {
+        "nombre": "Cercano & Humano",
+        "titular": "Poppins", "titular_peso": "700",
+        "cuerpo": "Nunito Sans", "cuerpo_peso": "400",
+        "descripcion": "Redondeado, cálido — coaching, bienestar, lifestyle.",
+    },
+    "urbano": {
+        "nombre": "Directo & Urbano",
+        "titular": "Montserrat", "titular_peso": "800",
+        "cuerpo": "Roboto", "cuerpo_peso": "400",
+        "descripcion": "Geométrico, alto impacto — fitness, ventas agresivas.",
+    },
+}
+
+# Estilo fotográfico elegible por el cliente (onboarding / /marca).
+ESTILO_FOTOGRAFICO_OPCIONES = {
+    "modelo_consistente": "Modelo consistente — un mismo personaje ficticio en todas las piezas",
+    "paisajes": "Paisajes/lifestyle — sin personas, escenas y objetos",
+    "mixto": "Mixto — sin restricción, según lo que pida cada pieza",
+}
+
+
+def tipografias_de_estilo(estilo_id: str) -> list:
+    """Resuelve [titular, cuerpo] desde el catálogo fijo — determinístico, sin LLM."""
+    estilo = TIPOGRAFIA_ESTILOS.get(estilo_id)
+    if not estilo:
+        return []
+    return [
+        f"{estilo['titular']} {estilo['titular_peso']}",
+        f"{estilo['cuerpo']} {estilo['cuerpo_peso']}",
+    ]
 
 
 def normalizar_marca(marca: Optional[dict]) -> dict:
@@ -201,7 +252,10 @@ def style_hints_from_marca(marca: Optional[dict], brief: Optional[dict] = None) 
     visual = marca.get("visual") or {}
     comm = marca.get("comunicacion") or {}
     colores = paleta_colores(marca) or []
-    tips = visual.get("tipografias") or []
+    # Elección explícita del cliente (catálogo fijo) tiene prioridad sobre lo
+    # adivinado por Gemini del scrape de IG.
+    tips_elegidas = tipografias_de_estilo(visual.get("tipografia_estilo") or "")
+    tips = tips_elegidas or (visual.get("tipografias") or [])
     tipografia = ", ".join(str(t) for t in tips[:2] if t) if tips else ""
     return {
         "idioma": idioma_cliente(brief, marca),
@@ -216,13 +270,16 @@ def style_hints_from_marca(marca: Optional[dict], brief: Optional[dict] = None) 
         "tono": comm.get("tono") or brief.get("brand_tone") or "",
         "tipos_toma": visual.get("tipos_toma") or [],
         "origen_marca": marca.get("origen") or "",
+        "estilo_fotografico": visual.get("estilo_fotografico") or "mixto",
+        "imagen_personaje_url": visual.get("imagen_personaje_url") or "",
     }
 
 
 def contexto_marca_para_copy(marca: Optional[dict], brief: Optional[dict] = None) -> str:
     """Bloque de prompt: identidad visual del onboarding."""
     hints = style_hints_from_marca(marca, brief)
-    if not any(hints.get(k) for k in ("colores", "estilo_visual", "tono", "tipos_toma")):
+    ef_activo = hints.get("estilo_fotografico") in ("paisajes", "modelo_consistente")
+    if not ef_activo and not any(hints.get(k) for k in ("colores", "estilo_visual", "tono", "tipos_toma")):
         return ""
     lineas = ["IDENTIDAD VISUAL DEL CLIENTE (onboarding / perfil IG — usar en style_guide y visual_suggestion):"]
     if hints["estilo_visual"]:
@@ -235,6 +292,19 @@ def contexto_marca_para_copy(marca: Optional[dict], brief: Optional[dict] = None
         lineas.append(f"- Tono de comunicación: {hints['tono']}")
     if hints["tipos_toma"]:
         lineas.append(f"- Tipos de toma habituales: {', '.join(hints['tipos_toma'][:4])}")
+    ef = hints.get("estilo_fotografico")
+    if ef == "paisajes":
+        lineas.append(
+            "- Estilo fotográfico elegido: PAISAJES/LIFESTYLE — evitar rostros y "
+            "personas, priorizar escenas, objetos y texturas con una frase o "
+            "pensamiento como elemento central de texto."
+        )
+    elif ef == "modelo_consistente":
+        lineas.append(
+            "- Estilo fotográfico elegido: MODELO CONSISTENTE — mantener el mismo "
+            "personaje/rostro en todas las piezas generadas (usar imagen de "
+            "referencia si está disponible)."
+        )
     if hints["origen_marca"]:
         lineas.append(f"- Origen datos: {hints['origen_marca']}")
     return "\n".join(lineas)

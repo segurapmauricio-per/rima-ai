@@ -580,6 +580,7 @@ function renderClipsList(reelId, clips) {
     delBtn.style.cssText = 'width:20px;height:20px;border-radius:5px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0';
     delBtn.innerHTML = '<svg style="width:10px;height:10px;color:#fb7185" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
     delBtn.addEventListener('click', async function() {
+      if (!confirm('¿Eliminar este clip?')) return;
       try {
         await fetch('/api/videos/' + reelId + '/clips/' + clip.name, { method: 'DELETE' });
         REEL_STATE[reelId].clips = REEL_STATE[reelId].clips.filter(function(c){ return c.name !== clip.name; });

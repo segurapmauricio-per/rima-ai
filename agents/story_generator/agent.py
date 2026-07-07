@@ -39,6 +39,8 @@ def build_style_guide(marca: Optional[dict], brief: Optional[dict],
         "negocio": brief.get("business_name") or "",
         "idioma": sg.get("idioma") or hints.get("idioma") or "es",
     }
+    if hints.get("estilo_fotografico") in ("paisajes", "modelo_consistente"):
+        base["direccion_personaje"] = hints["estilo_fotografico"]
     return merge_style_guide_from_marca(base, marca, brief)
 
 
@@ -109,6 +111,14 @@ def generate_story_batch(
             reference_url = s["kie_reference_url"]
             break
 
+    direccion_personaje = style_guide.get("direccion_personaje") or ""
+    personaje_ref = marca.get("visual", {}).get("imagen_personaje_url") or ""
+    paisaje_suffix = (
+        ", sin personas ni rostros en cuadro, priorizar escena/paisaje/objeto "
+        "con una frase o pensamiento como elemento central"
+        if direccion_personaje == "paisajes" else ""
+    )
+
     generated = 0
     errors = []
     results = []
@@ -122,8 +132,15 @@ def generate_story_batch(
         )
         if face_suffix and "kie_pending" in (slide.get("image_source") or ""):
             prompt = (prompt or "") + face_suffix
+        if paisaje_suffix:
+            prompt = (prompt or "") + paisaje_suffix
         ratio = slide.get("ratio") or "9:16"
-        ref = reference_url if idx > 0 else face_ref
+        if direccion_personaje == "modelo_consistente":
+            # Personaje ficticio: prioriza la referencia ya fijada en marca_visual
+            # (creada en una generación previa) por sobre la del cliente real.
+            ref = reference_url or personaje_ref or face_ref
+        else:
+            ref = reference_url if idx > 0 else face_ref
         res = kie_client.generate_image(
             prompt, ratio,
             reference_image=ref,
@@ -166,6 +183,14 @@ def generate_story_batch(
         })
         slide.pop("match_score", None)
         reference_url = res.get("image_url") or reference_url
+        if direccion_personaje == "modelo_consistente" and not personaje_ref and res.get("image_url"):
+            # Primera generación de la sesión de este cliente en modo "modelo
+            # consistente": fija esta imagen como referencia de personaje para
+            # todas las piezas futuras (no solo este batch).
+            from core.db import set_marca_visual
+            marca.setdefault("visual", {})["imagen_personaje_url"] = res["image_url"]
+            set_marca_visual(cliente_id, marca)
+            personaje_ref = res["image_url"]
         generated += 1
         results.append({"slide_index": idx, "ok": True, "archivo_url": slide.get("archivo_url")})
 

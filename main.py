@@ -74,6 +74,7 @@ from core.activation_flow import (
     get_referentes_discovery_state, mark_referentes_discovery_running,
     save_referentes_discovery_result, mark_referentes_discovery_shown,
     mark_referentes_anchor_ready,
+    get_calendario_guide_state, mark_calendario_guide_seen,
 )
 from core.face_profile import save_face_profile, load_face_profile, has_face_profile
 from core.imagenes_cliente import (
@@ -117,6 +118,13 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 (UPLOADS_DIR / "clientes").mkdir(exist_ok=True)
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+
+ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return FileResponse(ASSETS_DIR / "favicon.ico")
 
 # â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # Persistencia local en JSON
@@ -188,7 +196,8 @@ SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;fl
   <div id="rima-user-bar" style="position:relative;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0">
     <div style="display:flex;align-items:center;gap:6px">
       <button type="button" id="rima-user-trigger" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;transition:background .15s">
-        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+          <img id="rima-user-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none" />
           <span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>
         </div>
         <div style="flex:1;min-width:0">
@@ -1091,7 +1100,7 @@ SHARED_JS = """
   var TOUR_STEPS = [
     { slug: 'dashboard', title: 'Dashboard', text: 'Vista general de tu negocio, agentes y pendientes del mes.' },
     { slug: 'calendario', title: 'Calendario', text: 'Plan de contenido del mes generado por RIMA (reels, carruseles, historias).' },
-    { slug: 'contenido', title: 'Contenido', text: 'Piezas generadas listas para validar: historias, carruseles y reels.' },
+    { slug: 'contenido', title: 'Contenido', text: 'Las mejores ideas y tu contenido, listo para modelar.' },
     { slug: 'mercado', title: 'Estudio de mercado', text: 'Referentes de tu nicho analizados — benchmark de fuerza y patrones ganadores.' },
     { slug: 'marca', title: 'Información de la marca', text: 'Brief del negocio: oferta, cliente ideal, problema y resultado principal.' },
     { slug: 'referencias', title: 'Referencias', text: 'Perfiles de Instagram referentes que RIMA modela para tu contenido.' },
@@ -1422,8 +1431,17 @@ SHARED_JS = """
     }
     if (ACT.step === 4) {
       btn.disabled = true;
-      btn.textContent = 'Iniciando semana…';
-      if (status) status.textContent = 'Generando propuestas semanales…';
+      btn.textContent = 'Preparando tu contenido…';
+      var skipBtn = document.getElementById('act-skip-all');
+      if (skipBtn) skipBtn.disabled = true;
+      var body4 = document.getElementById('act-body');
+      if (body4) {
+        body4.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:4px 0">'
+          + '<div style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(124,58,237,0.25);border-top-color:#7C3AED;animation:rima-spin .8s linear infinite;flex-shrink:0"></div>'
+          + '<p id="act-status" style="font-size:11px;color:#94A3B8;margin:0">Cargando… esto puede tardar unos minutos. Mezclamos tu estudio de mercado con el calendario del mes.</p>'
+          + '</div>'
+          + '<style>@keyframes rima-spin{to{transform:rotate(360deg)}}</style>';
+      }
       try {
         var brandR = await fetch('/api/brand');
         var brand = brandR.ok ? await brandR.json() : {};
@@ -1442,7 +1460,9 @@ SHARED_JS = """
         if (window.rimaToast) rimaToast('¡Listo! Revisá tu contenido en Contenido.');
         setTimeout(maybeShowReferentesDiscovery, 600);
       } catch(e) {
-        if (status) status.textContent = e.message || 'Error';
+        if (skipBtn) skipBtn.disabled = false;
+        var errBody = document.getElementById('act-body');
+        if (errBody) errBody.innerHTML = '<p id="act-status" style="font-size:11px;color:#F87171">' + (e.message || 'Error') + '</p>';
         btn.disabled = false;
         btn.textContent = 'Generar plan semanal';
       }
@@ -1729,12 +1749,15 @@ def _session_from_request(request: Optional[Request]) -> Optional[dict]:
         plan = get_user_plan(data, email)
         name = rec.get("name", payload.get("name", email.split("@")[0] if email else "Usuario"))
 
+    avatar_url = get_user_brand(data, email).get("brand_avatar_url") or ""
+
     return {
         "email": email,
         "sub": email,
         "name": name,
         "plan": plan,
         "initials": _user_initials(name, email),
+        "avatar_url": avatar_url,
         **get_onboarding_state(data, email),
     }
 
@@ -1744,10 +1767,21 @@ def _apply_session_to_sidebar(sidebar: str, session: dict) -> str:
     name = session.get("name", "Usuario")
     initials = session.get("initials", "?")
     email = session.get("email", "")
-    sidebar = sidebar.replace(
-        '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>',
-        f'<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">{initials}</span>',
-    )
+    avatar_url = session.get("avatar_url") or ""
+    if avatar_url:
+        sidebar = sidebar.replace(
+            '<img id="rima-user-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none" />',
+            f'<img id="rima-user-avatar-img" src="{avatar_url}" alt="" style="width:100%;height:100%;object-fit:cover;display:block" />',
+        )
+        sidebar = sidebar.replace(
+            '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>',
+            '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1;display:none">' + initials + '</span>',
+        )
+    else:
+        sidebar = sidebar.replace(
+            '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>',
+            f'<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">{initials}</span>',
+        )
     sidebar = sidebar.replace(
         '<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>',
         f'<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">{name}</p>',
@@ -1779,6 +1813,8 @@ def _user_bootstrap_script(session: dict) -> str:
         "s('rima-user-initials',u.initials||'?');"
         "s('rima-user-name',u.name||'Usuario');"
         "s('rima-user-plan',plan);"
+        "if(u.avatar_url){var img=document.getElementById('rima-user-avatar-img');var ini=document.getElementById('rima-user-initials');"
+        "if(img){img.src=u.avatar_url;img.style.display='block';}if(ini)ini.style.display='none';}"
         "s('rima-user-menu-email',u.email||'');"
         "s('rima-user-menu-plan',plan);"
         "})();\n"
@@ -1819,8 +1855,11 @@ def serve_html(filename: str, request: Optional[Request] = None) -> HTMLResponse
     # Reemplazar cualquier aside (vacío o lleno) con el sidebar generado
     content = _re.sub(r'<aside[^>]*>.*?</aside>', sidebar, content, count=1, flags=_re.DOTALL)
 
-    # Inyectar CSS en <head>
-    content = content.replace("</head>", SHARED_CSS + "\n</head>")
+    # Inyectar CSS + favicon en <head>
+    content = content.replace(
+        "</head>",
+        '<link rel="icon" type="image/x-icon" href="/favicon.ico">\n' + SHARED_CSS + "\n</head>",
+    )
 
     user_bootstrap = _user_bootstrap_script(session) if session else ""
 
@@ -2158,9 +2197,10 @@ async def upload_images(
         dest.write_bytes(content)
 
         url = archivo_url(cid, category, unique_name)
-        register_uploaded_image(cid, category, unique_name)
+        registrada = register_uploaded_image(cid, category, unique_name)
 
         saved.append({
+            "id": registrada.get("id"),
             "name": unique_name,
             "original": f.filename,
             "size_mb": round(size_mb, 2),
@@ -2928,10 +2968,12 @@ def api_add_referente_profile(
     plataforma = req.plataforma if req.plataforma in ("instagram", "youtube") else "instagram"
     try:
         profile = add_profile(data, email, plataforma, req.model_dump())
+        market_job_id = None
         if plataforma == "instagram":
             _maybe_schedule_referentes_discovery(data, email, background_tasks)
+            market_job_id = _trigger_market_research_job(email)
         save_data(data)
-        return {"ok": True, "profile": profile}
+        return {"ok": True, "profile": profile, "market_research_job_id": market_job_id}
     except ValueError as e:
         raise HTTPException(400, str(e))
 
@@ -4373,6 +4415,32 @@ def setup_client(brand: str, brief: BrandBrief):
 _scrape_running: set = set()
 
 
+def _save_profile_picture_from_scrape(brand: dict, cliente_id: str, profile: dict) -> None:
+    """Descarga la foto de perfil de IG detectada en el primer scrape del
+    onboarding y la persiste localmente (la URL de Instagram es temporal y
+    expira) — se usa como avatar del sidebar en vez de las iniciales.
+    No sobreescribe un avatar ya guardado (ej. si el cliente sube uno propio
+    más adelante)."""
+    if brand.get("brand_avatar_url"):
+        return
+    pic_url = (profile or {}).get("profile_pic_url") or ""
+    if not pic_url:
+        return
+    try:
+        dest_dir = cliente_images_dir(UPLOADS_DIR, cliente_id, "branding")
+        filename = f"avatar_ig_{int(time.time())}.jpg"
+        dest = dest_dir / filename
+        req = urllib.request.Request(
+            pic_url,
+            headers={"User-Agent": "Mozilla/5.0 (compatible; RIMA/1.0)"},
+        )
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            dest.write_bytes(resp.read())
+        brand["brand_avatar_url"] = archivo_url(cliente_id, "branding", filename)
+    except Exception as e:
+        print(f"[RIMA] Warning: no se pudo descargar foto de perfil IG para {cliente_id}: {e}")
+
+
 async def _background_scrape(email: str, username: str) -> None:
     if email in _scrape_running:
         return
@@ -4398,6 +4466,7 @@ async def _background_scrape(email: str, username: str) -> None:
         plan = get_user_plan(d, email)
         if result.get("ok"):
             brand = apply_scrape_to_brand(brand, result)
+            _save_profile_picture_from_scrape(brand, cid, result.get("profile") or {})
             set_user_brand(d, email, brand)
             sync_brand_storage(d, email, brand, plan)
             user["onboarding_scrape"] = {
@@ -4597,6 +4666,28 @@ def api_dashboard_tour_dismiss(body: TourDismissRequest, user: dict = Depends(ge
     email = (user.get("email") or "").strip().lower()
     rec = data.setdefault("users", {}).setdefault(email, {})
     state = mark_tour_seen(rec, dismiss_permanent=body.dismiss_permanent)
+    save_data(data)
+    return {"ok": True, **state}
+
+
+@app.get("/api/calendario/guide")
+def api_calendario_guide(user: dict = Depends(get_current_user)):
+    """Guía de una sola vez del Calendario mensual (colores, distribución,
+    selector de mes) — separada del tour genérico de 9 pasos."""
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    if ensure_dashboard_flags(rec):
+        save_data(data)
+    return get_calendario_guide_state(rec)
+
+
+@app.post("/api/calendario/guide/dismiss")
+def api_calendario_guide_dismiss(user: dict = Depends(get_current_user)):
+    data = load_data()
+    email = (user.get("email") or "").strip().lower()
+    rec = data.setdefault("users", {}).setdefault(email, {})
+    state = mark_calendario_guide_seen(rec)
     save_data(data)
     return {"ok": True, **state}
 
@@ -4842,12 +4933,60 @@ def api_referentes_confirm_activation(
     advance_activation(rec, 2, referentes_confirmed=len(added) > 0 or bool(active_ig_usernames(data, email)))
     _maybe_schedule_referentes_discovery(data, email, background_tasks)
     save_data(data)
+
+    market_job_id = None
+    if added:
+        market_job_id = _trigger_market_research_job(email)
+
     return {
         "ok": True,
         "added": len(added),
         "profiles": added,
+        "market_research_job_id": market_job_id,
         **get_activation_state(rec, True),
     }
+
+
+def _trigger_market_research_job(email: str) -> Optional[str]:
+    """Dispara el estudio de mercado en background apenas se cargan referentes
+    nuevos — no consume el crédito semanal de actualización manual (eso es
+    solo para /api/referentes/scrape), corre en paralelo mientras el cliente
+    sigue el onboarding."""
+    from core.jobs import start_job, running_job_for
+
+    existing = running_job_for("market_research", email)
+    if existing:
+        return existing
+
+    data = load_data()
+    brand = get_user_brand(data, email)
+    brand_slug = cliente_id_from_brand(brand)
+    brief = _brand_brief_from_brand(brand, user_plan=get_user_plan(data, email))
+    profiles = active_ig_usernames(data, email)
+    if not profiles:
+        return None
+
+    def _run():
+        result = market_research_agent.run(
+            brand=brand_slug,
+            brand_brief=brief,
+            competitor_profiles=profiles,
+            cliente_id=brand_slug,
+        )
+        if result.get("profile_meta"):
+            d = load_data()
+            sync_ig_profiles_from_meta(d, email, result["profile_meta"])
+            save_data(d)
+        try:
+            from core.db import init_db
+            from core.marca_visual import sync_from_market_research
+            init_db(brand_slug)
+            sync_from_market_research(brand_slug, result, brief)
+        except Exception:
+            pass
+        return result
+
+    return start_job("market_research", _run, owner=email)
 
 
 # ── Auth routes ──────────────────────────────────────────────────────────────
