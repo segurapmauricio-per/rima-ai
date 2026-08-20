@@ -15,7 +15,9 @@ from typing import Optional
 from core import kie_client
 from core.carousel_plan import build_carousel_plan
 from core.imagenes_biblioteca import cliente_generadas_dir, registrar_imagen_generada
-from core.marca_visual import normalizar_marca, paleta_colores, merge_style_guide_from_marca, style_hints_from_marca
+from core.marca_visual import (normalizar_marca, paleta_colores,
+                               merge_style_guide_from_marca, style_hints_from_marca,
+                               estilo_estetico_preset)
 from core.db import get_marca_visual
 from core.visual_spec import spec_desde_slide, spec_a_prompt_integrado
 
@@ -58,6 +60,7 @@ def build_style_guide(marca: Optional[dict], brief: Optional[dict],
         base["tono_marca"] = hints["tono"]
     if hints.get("estilo_fotografico") in ("paisajes", "modelo_consistente"):
         base["direccion_personaje"] = hints["estilo_fotografico"]
+    base["estetica"] = estilo_estetico_preset(hints.get("estilo_estetico"))
     return merge_style_guide_from_marca(base, marca, brief)
 
 

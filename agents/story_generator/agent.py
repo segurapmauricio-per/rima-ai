@@ -14,7 +14,9 @@ from typing import Optional
 from core import kie_client
 from core.story_plan import build_story_plan
 from core.imagenes_biblioteca import cliente_generadas_dir, registrar_imagen_generada
-from core.marca_visual import normalizar_marca, paleta_colores, merge_style_guide_from_marca, style_hints_from_marca
+from core.marca_visual import (normalizar_marca, paleta_colores,
+                               merge_style_guide_from_marca, style_hints_from_marca,
+                               estilo_estetico_preset)
 from core.db import get_marca_visual
 from core.visual_spec import spec_desde_slide, spec_a_prompt
 
@@ -41,6 +43,7 @@ def build_style_guide(marca: Optional[dict], brief: Optional[dict],
     }
     if hints.get("estilo_fotografico") in ("paisajes", "modelo_consistente"):
         base["direccion_personaje"] = hints["estilo_fotografico"]
+    base["estetica"] = estilo_estetico_preset(hints.get("estilo_estetico"))
     return merge_style_guide_from_marca(base, marca, brief)
 
 
@@ -54,7 +57,7 @@ def refresh_kie_prompts(slides: list, style_guide: dict,
         s = dict(slide)
         spec = spec_desde_slide(s, "historia", slot_context, style_guide.get("colores"))
         s["spec_visual"] = spec
-        s["prompt_sugerido"] = spec_a_prompt(spec)
+        s["prompt_sugerido"] = spec_a_prompt(spec, style_guide.get("estetica"))
         s["ratio"] = "9:16"
         s["kie_resolution"] = resolucion
         s["kie_model"] = modelo
@@ -128,7 +131,8 @@ def generate_story_batch(
         prompt = (
             slide.get("prompt_usado")
             or slide.get("prompt_sugerido")
-            or spec_a_prompt(slide.get("spec_visual") or {})
+            or spec_a_prompt(slide.get("spec_visual") or {},
+                             style_guide.get("estetica"))
         )
         if face_suffix and "kie_pending" in (slide.get("image_source") or ""):
             prompt = (prompt or "") + face_suffix

@@ -153,8 +153,20 @@ def spec_desde_slide(slide: dict, tipo: str,
     return spec
 
 
-def spec_a_prompt(spec: dict) -> str:
-    """Prompt de generación para KIE AI armado por template desde la spec."""
+ZONA_LABEL_EN = {"upper_third": "upper third", "center": "center",
+                 "lower_third": "lower third"}
+
+
+def spec_a_prompt(spec: dict, estetica: Optional[dict] = None) -> str:
+    """Prompt de generación para KIE AI armado por template desde la spec.
+
+    `estetica`: preset de core.marca_visual.estilo_estetico_preset(). Si es
+    fotográfico, el prompt sale en inglés con metodología PromptDirector
+    (specs de cámara, micro-imperfecciones, negativos, coda fotográfica).
+    Sin preset (o preset gráfico) se mantiene el template histórico en español.
+    """
+    if estetica and estetica.get("tipo") == "fotografico":
+        return _spec_a_prompt_fotografico(spec, estetica)
     partes = [
         f"Fotografía para Instagram, formato {spec.get('formato', '1080x1080')}.",
         spec.get("descripcion", "").rstrip(".") + ".",
@@ -173,6 +185,61 @@ def spec_a_prompt(spec: dict) -> str:
                   "para superponer texto.")
     partes.append("Sin texto incrustado, sin logos, sin marcas de agua.")
     return " ".join(p for p in partes if p and p != ".")
+
+
+def _spec_a_prompt_fotografico(spec: dict, estetica: dict) -> str:
+    """Prompt PromptDirector (inglés) para historias con preset fotográfico.
+
+    Estructura: realismo → escena → luz → mood/contexto → paleta →
+    imperfecciones → zona de texto despejada (overlay Pillow posterior) →
+    negativos → coda fotográfica. La descripción del slide viene en español
+    del copy agent: se incluye tal cual como dirección de escena — nano-banana
+    la interpreta bien; el vocabulario técnico que sesga el estilo va en inglés.
+    """
+    desc = (spec.get("descripcion") or "clean professional brand image").rstrip(".")
+    partes = [
+        estetica.get("realismo", "Real photograph, not a render").rstrip(".") + ".",
+        f"Vertical Instagram story frame, {spec.get('formato', '1080x1920')}.",
+        f"Scene: {desc}.",
+        f"Lit by {estetica.get('luz', 'natural available light')}.",
+    ]
+    if spec.get("vibe"):
+        partes.append(f"Mood: {spec['vibe'].rstrip('.')}.")
+    if spec.get("elementos_clave"):
+        partes.append("Thematic context: " + ", ".join(spec["elementos_clave"]) + ".")
+    if spec.get("paleta_colores"):
+        partes.append("Brand color palette guiding wardrobe and props: "
+                      + ", ".join(spec["paleta_colores"][:5]) + ".")
+    if estetica.get("imperfecciones"):
+        partes.append(f"Real-world micro-imperfections: {estetica['imperfecciones']}.")
+    partes.append("Subject in sharp focus, background falling into coherent bokeh "
+                  "consistent with the stated aperture.")
+    zona = ZONA_LABEL_EN.get((spec.get("zona_texto") or {}).get("zone", "center"),
+                             "center")
+    partes.append(f"Keep the {zona} of the frame clean and uncluttered, with an "
+                  "even background, so text can be overlaid there later.")
+    if estetica.get("negativos"):
+        partes.append(f"Negative: {estetica['negativos']}.")
+    partes.append(estetica.get("coda", "Photographic realism, no text") + ".")
+    return " ".join(p for p in partes if p and p != ".")
+
+
+def estetica_fondo_carrusel(estetica: Optional[dict]) -> str:
+    """Línea de dirección del FONDO para carruseles con preset fotográfico.
+
+    El carrusel mantiene su lenguaje de diseño con texto horneado; el preset
+    solo modula cómo se ve la escena de fondo detrás del layout.
+    """
+    if not estetica or estetica.get("tipo") != "fotografico":
+        return ""
+    partes = [
+        f"Background scene treatment: {estetica.get('realismo', 'real photograph')}",
+        f"lit by {estetica.get('luz', 'natural light')}",
+        estetica.get("coda", "photographic realism"),
+    ]
+    return (". ".join(p.rstrip(".") for p in partes if p)
+            + ". The photographic treatment applies ONLY to the background scene; "
+              "keep the text layout crisp, flat and legible on top.")
 
 
 def spec_a_prompt_integrado(spec: dict, style_guide: dict,
@@ -226,6 +293,9 @@ def _spec_a_prompt_integrado_es(spec: dict, sg: dict,
     desc = (spec.get("descripcion") or spec.get("vibe") or "").strip().rstrip(".")
     if desc:
         partes.append(f"Escena de fondo y composición: {desc}.")
+    fondo = estetica_fondo_carrusel(sg.get("estetica"))
+    if fondo:
+        partes.append(fondo)
     if slide_idx > 0:
         partes.append(
             "CRÍTICO: Mismo estilo visual, paleta, tipografía y lenguaje de diseño que la slide 1 (portada)."
@@ -280,6 +350,9 @@ def _spec_a_prompt_integrado_en(spec: dict, sg: dict,
     desc = (spec.get("descripcion") or spec.get("vibe") or "").strip().rstrip(".")
     if desc:
         partes.append(f"Background scene and composition: {desc}.")
+    fondo = estetica_fondo_carrusel(sg.get("estetica"))
+    if fondo:
+        partes.append(fondo)
     if slide_idx > 0:
         partes.append(
             "CRITICAL: Match exactly the same visual style, color palette, typography "

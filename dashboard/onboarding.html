@@ -95,11 +95,14 @@
       <div id="palette-row" class="flex flex-wrap gap-2 mb-3"></div>
       <p id="fonts-display" class="text-[12px] text-slate-300 mb-3"></p>
       <input id="b-tone" class="f-input mb-3" placeholder="Tono de comunicación" />
-      <div class="flex gap-2 mb-3">
+      <div class="flex gap-2 mb-4">
         <span class="chip on" data-lang="es" onclick="pickLang(this)">Español</span>
         <span class="chip" data-lang="en" onclick="pickLang(this)">Inglés</span>
         <span class="chip" data-lang="pt" onclick="pickLang(this)">Portugués</span>
       </div>
+      <p class="text-[10px] uppercase text-slate-500 font-bold mb-1">Estética de tus imágenes</p>
+      <p class="text-[10px] text-slate-500 mb-2">El "look" con que RIMA genera tus piezas. Lo podés cambiar cuando quieras desde Marca.</p>
+      <div id="estetica-cards" class="grid grid-cols-1 gap-2 mb-4"></div>
       <div id="scrape-insights" class="rounded-xl p-3 text-[10px] text-slate-400 mb-4" style="background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)"></div>
       <button type="button" class="btn-primary w-full py-3 rounded-xl text-[12px] font-semibold text-white" onclick="submitVisual()">Confirmar identidad</button>
     </div>
@@ -144,11 +147,30 @@
   </div>
 
 <script>
-var STATE = { step:1, mustChangePassword:true, lang:'es', scrapePoll:null, marca:null, minPhotos:3, faceRequired:true, photosCount:0, faceOk:false, plan:'pro' };
+var STATE = { step:1, mustChangePassword:true, lang:'es', scrapePoll:null, marca:null, minPhotos:3, faceRequired:true, photosCount:0, faceOk:false, plan:'pro', estetica:'grafico_bold' };
 var TOTAL_STEPS = 7;
 
+// Debe coincidir con ESTILO_ESTETICO_PRESETS de core/marca_visual.py.
+var ESTETICAS = {
+  grafico_bold:    { nombre:'Gráfico & Bold',             desc:'Diseño moderno con texto integrado — el look clásico de RIMA.' },
+  hiperrealista:   { nombre:'Hiperrealista publicitario', desc:'Foto tipo anuncio premium real — servicios de alto valor.' },
+  cinematografico: { nombre:'Cinematográfico',            desc:'Grano de película, atmósfera — marca personal aspiracional.' },
+  editorial:       { nombre:'Editorial de revista',       desc:'Luz suave, composición cuidada — belleza, moda, lifestyle.' },
+  ugc_movil:       { nombre:'UGC casero de celular',      desc:'Crudo y cercano — coaches e infoproductos.' }
+};
+function renderEsteticas(){
+  var el=document.getElementById('estetica-cards');if(!el)return;
+  el.innerHTML=Object.keys(ESTETICAS).map(function(id){
+    var e=ESTETICAS[id],on=STATE.estetica===id;
+    return '<div onclick="pickEstetica(\''+id+'\')" style="cursor:pointer;border:1px solid '+(on?'rgba(244,114,182,0.6)':'rgba(255,255,255,0.08)')+';border-radius:10px;padding:9px 12px;background:'+(on?'rgba(244,114,182,0.08)':'rgba(255,255,255,0.02)')+'">'
+      +'<p style="font-size:11px;font-weight:700;color:#F1F5F9;margin:0">'+e.nombre+'</p>'
+      +'<p style="font-size:10px;color:#94A3B8;margin:2px 0 0">'+e.desc+'</p></div>';
+  }).join('');
+}
+function pickEstetica(id){STATE.estetica=id;renderEsteticas();}
+
 function renderDots(){var el=document.getElementById('step-dots');el.innerHTML='';for(var i=1;i<=TOTAL_STEPS;i++){var d=document.createElement('div');d.className='step-dot'+(i===STATE.step?' active':(i<STATE.step?' done':''));el.appendChild(d);}}
-function goStep(n){STATE.step=n;document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});var p=document.getElementById('step-'+n);if(p)p.classList.add('active');renderDots();if(n===7)renderSummary();if(n===5)refreshPhotosCount();}
+function goStep(n){STATE.step=n;document.querySelectorAll('.step-panel').forEach(function(p){p.classList.remove('active');});var p=document.getElementById('step-'+n);if(p)p.classList.add('active');renderDots();if(n===7)renderSummary();if(n===5)refreshPhotosCount();if(n===4)renderEsteticas();}
 
 async function loadState(){
   try{
@@ -170,6 +192,8 @@ async function loadState(){
     if(params.get('reason')==='brief')goStep(3);
     prefillBrief(await fetch('/api/brand').then(function(r){return r.json();}));
     STATE.marca=await fetch('/api/marca-visual').then(function(r){return r.json();});
+    if(STATE.marca&&STATE.marca.visual&&STATE.marca.visual.estilo_estetico)STATE.estetica=STATE.marca.visual.estilo_estetico;
+    renderEsteticas();
     if(STATE.marca&&STATE.marca.comunicacion&&STATE.marca.comunicacion.tono)document.getElementById('b-tone').value=STATE.marca.comunicacion.tono;
     if(me.scrape_status==='running'){showScrapeProgress();startScrapePoll();}
     else if(me.scrape_status==='done')loadScrapeInsights();
@@ -246,7 +270,9 @@ async function submitBrief(){
 function pickLang(el){document.querySelectorAll('.chip[data-lang]').forEach(function(c){c.classList.remove('on');});el.classList.add('on');STATE.lang=el.dataset.lang;}
 
 async function submitVisual(){
-  await fetch('/api/marca-visual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({comunicacion:{tono:document.getElementById('b-tone').value,idioma:STATE.lang},visual:STATE.marca?STATE.marca.visual:{}})});
+  var visual=(STATE.marca&&STATE.marca.visual)?STATE.marca.visual:{};
+  visual.estilo_estetico=STATE.estetica;
+  await fetch('/api/marca-visual',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({comunicacion:{tono:document.getElementById('b-tone').value,idioma:STATE.lang},visual:visual})});
   await fetch('/api/brand',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({brand_tone:document.getElementById('b-tone').value,brand_language:STATE.lang})});
   await fetch('/api/onboarding/step',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step:5})});goStep(5);
 }

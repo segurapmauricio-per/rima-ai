@@ -2242,14 +2242,73 @@ def delete_image(category: str, filename: str, user: dict = Depends(get_current_
 
 
 # â"€â"€ API: Clips de video por reel â"€â"€
+#
+# Aislamiento por cliente: TODO el material de video (clips, video final y
+# estado del reel) vive bajo el cliente derivado de la sesión — nunca de un
+# parámetro de la URL. Un cliente no puede listar, descargar, borrar ni pisar
+# el material de otro aunque conozca su reel_id. Mismo patrón que la biblioteca
+# de imágenes (core/imagenes_biblioteca.cliente_generadas_dir).
 
-ALLOWED_VIDEO = {"video/mp4","video/quicktime","video/x-msvideo","video/webm","video/mpeg","video/mov"}
+ALLOWED_VIDEO_EXT = {".mp4", ".mov", ".avi", ".webm", ".mpeg", ".m4v"}
 MAX_CLIP_MB = 500
+
+
+def _safe_segment(value: str, campo: str) -> str:
+    """Normaliza un valor para usarlo como carpeta/archivo en disco.
+
+    Fuera del charset seguro se sustituye por '_', y si la sustitución cambió
+    algo se agrega un sufijo hash del original: así dos valores distintos nunca
+    colapsan en la misma carpeta (p. ej. dos marcas con acentos diferentes).
+    """
+    raw = (value or "").strip()
+    if not raw:
+        raise HTTPException(400, f"{campo} vacío")
+    safe = re.sub(r"[^a-z0-9_-]", "_", raw.lower())[:60].strip("._-")
+    if not safe:
+        raise HTTPException(400, f"{campo} inválido")
+    if safe != raw.lower():
+        safe = f"{safe}_{hashlib.sha1(raw.encode('utf-8')).hexdigest()[:8]}"
+    return safe
+
+
+def _clips_dir(cliente_id: str, reel_id: str, crear: bool = False) -> Path:
+    d = (UPLOADS_DIR / "clips" / _safe_segment(cliente_id, "cliente")
+         / _safe_segment(reel_id, "reel_id"))
+    if crear:
+        d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _clips_url(cliente_id: str, reel_id: str, nombre: str) -> str:
+    return (f"/uploads/clips/{_safe_segment(cliente_id, 'cliente')}"
+            f"/{_safe_segment(reel_id, 'reel_id')}/{nombre}")
+
+
+def _finals_dir(cliente_id: str, crear: bool = False) -> Path:
+    d = UPLOADS_DIR / "finals" / _safe_segment(cliente_id, "cliente")
+    if crear:
+        d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _reels_root(d: dict, cliente_id: str) -> dict:
+    """Metadata de reels namespaced por cliente dentro de rima_data.json."""
+    return d.setdefault("reels_por_cliente", {}).setdefault(cliente_id, {})
+
+
+def _nombre_unico(filename: str) -> str:
+    """Nombre de archivo seguro y no adivinable (el mount /uploads es público)."""
+    ext = Path(filename or "").suffix.lower()
+    if ext not in ALLOWED_VIDEO_EXT:
+        raise ValueError(f"Formato no permitido ({ext or 'sin extensión'})")
+    stem = re.sub(r"[^A-Za-z0-9_-]", "_", Path(filename).stem)[:40] or "clip"
+    return f"{stem}_{int(time.time() * 1000)}_{secrets.token_hex(4)}{ext}"
+
 
 @app.post("/api/videos/{reel_id}/clips")
 async def upload_clip(reel_id: str, files: List[UploadFile] = File(...), user: dict = Depends(get_current_user)):
-    reel_dir = UPLOADS_DIR / "clips" / reel_id
-    reel_dir.mkdir(parents=True, exist_ok=True)
+    cid = _get_cliente_id(user)
+    reel_dir = _clips_dir(cid, reel_id, crear=True)
     saved, errors = [], []
     for f in files:
         content = await f.read()
@@ -2257,28 +2316,32 @@ async def upload_clip(reel_id: str, files: List[UploadFile] = File(...), user: d
         if size_mb > MAX_CLIP_MB:
             errors.append({"name": f.filename, "error": f"Supera {MAX_CLIP_MB} MB"})
             continue
-        stem = Path(f.filename).stem[:40].replace(" ", "_")
-        ext  = Path(f.filename).suffix.lower() or ".mp4"
-        unique = f"{stem}_{int(time.time()*1000)}{ext}"
+        try:
+            unique = _nombre_unico(f.filename)
+        except ValueError as e:
+            errors.append({"name": f.filename, "error": str(e)})
+            continue
         (reel_dir / unique).write_bytes(content)
         saved.append({
             "name": unique, "original": f.filename,
             "size_mb": round(size_mb, 2),
-            "url": f"/uploads/clips/{reel_id}/{unique}",
+            "url": _clips_url(cid, reel_id, unique),
             "uploaded_at": int(time.time()),
         })
     return {"saved": saved, "errors": errors}
 
 @app.get("/api/videos/{reel_id}/clips")
 def list_clips(reel_id: str, user: dict = Depends(get_current_user)):
-    folder = UPLOADS_DIR / "clips" / reel_id
-    folder.mkdir(parents=True, exist_ok=True)
+    cid = _get_cliente_id(user)
+    folder = _clips_dir(cid, reel_id)
+    if not folder.is_dir():
+        return {"clips": [], "reel_id": reel_id}
     clips = []
     for p in sorted(folder.iterdir(), key=lambda x: x.stat().st_mtime):
-        if p.suffix.lower() in (".mp4",".mov",".avi",".webm",".mpeg"):
+        if p.suffix.lower() in ALLOWED_VIDEO_EXT:
             st = p.stat()
             clips.append({
-                "name": p.name, "url": f"/uploads/clips/{reel_id}/{p.name}",
+                "name": p.name, "url": _clips_url(cid, reel_id, p.name),
                 "size_mb": round(st.st_size/(1024*1024), 2),
                 "uploaded_at": int(st.st_mtime),
             })
@@ -2286,10 +2349,19 @@ def list_clips(reel_id: str, user: dict = Depends(get_current_user)):
 
 @app.delete("/api/videos/{reel_id}/clips/{filename}")
 def delete_clip(reel_id: str, filename: str, user: dict = Depends(get_current_user)):
-    if ".." in filename or "/" in filename:
-        raise HTTPException(400, "Nombre invÃ¡lido")
-    p = UPLOADS_DIR / "clips" / reel_id / filename
-    if not p.exists(): raise HTTPException(404, "No encontrado")
+    cid = _get_cliente_id(user)
+    if ".." in filename or "/" in filename or "\\" in filename:
+        raise HTTPException(400, "Nombre inválido")
+    carpeta = _clips_dir(cid, reel_id)
+    p = carpeta / filename
+    # Defensa en profundidad: el archivo resuelto debe seguir dentro de la
+    # carpeta del cliente aunque el nombre haya esquivado el chequeo de arriba.
+    try:
+        p.resolve().relative_to(carpeta.resolve())
+    except (ValueError, OSError):
+        raise HTTPException(400, "Nombre inválido")
+    if not p.exists():
+        raise HTTPException(404, "No encontrado")
     p.unlink()
     return {"status": "deleted"}
 
@@ -2297,31 +2369,35 @@ def delete_clip(reel_id: str, filename: str, user: dict = Depends(get_current_us
 
 @app.post("/api/videos/{reel_id}/final")
 async def upload_final(reel_id: str, file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-    finals_dir = UPLOADS_DIR / "finals"
-    finals_dir.mkdir(exist_ok=True)
+    cid = _get_cliente_id(user)
+    reel_safe = _safe_segment(reel_id, "reel_id")
+    finals_dir = _finals_dir(cid, crear=True)
     content = await file.read()
     size_mb = len(content) / (1024*1024)
     if size_mb > MAX_CLIP_MB:
         raise HTTPException(400, f"Supera {MAX_CLIP_MB} MB")
-    ext = Path(file.filename).suffix.lower() or ".mp4"
-    fname = f"{reel_id}_final_{int(time.time())}{ext}"
+    try:
+        fname = f"{reel_safe}_final_{_nombre_unico(file.filename)}"
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     (finals_dir / fname).write_bytes(content)
-    # Guardar referencia en data
+    url = f"/uploads/finals/{_safe_segment(cid, 'cliente')}/{fname}"
     d = load_data()
-    d.setdefault("reels", {}).setdefault(reel_id, {})["final"] = {
-        "name": fname, "url": f"/uploads/finals/{fname}",
+    _reels_root(d, cid).setdefault(reel_id, {})["final"] = {
+        "name": fname, "url": url,
         "size_mb": round(size_mb, 2), "uploaded_at": int(time.time())
     }
     save_data(d)
-    return {"url": f"/uploads/finals/{fname}", "name": fname}
+    return {"url": url, "name": fname}
 
 @app.get("/api/videos/{reel_id}/final")
 def get_final(reel_id: str, user: dict = Depends(get_current_user)):
+    cid = _get_cliente_id(user)
     d = load_data()
-    final = d.get("reels", {}).get(reel_id, {}).get("final")
+    final = _reels_root(d, cid).get(reel_id, {}).get("final")
     if not final: return {"final": None}
     # Verificar que el archivo sigue existiendo
-    path = UPLOADS_DIR / "finals" / final["name"]
+    path = _finals_dir(cid) / final["name"]
     if not path.exists(): return {"final": None}
     return {"final": final}
 
@@ -2329,13 +2405,15 @@ def get_final(reel_id: str, user: dict = Depends(get_current_user)):
 
 @app.get("/api/videos/{reel_id}/state")
 def get_reel_state(reel_id: str, user: dict = Depends(get_current_user)):
+    cid = _get_cliente_id(user)
     d = load_data()
-    return d.get("reels", {}).get(reel_id, {}).get("state", {"script_approved": False, "step": 1})
+    return _reels_root(d, cid).get(reel_id, {}).get("state", {"script_approved": False, "step": 1})
 
 @app.post("/api/videos/{reel_id}/state")
 def set_reel_state(reel_id: str, payload: dict, user: dict = Depends(get_current_user)):
+    cid = _get_cliente_id(user)
     d = load_data()
-    d.setdefault("reels", {}).setdefault(reel_id, {})["state"] = payload
+    _reels_root(d, cid).setdefault(reel_id, {})["state"] = payload
     save_data(d)
     return {"status": "ok"}
 
@@ -2343,15 +2421,17 @@ def set_reel_state(reel_id: str, payload: dict, user: dict = Depends(get_current
 @app.post("/api/videos/{reel_id}/edit")
 def trigger_edit(reel_id: str, user: dict = Depends(get_current_user)):
     """Stub: envÃ­a los clips al agente editor. Por ahora devuelve confirmaciÃ³n."""
+    cid = _get_cliente_id(user)
     d = load_data()
-    clips_dir = UPLOADS_DIR / "clips" / reel_id
+    clips_dir = _clips_dir(cid, reel_id)
     clip_files = []
     if clips_dir.exists():
-        clip_files = [p.name for p in clips_dir.iterdir() if p.suffix.lower() in (".mp4",".mov",".avi",".webm")]
+        clip_files = [p.name for p in clips_dir.iterdir()
+                      if p.suffix.lower() in ALLOWED_VIDEO_EXT]
     if not clip_files:
         raise HTTPException(400, "No hay clips para editar")
     # Registrar solicitud de ediciÃ³n en datos
-    d.setdefault("reels", {}).setdefault(reel_id, {})["edit_requested"] = {
+    _reels_root(d, cid).setdefault(reel_id, {})["edit_requested"] = {
         "clips": clip_files,
         "requested_at": int(time.time())
     }
@@ -3954,6 +4034,8 @@ def api_asignar_imagen_slide(pub_id: str, req: AsignarImagenSlideRequest,
         slide.pop(k, None)
     if not slide.get("prompt_sugerido"):
         from core.visual_spec import spec_desde_slide, spec_a_prompt
+        from core.marca_visual import style_hints_from_marca, estilo_estetico_preset
+        from core.db import get_marca_visual
         from agents.visual_composer.agent import _paleta_marca
         slot_context = {
             "tematica": pub.get("tematica", ""),
@@ -3963,7 +4045,9 @@ def api_asignar_imagen_slide(pub_id: str, req: AsignarImagenSlideRequest,
         spec = spec_desde_slide(slide, pub.get("tipo", "carrusel"), slot_context,
                                 _paleta_marca(cid))
         slide["spec_visual"] = spec
-        slide["prompt_sugerido"] = spec_a_prompt(spec)
+        estetica = estilo_estetico_preset(
+            style_hints_from_marca(get_marca_visual(cid)).get("estilo_estetico"))
+        slide["prompt_sugerido"] = spec_a_prompt(spec, estetica)
     update_publicacion_field(cid, pub_id, "produccion_json", prod)
     return {"ok": True, "slide_index": idx, "slide": slide}
 
@@ -3981,7 +4065,7 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
     from core import kie_client
     from core.visual_spec import spec_a_prompt, spec_desde_slide
     from core.imagenes_biblioteca import cliente_generadas_dir, registrar_imagen_generada
-    from core.marca_visual import paleta_colores
+    from core.marca_visual import paleta_colores, style_hints_from_marca, estilo_estetico_preset
     from core.db import get_marca_visual
 
     cid = _get_cliente_id(user)
@@ -4004,9 +4088,11 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
         raise HTTPException(400, "El slide no admite generación IA")
     spec = slide.get("spec_visual") or {}
     prompt = (req.prompt or "").strip()
+    estetica = estilo_estetico_preset(
+        style_hints_from_marca(get_marca_visual(cid)).get("estilo_estetico"))
     if not prompt:
         prompt = (slide.get("prompt_sugerido") or slide.get("prompt_usado")
-                  or (spec_a_prompt(spec) if spec else ""))
+                  or (spec_a_prompt(spec, estetica) if spec else ""))
     if not prompt and pub.get("tipo") == "carrusel":
         from agents.carousel_generator.agent import build_integrated_prompt, build_style_guide
         copy_j = pub.get("copy_json") or {}
@@ -4034,7 +4120,7 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
         from agents.visual_composer.agent import _paleta_marca
         spec = spec_desde_slide(slide, tipo, slot_context, _paleta_marca(cid))
         slide["spec_visual"] = spec
-        slide["prompt_sugerido"] = spec_a_prompt(spec)
+        slide["prompt_sugerido"] = spec_a_prompt(spec, estetica)
         prompt = slide["prompt_sugerido"]
     if not prompt:
         raise HTTPException(400, "No hay prompt para generar la imagen")

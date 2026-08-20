@@ -6,6 +6,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "7722", "--directory", "C:/Users/Mauricio/projects/rima-ai/dashboard"],
       "port": 7722
+    },
+    {
+      "name": "rima-api",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["main.py"],
+      "port": 8000
     }
   ]
 }

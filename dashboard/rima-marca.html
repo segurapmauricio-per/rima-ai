@@ -1010,7 +1010,11 @@
 
       <div class="sec-divider">Estilo fotográfico de tus imágenes con IA</div>
       <p class="field-hint" style="margin-bottom:12px">Define qué tipo de imágenes genera RIMA para tus carruseles e historias.</p>
-      <div id="estilo-foto-cards" class="grid grid-cols-3 gap-3"></div>
+      <div id="estilo-foto-cards" class="grid grid-cols-3 gap-3" style="margin-bottom:24px"></div>
+
+      <div class="sec-divider">Estética de tus imágenes</div>
+      <p class="field-hint" style="margin-bottom:12px">El "look" con que se generan tus piezas — aplica completo en historias y al fondo de tus carruseles. Al cambiarlo, las próximas generaciones usan el look nuevo.</p>
+      <div id="estilo-estetico-cards" class="grid grid-cols-2 gap-3"></div>
 
       <p id="visual-save-status" style="font-size:10px;color:#34D399;margin-top:14px;display:none">Guardado ✓</p>
     </div>
@@ -1031,6 +1035,14 @@
     paisajes:           { nombre: 'Paisajes / lifestyle', desc: 'Sin personas — escenas, objetos y texturas, con una frase o pensamiento como protagonista.' },
     mixto:              { nombre: 'Mixto', desc: 'Sin restricción — RIMA decide según lo que pida cada pieza.' }
   };
+  // Debe coincidir con ESTILO_ESTETICO_PRESETS de core/marca_visual.py.
+  var ESTILO_ESTETICO = {
+    grafico_bold:    { nombre: 'Gráfico & Bold',              desc: 'Diseño gráfico moderno con texto integrado — el look clásico de RIMA.' },
+    hiperrealista:   { nombre: 'Hiperrealista publicitario',  desc: 'Foto indistinguible de un anuncio premium real — producto y servicios de alto valor.' },
+    cinematografico: { nombre: 'Cinematográfico',             desc: 'Look de película: grano film, teal-orange, atmósfera — marca personal aspiracional.' },
+    editorial:       { nombre: 'Editorial de revista',        desc: 'Estética de revista premium: luz suave, composición cuidada — belleza, moda, lifestyle.' },
+    ugc_movil:       { nombre: 'UGC casero de celular',       desc: 'Look grabado con el teléfono: crudo, cercano, vendedor — coaches e infoproductos.' }
+  };
 
   var fontsLoaded = {};
   function ensureFontLoaded(family) {
@@ -1042,7 +1054,7 @@
     document.head.appendChild(link);
   }
 
-  var STATE = { tipografia_estilo: '', estilo_fotografico: '' };
+  var STATE = { tipografia_estilo: '', estilo_fotografico: '', estilo_estetico: '' };
 
   function renderTipografiaCards() {
     var el = document.getElementById('tipografia-cards');
@@ -1070,6 +1082,18 @@
     }).join('');
   }
 
+  function renderEstiloEsteticoCards() {
+    var el = document.getElementById('estilo-estetico-cards');
+    el.innerHTML = Object.keys(ESTILO_ESTETICO).map(function (id) {
+      var e = ESTILO_ESTETICO[id];
+      var selected = (STATE.estilo_estetico || 'grafico_bold') === id;
+      return '<div class="field-group" style="cursor:pointer;border:1px solid ' + (selected ? 'rgba(244,114,182,0.6)' : 'rgba(255,255,255,0.08)') + ';border-radius:12px;padding:14px;background:' + (selected ? 'rgba(244,114,182,0.08)' : 'rgba(255,255,255,0.02)') + '" onclick="window._elegirEstiloEstetico(\'' + id + '\')">'
+        + '<p style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0 0 4px">' + e.nombre + '</p>'
+        + '<p style="font-size:10px;color:#94A3B8;margin:0">' + e.desc + '</p>'
+        + '</div>';
+    }).join('');
+  }
+
   async function guardarVisual() {
     try {
       await fetch('/api/marca-visual', {
@@ -1078,6 +1102,7 @@
         body: JSON.stringify({ visual: {
           tipografia_estilo: STATE.tipografia_estilo,
           estilo_fotografico: STATE.estilo_fotografico,
+          estilo_estetico: STATE.estilo_estetico,
         } }),
       });
       var s = document.getElementById('visual-save-status');
@@ -1096,6 +1121,11 @@
     renderEstiloFotoCards();
     guardarVisual();
   };
+  window._elegirEstiloEstetico = function (id) {
+    STATE.estilo_estetico = id;
+    renderEstiloEsteticoCards();
+    guardarVisual();
+  };
 
   async function cargarVisual() {
     try {
@@ -1104,9 +1134,11 @@
       var visual = d.visual || {};
       STATE.tipografia_estilo = visual.tipografia_estilo || '';
       STATE.estilo_fotografico = visual.estilo_fotografico || '';
+      STATE.estilo_estetico = visual.estilo_estetico || 'grafico_bold';
     } catch (e) {}
     renderTipografiaCards();
     renderEstiloFotoCards();
+    renderEstiloEsteticoCards();
   }
   cargarVisual();
 })();

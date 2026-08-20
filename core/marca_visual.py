@@ -27,6 +27,7 @@ MARCA_VISUAL_VACIA = {
         "tipografia_estilo": "",
         "estilo_imagen": "",
         "estilo_fotografico": "",
+        "estilo_estetico": "",
         "imagen_personaje_url": "",
         "tipos_toma": [],
         "imagen_marca_url": "",
@@ -70,6 +71,84 @@ ESTILO_FOTOGRAFICO_OPCIONES = {
     "paisajes": "Paisajes/lifestyle — sin personas, escenas y objetos",
     "mixto": "Mixto — sin restricción, según lo que pida cada pieza",
 }
+
+# Estética visual elegible por el cliente (onboarding / /marca) — metodología
+# PromptDirector: cada preset empaqueta film stock, óptica y dirección de
+# realismo. Determinístico, sin LLM. Los bloques técnicos van en INGLÉS porque
+# los modelos de imagen rinden mejor con vocabulario fotográfico en inglés;
+# nombre/descripcion son para la UI en español.
+# "grafico_bold" = comportamiento histórico (diseño gráfico Canva-style) y es
+# el default: los clientes existentes no ven ningún cambio salvo que elijan.
+ESTILO_ESTETICO_PRESETS = {
+    "grafico_bold": {
+        "nombre": "Gráfico & Bold",
+        "descripcion": "Diseño gráfico moderno con texto integrado — el look clásico de RIMA.",
+        "tipo": "grafico",
+    },
+    "hiperrealista": {
+        "nombre": "Hiperrealista publicitario",
+        "descripcion": "Foto indistinguible de un anuncio premium real — producto y servicios de alto valor.",
+        "tipo": "fotografico",
+        "realismo": "Real advertising photograph, not a render. Authentic skin, fabric and materials.",
+        "luz": "soft key light from camera-left, gentle fill from open sky, defined falloff into shadow",
+        "coda": ("Shot on Kodak Portra 400, 85mm, f/2.0, ISO 200, ~4800K, natural color grade, "
+                 "photographic realism, no text"),
+        "imperfecciones": ("visible skin pores, individual eyebrow hairs, slight natural asymmetry, "
+                           "one flyaway strand of hair, subtle T-zone sheen, real fabric wrinkles"),
+        "negativos": ("no plastic skin, no airbrushing, no glow, no CGI gloss, no over-sharpening, "
+                      "no text, no logos, no watermark"),
+    },
+    "cinematografico": {
+        "nombre": "Cinematográfico",
+        "descripcion": "Look de película: grano film, teal-orange, atmósfera — marca personal aspiracional.",
+        "tipo": "fotografico",
+        "realismo": "Real cinematic film still, not a render. Atmospheric, moody, grounded in physical light.",
+        "luz": "single motivated key source (window / practical lamp), deep shadows, haze in the light beam",
+        "coda": ("Shot on Kodak Vision3 500T, 35mm anamorphic, f/2.8, ISO 500, teal-and-orange "
+                 "cinematic grade, clean deep blacks, photographic realism, no text"),
+        "imperfecciones": ("film grain texture, visible skin pores, dust motes drifting in the light beam, "
+                           "slight facial asymmetry, natural fabric creases"),
+        "negativos": ("no glow, no magical light, no fairy dust, no CGI gloss, no over-saturation, "
+                      "no text, no logos, no watermark"),
+    },
+    "editorial": {
+        "nombre": "Editorial de revista",
+        "descripcion": "Estética de revista premium: luz suave, composición cuidada — belleza, moda, lifestyle.",
+        "tipo": "fotografico",
+        "realismo": "Real editorial fashion photograph, not a render. Magazine-grade art direction.",
+        "luz": "large soft window light as key, negative fill for gentle contrast, clean background separation",
+        "coda": ("Shot on Mamiya 7, 80mm, f/4, ISO 100, neutral color grade, soft medium-format "
+                 "falloff, photographic realism, no text"),
+        "imperfecciones": ("visible skin pores, fine vellus hair catching the light, individual eyebrow "
+                           "hairs, subtle asymmetry, natural fabric drape"),
+        "negativos": ("no plastic skin, no airbrushing, no glow, no over-sharpening, "
+                      "no text, no logos, no watermark"),
+    },
+    "ugc_movil": {
+        "nombre": "UGC casero de celular",
+        "descripcion": "Look grabado con el teléfono: crudo, cercano, vendedor — coaches e infoproductos.",
+        "tipo": "fotografico",
+        "realismo": "Authentic phone photo taken by a real person, casual and unproduced.",
+        "luz": "available natural light, slightly uneven, honest shadows",
+        "coda": ("Shot on a phone-style 26mm equivalent lens, f/2.2, natural window light, slightly "
+                 "imperfect handheld framing, true-to-life color, photographic realism, no text"),
+        "imperfecciones": ("candid framing, slight motion softness, everyday clutter in the background, "
+                           "real skin texture, no studio polish"),
+        "negativos": ("no studio look, no professional lighting rig, no CGI gloss, no glow, "
+                      "no text, no logos, no watermark"),
+    },
+}
+
+ESTILO_ESTETICO_DEFAULT = "grafico_bold"
+
+
+def estilo_estetico_preset(estilo_id: str) -> dict:
+    """Preset de estética por id; default gráfico (comportamiento histórico)."""
+    preset = ESTILO_ESTETICO_PRESETS.get((estilo_id or "").strip())
+    if preset:
+        return dict(preset, id=(estilo_id or "").strip())
+    return dict(ESTILO_ESTETICO_PRESETS[ESTILO_ESTETICO_DEFAULT],
+                id=ESTILO_ESTETICO_DEFAULT)
 
 
 def tipografias_de_estilo(estilo_id: str) -> list:
@@ -271,6 +350,7 @@ def style_hints_from_marca(marca: Optional[dict], brief: Optional[dict] = None) 
         "tipos_toma": visual.get("tipos_toma") or [],
         "origen_marca": marca.get("origen") or "",
         "estilo_fotografico": visual.get("estilo_fotografico") or "mixto",
+        "estilo_estetico": visual.get("estilo_estetico") or ESTILO_ESTETICO_DEFAULT,
         "imagen_personaje_url": visual.get("imagen_personaje_url") or "",
     }
 
