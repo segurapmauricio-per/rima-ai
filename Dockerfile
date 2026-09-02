@@ -9,6 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Chromium headless para core/claude_slide_renderer.py (composición de
+# carruseles vía Claude + Playwright). --with-deps instala también las
+# librerías de sistema que Chromium necesita (fontconfig, libnss3, etc.).
+RUN playwright install --with-deps chromium
+
 COPY . .
 
 EXPOSE 8000

@@ -454,17 +454,50 @@ def slides_kie_integrado(slides: list, tipo: str,
 
 def compose_produccion(cliente_id: str, copy_json: dict, tipo: str,
                        slot_context: Optional[dict] = None,
-                       modo: str = "produccion") -> dict:
-    """Plan de slides + matching de biblioteca. modo=previsual tras generar copy."""
+                       modo: str = "produccion",
+                       modo_composicion: str = "texto_integrado") -> dict:
+    """Plan de slides + matching de biblioteca. modo=previsual tras generar copy.
+
+    modo_composicion (solo aplica a tipo="carrusel"):
+    - "texto_integrado" (default, comportamiento histórico): KIE genera cada
+      slide con el texto ya incrustado en la imagen.
+    - "fondo_limpio" (opt-in, no activado por defecto en ningún flujo todavía):
+      KIE genera solo el fondo, sin texto, y la composición final (texto,
+      scrim, resaltado) la hace Claude + Playwright vía
+      core/claude_slide_renderer — ver docs/protocolo-generacion-imagenes-ia.md
+      del proyecto Rima IA para el porqué. Requiere ANTHROPIC_API_KEY y
+      Playwright con Chromium instalado en el servidor; no probado todavía
+      contra la base de datos real, solo de forma aislada.
+    """
     slot_context = slot_context or {}
     slides = plan_slides(copy_json, tipo, slot_context)
     if not slides:
         return {}
-    if tipo == "carrusel":
+    if tipo == "carrusel" and modo_composicion == "fondo_limpio":
+        matched = match_images_to_slides(cliente_id, tipo, slides, slot_context)
+    elif tipo == "carrusel":
         paleta = _paleta_marca(cliente_id)
         matched = slides_kie_integrado(slides, tipo, slot_context, paleta)
     else:
         matched = match_images_to_slides(cliente_id, tipo, slides, slot_context)
+    if tipo == "carrusel" and modo_composicion == "fondo_limpio":
+        from agents.carousel_generator.agent import build_style_guide
+        from core.db import get_marca_visual
+        try:
+            from core.marca_visual import normalizar_marca
+            marca = normalizar_marca(get_marca_visual(cliente_id))
+        except Exception:
+            marca = {}
+        style_guide = build_style_guide(marca, {}, copy_json)
+        return {
+            "etapa": "previsual" if modo == "previsual" else "produccion",
+            "tipo": "visual",
+            "modo": modo,
+            "modo_visual": "fondo_limpio",
+            "style_guide": style_guide,
+            "slides": matched,
+            "generated_at": datetime.now().isoformat(),
+        }
     if tipo == "carrusel":
         from agents.carousel_generator.agent import (
             attach_carousel_plan,

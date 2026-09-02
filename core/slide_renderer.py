@@ -565,6 +565,14 @@ def render_publicacion_visual(
     slides = prod.get("slides") or []
     tipo = pub.get("tipo") or "carrusel"
     modo_visual = prod.get("modo_visual") or ""
+
+    # Carruseles en modo "fondo_limpio" (KIE genera solo el fondo, sin texto)
+    # se componen con Claude + Playwright, no con este overlay de Pillow.
+    # Ver docs/protocolo-generacion-imagenes-ia.md — Gemini no aplicaba el
+    # scrim de contraste de forma consistente en pruebas reales (2026-09-01).
+    if tipo == "carrusel" and modo_visual == "fondo_limpio":
+        from core.claude_slide_renderer import render_publicacion_visual_claude
+        return render_publicacion_visual_claude(cliente_id, pub_id, pub, uploads_dir, marca)
     out_dir = uploads_dir / "renderizados" / pub_id
     out_dir.mkdir(parents=True, exist_ok=True)
 
