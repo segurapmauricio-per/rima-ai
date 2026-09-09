@@ -6,41 +6,41 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
-    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border);backdrop-filter:blur(12px)}
+    .gh:hover{background:var(--rima-hover-strong);border-color:rgba(124,58,237,0.3);transition:all .2s}
     .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
     .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
-    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .si{transition:all .18s}.si:hover{background:var(--rima-hover)}
     .tab-btn{transition:all .2s;border-bottom:2px solid transparent;padding-bottom:10px;cursor:pointer}
-    .tab-btn.active{border-bottom-color:#10B981;color:#fff}
+    .tab-btn.active{border-bottom-color:#10B981;color:var(--rima-text)}
     .tab-panel{display:none}.tab-panel.active{display:block}
     .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
-    .badge-ok{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
-    .badge-warn{background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.25)}
-    .badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}
-    .kpi-ok{color:#34D399}.kpi-warn{color:#FBBF24}.kpi-bad{color:#F87171}
+    .badge-ok{background:rgba(52,211,153,0.15);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.25)}
+    .badge-warn{background:rgba(245,158,11,0.15);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.25)}
+    .badge-paused{background:rgba(148,163,184,0.1);color:var(--rima-c-slate);border:1px solid rgba(148,163,184,0.2)}
+    .kpi-ok{color:var(--rima-c-emerald)}.kpi-warn{color:var(--rima-c-amber)}.kpi-bad{color:var(--rima-c-rose)}
 
     /* Funnel */
-    .funnel-step{border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);position:relative;transition:all .15s;cursor:pointer}
+    .funnel-step{border-radius:12px;padding:14px 16px;border:1px solid var(--rima-border);background:var(--rima-surface-tint);position:relative;transition:all .15s;cursor:pointer}
     .funnel-step:hover{border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.04)}
-    .funnel-arrow{color:#334155;font-size:18px;text-align:center;line-height:1;margin:2px 0}
+    .funnel-arrow{color:var(--rima-text-faint);font-size:18px;text-align:center;line-height:1;margin:2px 0}
 
     /* DM bubble */
     .dm-bubble-rima{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border:1px solid rgba(124,58,237,0.3);border-radius:0 14px 14px 14px;padding:10px 14px;max-width:85%}
-    .dm-bubble-lead{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:14px 0 14px 14px;padding:10px 14px;max-width:75%;margin-left:auto}
-    .dm-step-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748B;margin-bottom:8px;display:flex;align-items:center;gap:6px}
-    .dm-step-label::after{content:'';flex:1;height:1px;background:rgba(255,255,255,0.06)}
+    .dm-bubble-lead{background:var(--rima-chip-bg);border:1px solid var(--rima-border-strong);border-radius:14px 0 14px 14px;padding:10px 14px;max-width:75%;margin-left:auto}
+    .dm-step-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--rima-text-muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .dm-step-label::after{content:'';flex:1;height:1px;background:var(--rima-border)}
 
     /* Script step */
-    .script-step{border-radius:14px;padding:16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03)}
+    .script-step{border-radius:14px;padding:16px;border:1px solid var(--rima-border);background:var(--rima-surface-tint)}
     .script-num{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
 
     /* Objection card */
-    .obj-card{border-radius:14px;padding:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);transition:all .15s;cursor:pointer}
-    .obj-card:hover{background:rgba(255,255,255,0.05);border-color:rgba(52,211,153,0.3)}
+    .obj-card{border-radius:14px;padding:14px;background:var(--rima-surface-tint);border:1px solid var(--rima-border);transition:all .15s;cursor:pointer}
+    .obj-card:hover{background:var(--rima-hover);border-color:rgba(52,211,153,0.3)}
 
     /* Source bar */
     .src-bar{height:8px;border-radius:4px}
@@ -478,7 +478,7 @@
             <!-- Paso 1: Rapport -->
             <div class="script-step">
               <div class="flex items-start gap-3">
-                <div class="script-num flex-shrink-0" style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);color:#A78BFA">1</div>
+                <div class="script-num flex-shrink-0" style="background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);color:var(--rima-c-violet)">1</div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <p class="text-xs font-bold text-white">Rapport</p>
@@ -495,7 +495,7 @@
             <!-- Paso 2: Diagnóstico -->
             <div class="script-step">
               <div class="flex items-start gap-3">
-                <div class="script-num flex-shrink-0" style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);color:#67E8F9">2</div>
+                <div class="script-num flex-shrink-0" style="background:rgba(6,182,212,0.2);border:1px solid rgba(6,182,212,0.4);color:var(--rima-c-cyan)">2</div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <p class="text-xs font-bold text-white">Diagnóstico</p>
@@ -528,7 +528,7 @@
             <!-- Paso 3: Presentación -->
             <div class="script-step">
               <div class="flex items-start gap-3">
-                <div class="script-num flex-shrink-0" style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:#FCD34D">3</div>
+                <div class="script-num flex-shrink-0" style="background:rgba(245,158,11,0.2);border:1px solid rgba(245,158,11,0.4);color:var(--rima-c-amber)">3</div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <p class="text-xs font-bold text-white">Presentación de la solución</p>
@@ -545,7 +545,7 @@
             <!-- Paso 4: Oferta y precio -->
             <div class="script-step">
               <div class="flex items-start gap-3">
-                <div class="script-num flex-shrink-0" style="background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:#34D399">4</div>
+                <div class="script-num flex-shrink-0" style="background:rgba(52,211,153,0.2);border:1px solid rgba(52,211,153,0.4);color:var(--rima-c-emerald)">4</div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <p class="text-xs font-bold text-white">Oferta y precio</p>
@@ -563,7 +563,7 @@
             <!-- Paso 5: Cierre -->
             <div class="script-step" style="border-color:rgba(52,211,153,0.2);background:rgba(52,211,153,0.04)">
               <div class="flex items-start gap-3">
-                <div class="script-num flex-shrink-0" style="background:rgba(52,211,153,0.3);border:1px solid rgba(52,211,153,0.5);color:#34D399">5</div>
+                <div class="script-num flex-shrink-0" style="background:rgba(52,211,153,0.3);border:1px solid rgba(52,211,153,0.5);color:var(--rima-c-emerald)">5</div>
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-2">
                     <p class="text-xs font-bold text-white">Cierre</p>

@@ -9,17 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: #0A0A0F; color: #F1F5F9; }
+    body { font-family: 'Inter', sans-serif; background: var(--rima-bg); color: var(--rima-text); }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
-    .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(12px); }
-    .glass-hover:hover { background: rgba(255,255,255,0.07); border-color: rgba(124,58,237,0.3); transition: all 0.2s; }
+    ::-webkit-scrollbar-thumb { background: var(--rima-border-strong); border-radius: 2px; }
+    .glass { background: var(--rima-chip-bg); border: 1px solid var(--rima-border); backdrop-filter: blur(12px); }
+    .glass-hover:hover { background: var(--rima-hover-strong); border-color: rgba(124,58,237,0.3); transition: all 0.2s; }
     .gradient-text { background: linear-gradient(135deg,#7C3AED,#06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
     .agent-active { background: linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08)); border-color: rgba(124,58,237,0.45) !important; }
     .glow-violet { box-shadow: 0 0 20px rgba(124,58,237,0.22); }
     .sidebar-item { transition: all 0.18s ease; }
-    .sidebar-item:hover { background:rgba(255,255,255,0.05); border-color:rgba(124,58,237,0.22); }
+    .sidebar-item:hover { background:var(--rima-hover); border-color:rgba(124,58,237,0.22); }
     .btn-primary { background: linear-gradient(135deg,#7C3AED,#6D28D9); transition: all .2s; }
     .btn-primary:hover { background: linear-gradient(135deg,#8B5CF6,#7C3AED); box-shadow:0 4px 20px rgba(124,58,237,0.4); transform:translateY(-1px); }
     .status-dot-processing { animation: pulse-v 1.5s ease-in-out infinite; }
@@ -28,26 +28,26 @@
     /* Input styles */
     .cred-input {
       width: 100%;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: var(--rima-input-bg);
+      border: 1px solid var(--rima-border-strong);
       border-radius: 10px;
       padding: 10px 14px;
       font-size: 12px;
-      color: #F1F5F9;
+      color: var(--rima-text);
       font-family: 'Inter', monospace;
       outline: none;
       transition: all .2s;
     }
     .cred-input:focus { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.06); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
-    .cred-input::placeholder { color: #475569; }
+    .cred-input::placeholder { color: var(--rima-text-faint); }
     .cred-input.connected { border-color: rgba(52,211,153,0.4); background: rgba(52,211,153,0.04); }
     .cred-input.error { border-color: rgba(244,63,94,0.4); background: rgba(244,63,94,0.04); }
 
     /* Status indicators */
-    .status-connected { color: #34D399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.25); }
-    .status-pending    { color: #FBBF24; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); }
-    .status-error      { color: #FB7185; background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.25); }
-    .status-empty      { color: #64748B; background: rgba(100,116,139,0.1);  border: 1px solid rgba(100,116,139,0.2); }
+    .status-connected { color: var(--rima-c-emerald); background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.25); }
+    .status-pending    { color: var(--rima-c-amber); background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25); }
+    .status-error      { color: var(--rima-c-rose); background: rgba(244,63,94,0.12); border: 1px solid rgba(244,63,94,0.25); }
+    .status-empty      { color: var(--rima-text-muted); background: rgba(100,116,139,0.1);  border: 1px solid rgba(100,116,139,0.2); }
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -142,7 +142,7 @@
             <p class="text-[10px] text-slate-500">Validación de contenido · notificaciones al cliente</p>
           </div>
         </div>
-        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);color:#94A3B8">Desconectado</span>
+        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);color:var(--rima-text-muted)">Desconectado</span>
       </div>
       <div class="px-5 py-4 space-y-4">
         <div class="grid grid-cols-2 gap-4">
@@ -178,7 +178,7 @@
     <div class="glass rounded-2xl border border-white/5 overflow-hidden">
       <div class="flex items-center justify-between px-5 py-4 border-b border-white/5" style="background:rgba(244,63,94,0.04)">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#F43F5E,#F97316,#FBBF24)">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0" style="background:linear-gradient(135deg,#F43F5E,#F97316,var(--rima-c-amber))">
             <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
           </div>
           <div>
@@ -186,7 +186,7 @@
             <p class="text-[10px] text-slate-500">Lectura de métricas · comentarios · DMs</p>
           </div>
         </div>
-        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.1);color:#FBBF24">Pendiente</span>
+        <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.1);color:var(--rima-c-amber)">Pendiente</span>
       </div>
       <div class="px-5 py-4 space-y-4">
         <div class="rounded-lg p-3 text-[10px] text-amber-300" style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.18)">
@@ -205,9 +205,9 @@
         <div class="flex items-center justify-between pt-1">
           <div class="flex flex-wrap items-center gap-2 text-[10px]">
             <span class="text-slate-500 font-medium">Permisos (cuando se conecte):</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">instagram_basic</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">read_insights</span>
-            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:#94A3B8">manage_messages</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:var(--rima-text-muted)">instagram_basic</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:var(--rima-text-muted)">read_insights</span>
+            <span class="px-1.5 py-0.5 rounded text-[9px]" style="background:rgba(148,163,184,0.1);color:var(--rima-text-muted)">manage_messages</span>
           </div>
           <button class="glass glass-hover px-3 py-1.5 rounded-lg text-[10px] text-slate-400 cursor-pointer flex-shrink-0 ml-3">Editar</button>
         </div>

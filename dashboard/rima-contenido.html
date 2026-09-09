@@ -6,48 +6,48 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border)}
     .tab-btn{
       font-size:12px;font-weight:600;padding:10px 20px;border-radius:12px 12px 0 0;cursor:pointer;
-      transition:all .2s ease;border:1px solid rgba(255,255,255,0.07);border-bottom:none;
-      background:rgba(255,255,255,0.04);color:#fff;display:flex;align-items:center;gap:8px
+      transition:all .2s ease;border:1px solid var(--rima-border);border-bottom:none;
+      background:var(--rima-chip-bg);color:var(--rima-text);display:flex;align-items:center;gap:8px
     }
     .tab-btn.active{
       background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));
-      border-color:rgba(124,58,237,0.45);color:#fff
+      border-color:rgba(124,58,237,0.45);color:var(--rima-text)
     }
-    .tab-btn:not(.active){color:#64748B;background:rgba(255,255,255,0.03)}
-    .tab-btn:not(.active):hover{background:rgba(255,255,255,0.05);color:#94A3B8}
+    .tab-btn:not(.active){color:var(--rima-text-muted);background:var(--rima-surface-tint)}
+    .tab-btn:not(.active):hover{background:var(--rima-hover);color:var(--rima-text-muted)}
     .tab-count{font-size:9px;font-weight:700;padding:2px 7px;border-radius:999px;line-height:1.2}
-    .piece-card{border-radius:14px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);padding:14px 16px;transition:all .18s}
+    .piece-card{border-radius:14px;border:1px solid var(--rima-border);background:var(--rima-surface-tint);padding:14px 16px;transition:all .18s}
     .piece-card:hover{border-color:rgba(124,58,237,0.3);background:rgba(124,58,237,0.04)}
     .piece-card.focused{border-color:rgba(124,58,237,0.45)!important;background:rgba(124,58,237,0.08)!important;box-shadow:0 0 0 1px rgba(124,58,237,0.35)}
     .badge{font-size:9px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:.04em}
-    .b-plan{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.15)}
-    .b-aprobado{background:rgba(52,211,153,0.12);color:#34D399;border:1px solid rgba(52,211,153,0.2)}
-    .b-publicado{background:rgba(6,182,212,0.12);color:#22D3EE;border:1px solid rgba(6,182,212,0.2)}
-    .b-validacion{background:rgba(245,158,11,0.12);color:#FBBF24;border:1px solid rgba(245,158,11,0.2)}
-    .b-reel{background:rgba(236,72,153,0.12);color:#F472B6;border:1px solid rgba(236,72,153,0.2)}
-    .b-carrusel{background:rgba(245,158,11,0.12);color:#FCD34D;border:1px solid rgba(245,158,11,0.2)}
-    .b-historia{background:rgba(99,102,241,0.12);color:#A5B4FC;border:1px solid rgba(99,102,241,0.2)}
-    .b-programado{background:rgba(14,165,233,0.12);color:#38BDF8;border:1px solid rgba(14,165,233,0.2)}
+    .b-plan{background:rgba(148,163,184,0.1);color:var(--rima-c-slate);border:1px solid rgba(148,163,184,0.15)}
+    .b-aprobado{background:rgba(52,211,153,0.12);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.2)}
+    .b-publicado{background:rgba(6,182,212,0.12);color:var(--rima-c-cyan);border:1px solid rgba(6,182,212,0.2)}
+    .b-validacion{background:rgba(245,158,11,0.12);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.2)}
+    .b-reel{background:rgba(236,72,153,0.12);color:var(--rima-c-pink);border:1px solid rgba(236,72,153,0.2)}
+    .b-carrusel{background:rgba(245,158,11,0.12);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.2)}
+    .b-historia{background:rgba(99,102,241,0.12);color:var(--rima-c-violet);border:1px solid rgba(99,102,241,0.2)}
+    .b-programado{background:rgba(14,165,233,0.12);color:var(--rima-c-sky);border:1px solid rgba(14,165,233,0.2)}
     .aprobar-btn{font-size:9px;font-weight:700;padding:3px 10px;border-radius:8px;cursor:pointer;transition:all .15s;
-      background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:#34D399}
+      background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);color:var(--rima-c-emerald)}
     .aprobar-btn:hover{background:rgba(52,211,153,0.2)}
-    .aprobar-btn.done{background:rgba(52,211,153,0.18);color:#6EE7B7;cursor:default;border-color:rgba(52,211,153,0.3)}
+    .aprobar-btn.done{background:rgba(52,211,153,0.18);color:var(--rima-c-emerald);cursor:default;border-color:rgba(52,211,153,0.3)}
     .ver-video-btn{font-size:9px;font-weight:700;padding:3px 10px;border-radius:8px;cursor:pointer;transition:all .15s;
-      background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.28);color:#38BDF8;text-decoration:none;display:inline-block}
-    .ver-video-btn:hover{background:rgba(56,189,248,0.16);color:#7DD3FC}
+      background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.28);color:var(--rima-c-sky);text-decoration:none;display:inline-block}
+    .ver-video-btn:hover{background:rgba(56,189,248,0.16);color:var(--rima-c-sky)}
     @keyframes fade-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     .fade-in{animation:fade-in .25s ease-out}
-    .spinner{border:2px solid rgba(255,255,255,0.08);border-top-color:#7C3AED;border-radius:50%;width:16px;height:16px;animation:spin .7s linear infinite;display:inline-block}
+    .spinner{border:2px solid var(--rima-border-strong);border-top-color:#7C3AED;border-radius:50%;width:16px;height:16px;animation:spin .7s linear infinite;display:inline-block}
     @keyframes spin{to{transform:rotate(360deg)}}
     .contenido-topbar{
       flex-shrink:0;z-index:50;
-      background:rgba(10,10,15,0.96);backdrop-filter:blur(14px);
-      border-bottom:1px solid rgba(255,255,255,0.05);
+      background:var(--rima-surface);backdrop-filter:blur(14px);
+      border-bottom:1px solid var(--rima-border);
     }
     #contenido-scroll{
       flex:1 1 0%;min-height:0;height:0;
@@ -57,32 +57,32 @@
     .contenido-body{padding:1.25rem 1.5rem 8rem}
     html,body{height:100%;min-height:0}
     .slide-estado{font-size:8px;font-weight:700;padding:2px 7px;border-radius:20px;letter-spacing:.03em;white-space:nowrap}
-    .slide-estado-pend{background:rgba(245,158,11,0.12);color:#FCD34D;border:1px solid rgba(245,158,11,0.25)}
-    .slide-estado-ia{background:rgba(167,139,250,0.12);color:#C4B5FD;border:1px solid rgba(167,139,250,0.25)}
-    .slide-estado-bib{background:rgba(52,211,153,0.12);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
-    .slide-acc-btn{font-size:9px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.05);color:#CBD5E1}
-    .slide-acc-btn:hover{background:rgba(255,255,255,0.09)}
-    .slide-acc-btn.primary{background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.28);color:#34D399}
+    .slide-estado-pend{background:rgba(245,158,11,0.12);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.25)}
+    .slide-estado-ia{background:rgba(167,139,250,0.12);color:var(--rima-c-violet);border:1px solid rgba(167,139,250,0.25)}
+    .slide-estado-bib{background:rgba(52,211,153,0.12);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.25)}
+    .slide-acc-btn{font-size:9px;font-weight:700;padding:4px 10px;border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid var(--rima-border-strong);background:var(--rima-chip-bg);color:var(--rima-text)}
+    .slide-acc-btn:hover{background:var(--rima-hover-strong)}
+    .slide-acc-btn.primary{background:rgba(52,211,153,0.1);border-color:rgba(52,211,153,0.28);color:var(--rima-c-emerald)}
     .slide-acc-btn.primary:hover{background:rgba(52,211,153,0.18)}
-    .slide-acc-btn.secondary{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.28);color:#A5B4FC}
+    .slide-acc-btn.secondary{background:rgba(99,102,241,0.1);border-color:rgba(99,102,241,0.28);color:var(--rima-c-violet)}
     .slide-acc-btn.secondary:hover{background:rgba(99,102,241,0.18)}
     .rima-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
     .rima-modal-overlay.open{display:flex}
-    .rima-modal{background:#111827;border:1px solid rgba(255,255,255,0.1);border-radius:14px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.45)}
-    .rima-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.07)}
+    .rima-modal{background:var(--rima-surface-solid);border:1px solid var(--rima-border-strong);border-radius:14px;width:100%;max-width:520px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 48px rgba(0,0,0,0.45)}
+    .rima-modal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--rima-border)}
     .rima-modal-body{padding:14px 16px;overflow-y:auto;flex:1}
-    .rima-modal-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.07);display:flex;gap:8px;justify-content:flex-end}
+    .rima-modal-footer{padding:12px 16px;border-top:1px solid var(--rima-border);display:flex;gap:8px;justify-content:flex-end}
     .bib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
     .bib-item{cursor:pointer;border-radius:8px;overflow:hidden;border:2px solid transparent;transition:border-color .15s}
     .bib-item:hover,.bib-item.selected{border-color:#7C3AED}
     .bib-item img{width:100%;aspect-ratio:1;object-fit:cover;display:block}
     .render-strip{display:flex;flex-direction:row;flex-wrap:nowrap;gap:12px;overflow-x:auto;padding:12px 2px;margin:0;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
-    .render-strip-item{flex:0 0 120px;cursor:pointer;border-radius:10px;overflow:hidden;border:2px solid rgba(255,255,255,0.08);transition:border-color .15s,transform .15s;background:rgba(0,0,0,0.35)}
+    .render-strip-item{flex:0 0 120px;cursor:pointer;border-radius:10px;overflow:hidden;border:2px solid var(--rima-border-strong);transition:border-color .15s,transform .15s;background:rgba(0,0,0,0.35)}
     .render-strip-item:hover{border-color:rgba(52,211,153,0.5);transform:translateY(-2px)}
     .render-strip-item img{width:120px;height:120px;object-fit:cover;display:block}
-    .render-strip-item p{font-size:8px;color:#64748B;margin:0;padding:5px 4px;text-align:center;line-height:1.3}
+    .render-strip-item p{font-size:8px;color:var(--rima-text-muted);margin:0;padding:5px 4px;text-align:center;line-height:1.3}
     .rima-modal-final-img{width:100%;max-height:min(70vh,720px);object-fit:contain;border-radius:8px;background:#000;display:block}
-    .prompt-textarea{width:100%;min-height:140px;background:#0A0A0F;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:10px;font-size:11px;color:#E2E8F0;font-family:'Inter',sans-serif;line-height:1.5;resize:vertical;outline:none}
+    .prompt-textarea{width:100%;min-height:140px;background:var(--rima-input-bg);border:1px solid var(--rima-border-strong);border-radius:8px;padding:10px;font-size:11px;color:var(--rima-text);font-family:'Inter',sans-serif;line-height:1.5;resize:vertical;outline:none}
     .prompt-textarea:focus{border-color:rgba(124,58,237,0.5)}
   </style>
 </head>
@@ -105,14 +105,14 @@
         </div>
         <h1 class="text-sm font-semibold text-white whitespace-nowrap">Contenido</h1>
         <select id="week-select" onchange="changeWeek(this.value)"
-          style="background:#111827;color:#F1F5F9;border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:4px 10px;font-size:11px;font-family:'Inter',sans-serif;outline:none;cursor:pointer;max-width:180px">
+          style="background:var(--rima-surface-solid);color:var(--rima-text);border:1px solid var(--rima-border-strong);border-radius:8px;padding:4px 10px;font-size:11px;font-family:'Inter',sans-serif;outline:none;cursor:pointer;max-width:180px">
         </select>
       </div>
       <p class="text-[10px] text-slate-500 truncate ml-4" id="week-label">Cargando...</p>
       <button type="button" id="btn-reset-week" onclick="resetWeeklyWeek()"
         title="Borra propuestas y copy del agente semanal; mantiene el plan mensual y el estudio de mercado"
         style="font-size:10px;font-weight:600;padding:5px 12px;border-radius:8px;cursor:pointer;flex-shrink:0;
-          background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:#FBBF24">
+          background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:var(--rima-c-amber)">
         Reiniciar semana
       </button>
     </div>
@@ -125,12 +125,12 @@
         <span id="cnt-reels" class="tab-count bg-violet-500/20 text-violet-400">0</span>
       </button>
       <button class="tab-btn active" id="tab-carruseles" onclick="showTab('carruseles')">
-        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#06B6D4,#3B82F6)"></div>
+        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,var(--rima-c-cyan),#3B82F6)"></div>
         Carruseles
         <span id="cnt-carruseles" class="tab-count bg-cyan-500/20 text-cyan-400">0</span>
       </button>
       <button class="tab-btn text-slate-400" id="tab-historias" onclick="showTab('historias')">
-        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,#F43F5E,#FB923C)"></div>
+        <div class="w-4 h-4 rounded flex-shrink-0" style="background:linear-gradient(135deg,var(--rima-c-rose),var(--rima-c-orange))"></div>
         Historias
         <span id="cnt-historias" class="tab-count bg-rose-500/20 text-rose-400">0</span>
       </button>
@@ -192,17 +192,17 @@
 <div id="modal-biblioteca" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalBiblioteca()">
   <div class="rima-modal" role="dialog" aria-labelledby="modal-bib-title">
     <div class="rima-modal-header">
-      <p id="modal-bib-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Buscar en la biblioteca</p>
-      <button type="button" onclick="cerrarModalBiblioteca()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+      <p id="modal-bib-title" style="font-size:12px;font-weight:700;color:var(--rima-text);margin:0">Buscar en la biblioteca</p>
+      <button type="button" onclick="cerrarModalBiblioteca()" style="background:none;border:none;color:var(--rima-text-muted);cursor:pointer;font-size:18px;line-height:1">&times;</button>
     </div>
     <div class="rima-modal-body">
-      <p id="modal-bib-subtitle" style="font-size:10px;color:#64748B;margin:0 0 10px"></p>
-      <label for="modal-bib-upload" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;margin-bottom:10px;border:1px dashed rgba(124,58,237,0.35);border-radius:8px;cursor:pointer;font-size:11px;color:#A78BFA;background:rgba(124,58,237,0.05)">
+      <p id="modal-bib-subtitle" style="font-size:10px;color:var(--rima-text-muted);margin:0 0 10px"></p>
+      <label for="modal-bib-upload" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;margin-bottom:10px;border:1px dashed rgba(124,58,237,0.35);border-radius:8px;cursor:pointer;font-size:11px;color:var(--rima-c-violet);background:rgba(124,58,237,0.05)">
         <span id="modal-bib-upload-label">+ Subir imagen (ej: captura de tu Instagram)</span>
         <input type="file" id="modal-bib-upload" accept="image/*" class="hidden" onchange="subirImagenBiblioteca(this)" />
       </label>
       <div id="modal-bib-grid" class="bib-grid"></div>
-      <p id="modal-bib-empty" style="display:none;font-size:11px;color:#64748B;text-align:center;padding:24px 0">No hay imágenes analizadas en la biblioteca</p>
+      <p id="modal-bib-empty" style="display:none;font-size:11px;color:var(--rima-text-muted);text-align:center;padding:24px 0">No hay imágenes analizadas en la biblioteca</p>
     </div>
     <div class="rima-modal-footer">
       <button type="button" class="slide-acc-btn" onclick="cerrarModalBiblioteca()">Cancelar</button>
@@ -220,10 +220,10 @@
 <div id="modal-confirm-ia" class="rima-modal-overlay" onclick="if(event.target===this)_resolverConfirmIA(false)">
   <div class="rima-modal" role="dialog" aria-labelledby="modal-confirm-ia-title" style="max-width:380px">
     <div class="rima-modal-header">
-      <p id="modal-confirm-ia-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">✨ Generar con inteligencia artificial</p>
+      <p id="modal-confirm-ia-title" style="font-size:12px;font-weight:700;color:var(--rima-text);margin:0">✨ Generar con inteligencia artificial</p>
     </div>
     <div class="rima-modal-body">
-      <p id="modal-confirm-ia-text" style="font-size:11px;color:#94A3B8;line-height:1.6;margin:0"></p>
+      <p id="modal-confirm-ia-text" style="font-size:11px;color:var(--rima-text-muted);line-height:1.6;margin:0"></p>
     </div>
     <div class="rima-modal-footer">
       <button type="button" class="slide-acc-btn" onclick="_resolverConfirmIA(false)">Cancelar</button>
@@ -236,12 +236,12 @@
 <div id="modal-prompt-ia" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalPromptIA()">
   <div class="rima-modal" role="dialog" aria-labelledby="modal-prompt-title">
     <div class="rima-modal-header">
-      <p id="modal-prompt-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Generar con IA</p>
-      <button type="button" onclick="cerrarModalPromptIA()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+      <p id="modal-prompt-title" style="font-size:12px;font-weight:700;color:var(--rima-text);margin:0">Generar con IA</p>
+      <button type="button" onclick="cerrarModalPromptIA()" style="background:none;border:none;color:var(--rima-text-muted);cursor:pointer;font-size:18px;line-height:1">&times;</button>
     </div>
     <div class="rima-modal-body">
-      <p id="modal-prompt-subtitle" style="font-size:10px;color:#64748B;margin:0 0 8px"></p>
-      <label style="font-size:9px;color:#94A3B8;font-weight:600;display:block;margin-bottom:4px">Prompt (editable)</label>
+      <p id="modal-prompt-subtitle" style="font-size:10px;color:var(--rima-text-muted);margin:0 0 8px"></p>
+      <label style="font-size:9px;color:var(--rima-text-muted);font-weight:600;display:block;margin-bottom:4px">Prompt (editable)</label>
       <textarea id="modal-prompt-text" class="prompt-textarea" placeholder="Describe la imagen a generar…"></textarea>
     </div>
     <div class="rima-modal-footer">
@@ -255,11 +255,11 @@
 <div id="modal-final-slide" class="rima-modal-overlay" onclick="if(event.target===this)cerrarModalFinal()">
   <div class="rima-modal" role="dialog" style="max-width:640px" aria-labelledby="modal-final-title">
     <div class="rima-modal-header">
-      <p id="modal-final-title" style="font-size:12px;font-weight:700;color:#F1F5F9;margin:0">Vista previa</p>
-      <button type="button" onclick="cerrarModalFinal()" style="background:none;border:none;color:#64748B;cursor:pointer;font-size:18px;line-height:1">&times;</button>
+      <p id="modal-final-title" style="font-size:12px;font-weight:700;color:var(--rima-text);margin:0">Vista previa</p>
+      <button type="button" onclick="cerrarModalFinal()" style="background:none;border:none;color:var(--rima-text-muted);cursor:pointer;font-size:18px;line-height:1">&times;</button>
     </div>
     <div class="rima-modal-body" style="text-align:center">
-      <p id="modal-final-subtitle" style="font-size:10px;color:#64748B;margin:0 0 10px"></p>
+      <p id="modal-final-subtitle" style="font-size:10px;color:var(--rima-text-muted);margin:0 0 10px"></p>
       <img id="modal-final-img" class="rima-modal-final-img" alt="" src="">
     </div>
     <div class="rima-modal-footer">
@@ -519,7 +519,7 @@ async function fetchAndRender() {
 
   ['reels','carruseles','historias'].forEach(function(t){
     document.getElementById(t+'-list').innerHTML =
-      '<div class="flex items-center gap-3 py-8 justify-center"><div class="spinner"></div><span style="font-size:11px;color:#64748B">Cargando...</span></div>';
+      '<div class="flex items-center gap-3 py-8 justify-center"><div class="spinner"></div><span style="font-size:11px;color:var(--rima-text-muted)">Cargando...</span></div>';
     document.getElementById('range-'+t).textContent = rangeLabel;
   });
   document.getElementById('week-label').textContent = rangeLabel;
@@ -570,7 +570,7 @@ async function fetchAndRender() {
   } catch(e) {
     ['reels','carruseles','historias'].forEach(function(t){
       document.getElementById(t+'-list').innerHTML =
-        '<p style="font-size:11px;color:#F87171;padding:20px 0">Error al cargar: ' + e.message + '</p>';
+        '<p style="font-size:11px;color:var(--rima-c-rose);padding:20px 0">Error al cargar: ' + e.message + '</p>';
     });
   }
 }
@@ -677,12 +677,12 @@ function planSection(pub) {
   if (typeof prop === 'string') { try { prop = JSON.parse(prop); } catch(e) { prop = {}; } }
   var angulo = prop.angulo_estrategico || (prop.slot_resumen && prop.slot_resumen.angulo_estrategico) || '';
   if (!angulo) {
-    return '<p style="font-size:10px;color:#475569;font-style:italic;margin:8px 0 0">'
+    return '<p style="font-size:10px;color:var(--rima-text-faint);font-style:italic;margin:8px 0 0">'
       + 'Esperá el agente semanal para elegir referente y generar copy.</p>';
   }
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(100,116,139,0.08);border:1px solid rgba(100,116,139,0.15)">'
-    + '<p style="font-size:10px;color:#94A3B8;font-weight:700;margin:0 0 6px">Ángulo estratégico (plan mensual)</p>'
-    + '<p style="font-size:11px;color:#CBD5E1;margin:0;line-height:1.5">' + esc(angulo) + '</p>'
+    + '<p style="font-size:10px;color:var(--rima-text-muted);font-weight:700;margin:0 0 6px">Ángulo estratégico (plan mensual)</p>'
+    + '<p style="font-size:11px;color:var(--rima-text);margin:0;line-height:1.5">' + esc(angulo) + '</p>'
     + '</div>';
   return html;
 }
@@ -698,11 +698,11 @@ function propuestaEmptyHtml(pub, prop) {
     hint = 'No hay referentes modelables en el estudio de mercado para esta pieza.';
   }
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2)">';
-  html += '<p style="font-size:10px;color:#FBBF24;font-weight:700;margin:0 0 6px">Sin opciones de propuesta</p>';
-  html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">' + esc(hint)
-    + ' Revisá <strong style="color:#CBD5E1">Referencias</strong> o el estudio de mercado, o usá '
-    + '<strong style="color:#CBD5E1">Reiniciar semana</strong> para que el agente vuelva a buscar.</p>';
-  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:#94A3B8" '
+  html += '<p style="font-size:10px;color:var(--rima-c-amber);font-weight:700;margin:0 0 6px">Sin opciones de propuesta</p>';
+  html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.45">' + esc(hint)
+    + ' Revisá <strong style="color:var(--rima-text)">Referencias</strong> o el estudio de mercado, o usá '
+    + '<strong style="color:var(--rima-text)">Reiniciar semana</strong> para que el agente vuelva a buscar.</p>';
+  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:var(--rima-text-muted)" '
     + 'onclick="refreshPropuesta(\'' + pub.id + '\',this)">↻ Buscar opciones</button>';
   html += '</div>';
   return html;
@@ -718,7 +718,7 @@ function propuestaSection(pub) {
   if (!alts.length) return propuestaEmptyHtml(pub, prop);
   var pubTipo = pub.tipo || 'reel';
   var html = '<div data-propuesta-block="' + escAttr(pub.id) + '" style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(124,58,237,0.06);border:1px solid rgba(124,58,237,0.15)">';
-  html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 4px">';
+  html += '<p style="font-size:10px;color:var(--rima-c-violet);font-weight:700;margin:0 0 4px">';
   if (pubTipo === 'historia') {
     html += 'Elegí el ángulo estratégico para esta historia';
   } else if (pubTipo === 'carrusel' && prop.modo_referente === 'reel_adaptado') {
@@ -730,12 +730,12 @@ function propuestaSection(pub) {
   }
   html += '</p>';
   if (pubTipo === 'carrusel' && prop.modo_referente === 'reel_adaptado') {
-    html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px;line-height:1.45">'
+    html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.45">'
       + 'No hay carruseles en el estudio de mercado. Estas ideas vienen de reels virales '
       + 'del nicho — el copy se adaptará a formato carrusel de 7 slides.</p>';
   }
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">';
-  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:#94A3B8" '
+  html += '<button type="button" class="aprobar-btn" style="background:rgba(148,163,184,0.08);border-color:rgba(148,163,184,0.25);color:var(--rima-text-muted)" '
     + 'onclick="refreshPropuesta(\'' + pub.id + '\',this)">↻ Otras opciones</button>';
   html += '</div>';
   alts.forEach(function(alt, idx) {
@@ -749,28 +749,28 @@ function propuestaSection(pub) {
     var verLabel = verReferenteLabel(pubTipo, alt);
     html += '<div style="margin-bottom:10px;padding:10px;border-radius:8px;background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.05)">';
     if (esEstrategia) {
-      html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
+      html += '<p style="font-size:11px;font-weight:600;color:var(--rima-text);margin:0 0 4px;line-height:1.45">'
         + 'Opción ' + (idx + 1) + ' · ' + esc(titulo) + '</p>';
     } else {
       var fmtPost = (alt.formato_post || '').toLowerCase();
       var fmtTag = '';
       if (pubTipo === 'carrusel') {
         if (alt.adaptado_desde_reel) {
-          fmtTag = ' · <span style="color:#FCD34D">Reel → carrusel</span>';
+          fmtTag = ' · <span style="color:var(--rima-c-amber)">Reel → carrusel</span>';
         } else if (fmtPost === 'sidecar' || fmtPost === 'carousel' || fmtPost === 'image') {
-          fmtTag = ' · <span style="color:#34D399">Carrusel</span>';
+          fmtTag = ' · <span style="color:var(--rima-c-emerald)">Carrusel</span>';
         }
       }
-      html += '<p style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0 0 4px;line-height:1.45">'
+      html += '<p style="font-size:11px;font-weight:600;color:var(--rima-text);margin:0 0 4px;line-height:1.45">'
         + 'Opción ' + (idx + 1) + ' · @' + esc(alt.owner || '') + ' · ' + esc(titulo)
         + fmtTag
         + ' · score ' + (alt.score_ventas != null ? alt.score_ventas : '—') + '</p>';
-      html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">'
+      html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px">'
         + views + ' visualizaciones · ' + comments + ' comentarios · ' + seguidores + ' seguidores</p>';
     }
     if (idea) {
-      html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
-        + '<span style="color:#475569;font-weight:600">Idea principal:</span> ' + esc(idea) + '</p>';
+      html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.45">'
+        + '<span style="color:var(--rima-text-faint);font-weight:600">Idea principal:</span> ' + esc(idea) + '</p>';
     }
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">';
     html += '<button type="button" class="aprobar-btn" onclick="elegirReferente(\'' + pub.id + '\',' + idx + ',this)">'
@@ -975,7 +975,7 @@ window.abrirModalBiblioteca = async function(pubId, slideIndex, slideLabel) {
   document.getElementById('modal-bib-confirm').disabled = true;
   document.getElementById('modal-bib-empty').style.display = 'none';
   document.getElementById('modal-bib-empty').textContent = 'No hay imágenes analizadas en la biblioteca';
-  document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:#64748B;text-align:center;padding:20px">Cargando…</p>';
+  document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:var(--rima-text-muted);text-align:center;padding:20px">Cargando…</p>';
   document.getElementById('modal-biblioteca').classList.add('open');
   try {
     var r = await fetch('/api/imagenes');
@@ -992,7 +992,7 @@ window.abrirModalBiblioteca = async function(pubId, slideIndex, slideLabel) {
       var cid = data.cliente_id || data2.cliente_id || '';
       var emptyEl = document.getElementById('modal-bib-empty');
       if (cid) {
-        emptyEl.innerHTML = 'No hay imágenes en la biblioteca de <strong style="color:#94A3B8">' + esc(cid) + '</strong>.<br><span style="font-size:10px;margin-top:4px;display:block">Subí imágenes en /imagenes con esta misma cuenta (max@test.com ≠ basico@test.com).</span>';
+        emptyEl.innerHTML = 'No hay imágenes en la biblioteca de <strong style="color:var(--rima-text-muted)">' + esc(cid) + '</strong>.<br><span style="font-size:10px;margin-top:4px;display:block">Subí imágenes en /imagenes con esta misma cuenta (max@test.com ≠ basico@test.com).</span>';
       }
       emptyEl.style.display = 'block';
       return;
@@ -1005,7 +1005,7 @@ window.abrirModalBiblioteca = async function(pubId, slideIndex, slideLabel) {
         + '<img src="' + esc(img.archivo_url) + '" alt="" loading="lazy"></div>';
     }).join('');
   } catch(e) {
-    document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:#F87171">Error al cargar biblioteca</p>';
+    document.getElementById('modal-bib-grid').innerHTML = '<p style="font-size:11px;color:var(--rima-c-rose)">Error al cargar biblioteca</p>';
   }
 };
 
@@ -1379,7 +1379,7 @@ function slideBulletsHtml(bullets) {
   if (!bullets || !bullets.length) return '';
   return '<ul style="margin:3px 0 0;padding-left:14px;list-style:disc">'
     + bullets.map(function(b) {
-      return '<li style="font-size:9px;color:#94A3B8;line-height:1.45;margin:1px 0">' + esc(b) + '</li>';
+      return '<li style="font-size:9px;color:var(--rima-text-muted);line-height:1.45;margin:1px 0">' + esc(b) + '</li>';
     }).join('') + '</ul>';
 }
 
@@ -1404,31 +1404,31 @@ function copySection(pub) {
   var pubTipo = pub.tipo || 'reel';
   var verLabel = videoUrl ? verReferenteLabel(pubTipo, prop.elegida || {}) : null;
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)">';
-  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 6px">Copy adaptado</p>';
+  html += '<p style="font-size:10px;color:var(--rima-c-emerald);font-weight:700;margin:0 0 6px">Copy adaptado</p>';
 
   if (pubTipo === 'historia' && copy.propuestas_copy && copy.propuestas_copy.length >= 2
       && pub.status === 'copy_generado') {
     var idxElegido = copy.propuesta_copy_index != null ? copy.propuesta_copy_index : 0;
-    html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">Elegí qué secuencia publicar (temática y enfoque fijos del plan)</p>';
+    html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px">Elegí qué secuencia publicar (temática y enfoque fijos del plan)</p>';
     copy.propuestas_copy.forEach(function(p, pi) {
       if (!p || !p.slides) return;
       var activa = pi === idxElegido;
       html += '<div style="margin-bottom:8px;padding:8px;border-radius:8px;'
         + (activa ? 'background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35)'
           : 'background:rgba(0,0,0,0.2);border:1px solid rgba(255,255,255,0.06)') + '">';
-      html += '<p style="font-size:10px;font-weight:700;color:' + (activa ? '#A5B4FC' : '#CBD5E1')
+      html += '<p style="font-size:10px;font-weight:700;color:' + (activa ? 'var(--rima-c-violet)' : 'var(--rima-text)')
         + ';margin:0 0 4px">Propuesta ' + (pi + 1)
         + (p.titulo ? ' · ' + esc(p.titulo) : '') + (activa ? ' ✓' : '') + '</p>';
       if (p.angulo) {
-        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 4px">' + esc(p.angulo) + '</p>';
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 4px">' + esc(p.angulo) + '</p>';
       }
       if (p.plan_resumen) {
-        html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px;font-style:italic">'
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px;font-style:italic">'
           + esc(String(p.plan_resumen).slice(0, 160)) + '</p>';
       }
-      html += '<p style="font-size:9px;color:#475569;margin:0 0 4px">' + p.slides.length + ' slides · 9:16</p>';
+      html += '<p style="font-size:9px;color:var(--rima-text-faint);margin:0 0 4px">' + p.slides.length + ' slides · 9:16</p>';
       if (!activa) {
-        html += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:#A5B4FC" '
+        html += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:var(--rima-c-violet)" '
           + 'onclick="elegirCopyHistoria(\'' + pub.id + '\',' + pi + ',this)">Usar esta propuesta</button>';
       }
       html += '</div>';
@@ -1437,39 +1437,39 @@ function copySection(pub) {
 
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 8px">';
   if (owner) {
-    html += '<p style="font-size:9px;color:#64748B;margin:0">Modelando @' + esc(owner) + '</p>';
+    html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0">Modelando @' + esc(owner) + '</p>';
   } else if (copy.angulo_estrategico || (prop.elegida && prop.elegida.titulo)) {
-    html += '<p style="font-size:9px;color:#64748B;margin:0">Ángulo: ' + esc(copy.angulo_estrategico || prop.elegida.titulo) + '</p>';
+    html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0">Ángulo: ' + esc(copy.angulo_estrategico || prop.elegida.titulo) + '</p>';
   }
   if (verLabel && videoUrl) {
     html += '<a class="ver-video-btn" href="' + esc(videoUrl) + '" target="_blank" rel="noopener noreferrer">' + verLabel + '</a>';
   }
   html += '</div>';
   if (ideaModelada) {
-    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
-      + '<span style="color:#475569;font-weight:600">Idea modelada:</span> ' + esc(ideaModelada) + '</p>';
+    html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.45">'
+      + '<span style="color:var(--rima-text-faint);font-weight:600">Idea modelada:</span> ' + esc(ideaModelada) + '</p>';
   }
   if (copy.tematica || pub.tematica) {
-    html += '<p style="font-size:9px;color:#475569;margin:0 0 4px">Temática: <span style="color:#94A3B8">'
+    html += '<p style="font-size:9px;color:var(--rima-text-faint);margin:0 0 4px">Temática: <span style="color:var(--rima-text-muted)">'
       + esc(copy.tematica || pub.tematica) + '</span>'
-      + (copy.enfoque || pub.enfoque ? ' · Enfoque: <span style="color:#94A3B8">'
+      + (copy.enfoque || pub.enfoque ? ' · Enfoque: <span style="color:var(--rima-text-muted)">'
         + esc(copy.enfoque || pub.enfoque) + '</span>' : '') + '</p>';
   }
   if (copy.plan_resumen && pubTipo === 'historia') {
-    html += '<p style="font-size:9px;color:#6EE7B7;margin:0 0 8px;line-height:1.4">'
+    html += '<p style="font-size:9px;color:var(--rima-c-emerald);margin:0 0 8px;line-height:1.4">'
       + esc(copy.plan_resumen) + '</p>';
   }
-  if (hook) html += '<p style="font-size:10px;color:#A78BFA;font-weight:700;margin:0 0 3px">Hook</p><p style="font-size:11px;color:#CBD5E1;margin:0 0 8px;line-height:1.5">' + esc(hook) + '</p>';
-  if (dev && !slidesCopy.length)  html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:#94A3B8;margin:0 0 8px;line-height:1.5;white-space:pre-line">' + esc(dev) + '</p>';
-  if (cta && !slidesCopy.length)  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 3px">CTA</p><p style="font-size:11px;color:#6EE7B7;margin:0;line-height:1.5">' + esc(cta) + '</p>';
-  if (keyword) html += '<p style="font-size:9px;color:#64748B;margin:4px 0 0">Palabra clave: <span style="color:#94A3B8;font-weight:600">' + esc(keyword) + '</span></p>';
+  if (hook) html += '<p style="font-size:10px;color:var(--rima-c-violet);font-weight:700;margin:0 0 3px">Hook</p><p style="font-size:11px;color:var(--rima-text);margin:0 0 8px;line-height:1.5">' + esc(hook) + '</p>';
+  if (dev && !slidesCopy.length)  html += '<p style="font-size:10px;color:var(--rima-text-muted);font-weight:700;margin:0 0 3px">Desarrollo</p><p style="font-size:11px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.5;white-space:pre-line">' + esc(dev) + '</p>';
+  if (cta && !slidesCopy.length)  html += '<p style="font-size:10px;color:var(--rima-c-emerald);font-weight:700;margin:0 0 3px">CTA</p><p style="font-size:11px;color:var(--rima-c-emerald);margin:0;line-height:1.5">' + esc(cta) + '</p>';
+  if (keyword) html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:4px 0 0">Palabra clave: <span style="color:var(--rima-text-muted);font-weight:600">' + esc(keyword) + '</span></p>';
   if (copy.valor_audience) {
-    html += '<p style="font-size:9px;color:#6EE7B7;margin:6px 0 0;line-height:1.4">'
+    html += '<p style="font-size:9px;color:var(--rima-c-emerald);margin:6px 0 0;line-height:1.4">'
       + '<span style="font-weight:600">Aprendizaje:</span> ' + esc(copy.valor_audience) + '</p>';
   }
   if (slidesCopy.length) {
     var esVisual = pub.tipo === 'carrusel' || pub.tipo === 'historia';
-    html += '<p style="font-size:10px;color:#64748B;font-weight:700;margin:8px 0 6px">Slides (' + slidesCopy.length + (pub.tipo === 'historia' ? ' · 9:16' : '') + ')</p>';
+    html += '<p style="font-size:10px;color:var(--rima-text-muted);font-weight:700;margin:8px 0 6px">Slides (' + slidesCopy.length + (pub.tipo === 'historia' ? ' · 9:16' : '') + ')</p>';
     // Vista lectura
     html += '<div id="slides-view-' + pub.id + '">';
     slidesCopy.forEach(function(s,i){
@@ -1478,11 +1478,11 @@ function copySection(pub) {
       var subtexto = s.secondary_text || s.subtexto || '';
       var tipoSlide = s.content_type || s.role || '';
       html += '<div style="padding:6px 8px;margin-bottom:4px;border-radius:6px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06)">';
-      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0 0 2px">Slide ' + (i+1)
+      html += '<p style="font-size:9px;color:var(--rima-c-amber);font-weight:700;margin:0 0 2px">Slide ' + (i+1)
         + (tipoSlide ? ' · ' + esc(tipoSlide) : '') + (titulo ? ' · ' + esc(titulo) : '') + '</p>';
-      if (texto)    html += '<p style="font-size:10px;color:#CBD5E1;margin:0;line-height:1.5;font-weight:600">' + esc(texto) + '</p>';
+      if (texto)    html += '<p style="font-size:10px;color:var(--rima-text);margin:0;line-height:1.5;font-weight:600">' + esc(texto) + '</p>';
       html += slideBulletsHtml(s.bullets);
-      if (subtexto) html += '<p style="font-size:9px;color:#94A3B8;margin:2px 0 0;line-height:1.4;font-style:italic">' + esc(subtexto) + '</p>';
+      if (subtexto) html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:2px 0 0;line-height:1.4;font-style:italic">' + esc(subtexto) + '</p>';
       html += '</div>';
     });
     html += '</div>';
@@ -1495,26 +1495,26 @@ function copySection(pub) {
         var subtexto = s.secondary_text || s.subtexto || '';
         var bulletsTxt = (s.bullets || []).join('\n');
         html += '<div style="margin-bottom:8px">';
-        html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0 0 3px">Slide ' + (i+1) + (titulo ? ' · ' + esc(titulo) : '') + '</p>';
+        html += '<p style="font-size:9px;color:var(--rima-c-amber);font-weight:700;margin:0 0 3px">Slide ' + (i+1) + (titulo ? ' · ' + esc(titulo) : '') + '</p>';
         html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="main_text" rows="2" placeholder="Texto principal — usá **palabra** para resaltar con recuadro"'
           + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:6px;'
-          + 'color:#CBD5E1;font-size:10px;padding:6px 8px;resize:vertical;font-family:inherit;line-height:1.5">'
+          + 'color:var(--rima-text);font-size:10px;padding:6px 8px;resize:vertical;font-family:inherit;line-height:1.5">'
           + esc(texto) + '</textarea>';
         if (pub.tipo === 'carrusel') {
         html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="bullets" rows="3" placeholder="Bullets (uno por línea)" '
           + 'style="width:100%;box-sizing:border-box;margin-top:3px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.08);border-radius:6px;'
-          + 'color:#A5B4FC;font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
+          + 'color:var(--rima-c-violet);font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
           + esc(bulletsTxt) + '</textarea>';
         }
         html += '<textarea class="slide-edit-ta" data-index="'+i+'" data-field="secondary_text" rows="1" placeholder="Frase complementaria / takeaway" '
           + 'style="width:100%;box-sizing:border-box;margin-top:3px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.07);border-radius:6px;'
-          + 'color:#94A3B8;font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
+          + 'color:var(--rima-text-muted);font-size:9px;padding:5px 8px;resize:vertical;font-family:inherit;line-height:1.4">'
           + esc(subtexto) + '</textarea>';
         html += '</div>';
       });
       html += '<div style="display:flex;gap:6px;margin-top:4px">';
       html += '<button type="button" class="aprobar-btn" onclick="guardarSlides(\'' + pub.id + '\',this)">Guardar cambios</button>';
-      html += '<button type="button" class="aprobar-btn" style="background:rgba(100,116,139,0.15);border-color:rgba(100,116,139,0.3);color:#94A3B8" onclick="cancelarEdicion(\'' + pub.id + '\')">Cancelar</button>';
+      html += '<button type="button" class="aprobar-btn" style="background:rgba(100,116,139,0.15);border-color:rgba(100,116,139,0.3);color:var(--rima-text-muted)" onclick="cancelarEdicion(\'' + pub.id + '\')">Cancelar</button>';
       html += '</div>';
       html += '</div>';
     }
@@ -1524,7 +1524,7 @@ function copySection(pub) {
     botonesRow += '<button type="button" class="aprobar-btn" onclick="aprobarCopy(\'' + pub.id + '\',this)">'
       + _aprobarCopyLabel(pub.tipo) + '</button>';
     if (pub.tipo === 'carrusel' || pub.tipo === 'historia') {
-      botonesRow += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.3);color:#A5B4FC" onclick="editarSlides(\'' + pub.id + '\')">Editar slides</button>';
+      botonesRow += '<button type="button" class="aprobar-btn" style="background:rgba(99,102,241,0.12);border-color:rgba(99,102,241,0.3);color:var(--rima-c-violet)" onclick="editarSlides(\'' + pub.id + '\')">Editar slides</button>';
     }
     botonesRow += '</div>';
     html += botonesRow;
@@ -1600,9 +1600,9 @@ function produccionSection(pub) {
     var esCarruselKie = pub.tipo === 'carrusel';
     var esHistoria = pub.tipo === 'historia';
     return '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">'
-      + '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">'
+      + '<p style="font-size:10px;color:var(--rima-c-amber);font-weight:700;margin:0 0 6px">'
       + (esCarruselKie ? 'Imágenes · generación KIE' : esHistoria ? 'Imágenes · biblioteca + KIE' : 'Imágenes · biblioteca') + '</p>'
-      + '<p style="font-size:10px;color:#94A3B8;margin:0 0 8px;line-height:1.45">'
+      + '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 8px;line-height:1.45">'
       + (esCarruselKie
         ? 'Se generarán slides nuevas con nano-banana-pro (texto integrado). Cada carrusel usa imágenes distintas.'
         : esHistoria
@@ -1615,7 +1615,7 @@ function produccionSection(pub) {
 
   if (!prod.etapa && !(prod.slides && prod.slides.length)) return '';
   var html = '<div style="margin-top:10px;padding:10px;border-radius:8px;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15)">';
-  html += '<p style="font-size:10px;color:#FCD34D;font-weight:700;margin:0 0 6px">'
+  html += '<p style="font-size:10px;color:var(--rima-c-amber);font-weight:700;margin:0 0 6px">'
     + (enRevisionImagenes
       ? (pub.tipo === 'carrusel' && prod.modo_visual === 'texto_integrado'
         ? 'Generación KIE · imágenes nuevas'
@@ -1623,11 +1623,11 @@ function produccionSection(pub) {
       : 'Producción') + '</p>';
   if (prod.tipo === 'guion') {
     if (prod.script_principal) {
-      html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5;white-space:pre-line">'
+      html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0;line-height:1.5;white-space:pre-line">'
         + esc(String(prod.script_principal).slice(0, 1500)) + '</p>';
     }
     if (prod.script_variante_b) {
-      html += '<p style="font-size:9px;color:#64748B;margin:6px 0 0">Variante B disponible</p>';
+      html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:6px 0 0">Variante B disponible</p>';
     }
   } else if (prod.slides && prod.slides.length) {
     var asignadas = prod.slides.filter(function(s) {
@@ -1640,7 +1640,7 @@ function produccionSection(pub) {
     if (pub.tipo === 'carrusel' && (copy.formato || prod.style_guide)) {
       var modeloKie = (prod.carousel_plan && prod.carousel_plan.modelo_kie)
         || prod.kie_model || 'nano-banana-pro';
-      html += '<p style="font-size:9px;color:#A78BFA;margin:0 0 6px">Formato: '
+      html += '<p style="font-size:9px;color:var(--rima-c-violet);margin:0 0 6px">Formato: '
         + esc(copy.formato || (prod.style_guide && prod.style_guide.formato_nombre) || 'Carrusel')
         + (prod.modo_visual === 'texto_integrado'
           ? ' · texto en imagen (' + esc(modeloKie) + ')' : '')
@@ -1648,27 +1648,27 @@ function produccionSection(pub) {
       var planResumen = (prod.carousel_plan && prod.carousel_plan.plan_resumen)
         || copy.plan_resumen;
       if (planResumen) {
-        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 6px;line-height:1.4">'
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px;line-height:1.4">'
           + esc(String(planResumen).slice(0, 280)) + '</p>';
       }
     }
     if (pub.tipo === 'historia' && (copy.plan_resumen || prod.story_plan)) {
       var planH = (prod.story_plan && prod.story_plan.plan_resumen) || copy.plan_resumen;
       if (planH) {
-        html += '<p style="font-size:9px;color:#94A3B8;margin:0 0 6px;line-height:1.4">'
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px;line-height:1.4">'
           + esc(String(planH).slice(0, 280)) + '</p>';
       }
-      html += '<p style="font-size:9px;color:#A5B4FC;margin:0 0 6px">Formato 9:16 (1080×1920) · texto superpuesto</p>';
+      html += '<p style="font-size:9px;color:var(--rima-c-violet);margin:0 0 6px">Formato 9:16 (1080×1920) · texto superpuesto</p>';
     }
-    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 6px">Composición visual · ' + prod.slides.length + ' slides</p>';
+    html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 6px">Composición visual · ' + prod.slides.length + ' slides</p>';
     if (enRevisionImagenes) {
       if (pub.tipo === 'carrusel' && prod.modo_visual === 'texto_integrado') {
-        html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">'
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 8px">'
           + pendientes + ' pendientes de KIE · ' + generadas + ' ya generadas'
           + (asignadas ? ' · ' + asignadas + ' desde biblioteca (manual)' : '')
           + '</p>';
       } else {
-        html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">'
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 8px">'
           + asignadas + ' desde biblioteca · ' + generadas + ' generadas con IA · ' + pendientes + ' pendientes de IA</p>';
       }
     }
@@ -1683,24 +1683,24 @@ function produccionSection(pub) {
       } else {
         html += '<div style="width:44px;height:44px;border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;'
           + 'background:rgba(245,158,11,0.08);border:1px dashed rgba(245,158,11,0.35)">'
-          + '<span style="font-size:8px;color:#FCD34D;font-weight:700;text-align:center;line-height:1.2">IA<br>pend.</span></div>';
+          + '<span style="font-size:8px;color:var(--rima-c-amber);font-weight:700;text-align:center;line-height:1.2">IA<br>pend.</span></div>';
       }
       html += '<div style="flex:1;min-width:0">';
       html += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">';
-      html += '<p style="font-size:9px;color:#FCD34D;font-weight:700;margin:0">' + esc(slideLabel) + '</p>';
+      html += '<p style="font-size:9px;color:var(--rima-c-amber);font-weight:700;margin:0">' + esc(slideLabel) + '</p>';
       html += slideEstadoHtml(s.image_source);
       html += '</div>';
       if (s.main_text) {
-        html += '<p style="font-size:10px;color:#CBD5E1;margin:1px 0 0;line-height:1.4;white-space:pre-line;font-weight:600">' + esc(s.main_text) + '</p>';
+        html += '<p style="font-size:10px;color:var(--rima-text);margin:1px 0 0;line-height:1.4;white-space:pre-line;font-weight:600">' + esc(s.main_text) + '</p>';
       }
       html += slideBulletsHtml(s.bullets);
       if (s.secondary_text) {
-        html += '<p style="font-size:9px;color:#94A3B8;margin:1px 0 0;line-height:1.4;font-style:italic">' + esc(s.secondary_text) + '</p>';
+        html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:1px 0 0;line-height:1.4;font-style:italic">' + esc(s.secondary_text) + '</p>';
       }
       if (s.image_source === 'cliente' || s.image_source === 'generada_ia') {
         var tz = s.text_zone || {};
         if (tz.zone) {
-          html += '<p style="font-size:8px;color:#64748B;margin:2px 0 0">Texto en ' + esc(tz.zone) + '</p>';
+          html += '<p style="font-size:8px;color:var(--rima-text-muted);margin:2px 0 0">Texto en ' + esc(tz.zone) + '</p>';
         }
         html += slideBtnsHtml(pub.id, idx, slideLabel, promptDefault, true);
       } else {
@@ -1710,10 +1710,10 @@ function produccionSection(pub) {
     });
     if (pub.tipo === 'carrusel' && pendientes > 0) {
       html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2)">';
-      html += '<p style="font-size:9px;color:#C4B5FD;margin:0 0 6px;line-height:1.45">'
+      html += '<p style="font-size:9px;color:var(--rima-c-violet);margin:0 0 6px;line-height:1.45">'
         + 'Generación automática: prompts con texto integrado y coherencia visual '
         + 'entre slides vía KIE (Nano Banana Pro), como el skill /carrusel.</p>';
-      html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#7C3AED,#A78BFA)" '
+      html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#7C3AED,var(--rima-c-violet))" '
         + 'onclick="generarCarruselCompleto(\'' + pub.id + '\',this)">'
         + 'Generar carrusel completo con IA'
         + (pendientes ? ' (' + pendientes + ' pendientes)' : '')
@@ -1721,7 +1721,7 @@ function produccionSection(pub) {
     }
     if (pub.tipo === 'historia' && pendientes > 0) {
       html += '<div style="margin-top:10px;padding:8px;border-radius:8px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2)">';
-      html += '<p style="font-size:9px;color:#A5B4FC;margin:0 0 6px;line-height:1.45">'
+      html += '<p style="font-size:9px;color:var(--rima-c-violet);margin:0 0 6px;line-height:1.45">'
         + 'Generación híbrida: mantiene fotos de biblioteca y genera con KIE las slides '
         + 'pendientes en 9:16, con coherencia visual entre ellas.</p>';
       html += '<button type="button" class="aprobar-btn" style="background:linear-gradient(135deg,#4338CA,#6366F1)" '
@@ -1731,7 +1731,7 @@ function produccionSection(pub) {
         + '</button></div>';
     }
   } else {
-    html += '<p style="font-size:10px;color:#94A3B8;margin:0;line-height:1.5">Visual pendiente de composición · '
+    html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0;line-height:1.5">Visual pendiente de composición · '
       + ((prod.imagenes_candidatas || []).length) + ' imágenes candidatas del cliente</p>';
   }
   if (pub.status === 'en_produccion' || enRevisionImagenes) {
@@ -1817,10 +1817,10 @@ function finalSection(pub) {
   var slides = rendered.slides || [];
   var esCarrusel = pub.tipo === 'carrusel';
   var html = '<div style="margin-top:10px;padding:12px;border-radius:8px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15)">';
-  html += '<p style="font-size:10px;color:#34D399;font-weight:700;margin:0 0 8px">Visual final · listo para publicar</p>';
+  html += '<p style="font-size:10px;color:var(--rima-c-emerald);font-weight:700;margin:0 0 8px">Visual final · listo para publicar</p>';
 
   if (!slides.length) {
-    html += '<p style="font-size:10px;color:#94A3B8;margin:0 0 10px;line-height:1.55">'
+    html += '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 10px;line-height:1.55">'
       + 'Compone cada slide (imagen + copy) y preparalo para subir a Instagram.</p>';
     html += '<button type="button" class="aprobar-btn" onclick="generarVisualFinal(\'' + pub.id + '\',this)">Generar visual para descarga</button>';
     html += '</div>';
@@ -1828,18 +1828,18 @@ function finalSection(pub) {
   }
 
   html += '<div style="padding:10px;border-radius:8px;background:rgba(0,0,0,0.25);border:1px solid rgba(255,255,255,0.06);margin-bottom:12px">';
-  html += '<p style="font-size:10px;color:#CBD5E1;font-weight:600;margin:0 0 6px">Descripción para publicar</p>';
-  html += '<p style="font-size:9px;color:#64748B;margin:0 0 8px">Copiá este texto como caption al subir el carrusel.</p>';
+  html += '<p style="font-size:10px;color:var(--rima-text);font-weight:600;margin:0 0 6px">Descripción para publicar</p>';
+  html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 8px">Copiá este texto como caption al subir el carrusel.</p>';
   var descId = 'desc-pub-' + pub.id;
   html += '<textarea id="' + descId + '" readonly rows="5" '
     + 'style="width:100%;box-sizing:border-box;background:rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.1);'
-    + 'border-radius:8px;color:#CBD5E1;font-size:10px;padding:8px 10px;line-height:1.5;resize:vertical;font-family:inherit">'
+    + 'border-radius:8px;color:var(--rima-text);font-size:10px;padding:8px 10px;line-height:1.5;resize:vertical;font-family:inherit">'
     + esc(descripcionParaPublicar(pub)) + '</textarea>';
   html += '<button type="button" class="slide-acc-btn" style="margin-top:6px" data-target="' + descId + '" '
     + 'onclick="copiarDescripcionPublicar(this)">Copiar descripción</button>';
   html += '</div>';
 
-  html += '<p style="font-size:9px;color:#64748B;margin:0 0 6px">' + slides.length + ' slides · clic para ver en grande</p>';
+  html += '<p style="font-size:9px;color:var(--rima-text-muted);margin:0 0 6px">' + slides.length + ' slides · clic para ver en grande</p>';
   html += '<div class="render-strip" id="final-gallery-' + pub.id + '">';
   slides.forEach(function(s) {
     var fname = s.filename || ('slide-' + String(s.slide_number || 0).padStart(2, '0') + '.png');
@@ -1856,7 +1856,7 @@ function finalSection(pub) {
   html += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(52,211,153,0.15)">';
   html += '<button type="button" class="aprobar-btn" style="background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.35)" '
     + 'onclick="descargarCarruselZip(\'' + pub.id + '\',this)">↓ Descargar todas (.zip)</button>';
-  html += '<span style="font-size:9px;color:#64748B;margin-left:8px">' + slides.length + ' PNG · 1080×' + (esCarrusel ? '1080' : '1920') + '</span>';
+  html += '<span style="font-size:9px;color:var(--rima-text-muted);margin-left:8px">' + slides.length + ' PNG · 1080×' + (esCarrusel ? '1080' : '1920') + '</span>';
   html += '</div></div>';
   return html;
 }
@@ -1894,7 +1894,7 @@ function slideBtnsHtml(pubId, idx, slideLabel, promptDefault, hasImage) {
 function renderList(tipo, pubs) {
   var container = document.getElementById(tipo + '-list');
   if (pubs.length === 0) {
-    container.innerHTML = '<div style="text-align:center;padding:40px 0;color:#334155">'
+    container.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--rima-text-faint)">'
       + '<p style="font-size:12px">No hay ' + tipo + ' esta semana</p>'
       + '<p style="font-size:10px;margin-top:4px">Genera el plan desde /calendario</p>'
       + '</div>';
@@ -1906,9 +1906,9 @@ function renderList(tipo, pubs) {
     var d = new Date(pub.fecha + 'T12:00:00');
     var dayShort = DAY_SHORT[d.getDay()];
 
-    var typeColor = tipo === 'reel' ? {bg:'rgba(236,72,153,0.1)',border:'rgba(236,72,153,0.2)',text:'#F472B6'}
-                  : tipo === 'carrusel' ? {bg:'rgba(245,158,11,0.1)',border:'rgba(245,158,11,0.2)',text:'#FCD34D'}
-                  : {bg:'rgba(99,102,241,0.1)',border:'rgba(99,102,241,0.2)',text:'#A5B4FC'};
+    var typeColor = tipo === 'reel' ? {bg:'rgba(236,72,153,0.1)',border:'rgba(236,72,153,0.2)',text:'var(--rima-c-pink)'}
+                  : tipo === 'carrusel' ? {bg:'rgba(245,158,11,0.1)',border:'rgba(245,158,11,0.2)',text:'var(--rima-c-amber)'}
+                  : {bg:'rgba(99,102,241,0.1)',border:'rgba(99,102,241,0.2)',text:'var(--rima-c-violet)'};
 
     var tematica  = pub.tematica || '';
     var enfoque   = pub.enfoque  || '';
@@ -1928,13 +1928,13 @@ function renderList(tipo, pubs) {
       + '<div style="flex:1;min-width:0">'
       + '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">'
       + statusBadge(pub) + ' ' + typeBadge(pub.tipo) + ' ' + aprobacionesBadges(pub)
-      + '<span class="badge" style="background:rgba(124,58,237,0.1);color:#C4B5FD;border:1px solid rgba(124,58,237,0.2)">' + esc(etapaLabel(pub)) + '</span>'
+      + '<span class="badge" style="background:rgba(124,58,237,0.1);color:var(--rima-c-violet);border:1px solid rgba(124,58,237,0.2)">' + esc(etapaLabel(pub)) + '</span>'
       + '</div>'
-      + '<p style="font-size:13px;font-weight:600;color:#F1F5F9;margin:0 0 4px;line-height:1.4">' + esc(tematica || 'Sin temática asignada') + '</p>'
-      + (tematica ? '' : '<p style="font-size:10px;color:#475569;font-style:italic;margin:0">Esperando agente semanal</p>')
-      + (tematica || enfoque ? '<div style="display:flex;gap:8px;font-size:10px;color:#475569;margin-top:3px">'
-          + (tematica ? '<span>Tematica: <span style="color:#64748B">'+esc(tematica)+'</span></span>' : '')
-          + (enfoque  ? '<span>·</span><span>Enfoque: <span style="color:#64748B">'+esc(enfoque)+'</span></span>' : '')
+      + '<p style="font-size:13px;font-weight:600;color:var(--rima-text);margin:0 0 4px;line-height:1.4">' + esc(tematica || 'Sin temática asignada') + '</p>'
+      + (tematica ? '' : '<p style="font-size:10px;color:var(--rima-text-faint);font-style:italic;margin:0">Esperando agente semanal</p>')
+      + (tematica || enfoque ? '<div style="display:flex;gap:8px;font-size:10px;color:var(--rima-text-faint);margin-top:3px">'
+          + (tematica ? '<span>Tematica: <span style="color:var(--rima-text-muted)">'+esc(tematica)+'</span></span>' : '')
+          + (enfoque  ? '<span>·</span><span>Enfoque: <span style="color:var(--rima-text-muted)">'+esc(enfoque)+'</span></span>' : '')
           + '</div>' : '')
       + planSection(pub)
       + propuestaSection(pub)
@@ -1943,7 +1943,7 @@ function renderList(tipo, pubs) {
       + finalSection(pub)
       + '</div>'
       + '<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">'
-      + '<span style="font-size:9px;color:#334155">'+pub.fecha+'</span>'
+      + '<span style="font-size:9px;color:var(--rima-text-faint)">'+pub.fecha+'</span>'
       + '</div>'
       + '</div>';
     container.appendChild(div);

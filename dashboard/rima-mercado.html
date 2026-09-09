@@ -9,20 +9,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; }
-    body { font-family: 'Inter', sans-serif; background: #0A0A0F; color: #F1F5F9; }
+    body { font-family: 'Inter', sans-serif; background: var(--rima-bg); color: var(--rima-text); }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+    ::-webkit-scrollbar-thumb { background: var(--rima-border-strong); border-radius: 2px; }
 
-    .glass { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); backdrop-filter: blur(12px); }
-    .glass-hover:hover { background: rgba(255,255,255,0.07); border-color: rgba(124,58,237,0.3); transition: all 0.2s ease; }
+    .glass { background: var(--rima-chip-bg); border: 1px solid var(--rima-border); backdrop-filter: blur(12px); }
+    .glass-hover:hover { background: var(--rima-hover-strong); border-color: rgba(124,58,237,0.3); transition: all 0.2s ease; }
     .gradient-text { background: linear-gradient(135deg,#7C3AED,#06B6D4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
     .agent-active { background: linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08)); border-color: rgba(124,58,237,0.45) !important; }
     .glow-violet { box-shadow: 0 0 20px rgba(124,58,237,0.22); }
     .glow-cyan   { box-shadow: 0 0 20px rgba(6,182,212,0.18); }
     .glow-amber  { box-shadow: 0 0 16px rgba(245,158,11,0.2); }
     .sidebar-item { transition: all 0.18s ease; }
-    .sidebar-item:hover { background:rgba(255,255,255,0.05); border-color:rgba(124,58,237,0.22); }
+    .sidebar-item:hover { background:var(--rima-hover); border-color:rgba(124,58,237,0.22); }
     .btn-primary { background: linear-gradient(135deg,#7C3AED,#6D28D9); transition: all .2s; }
     .btn-primary:hover { background: linear-gradient(135deg,#8B5CF6,#7C3AED); box-shadow:0 4px 20px rgba(124,58,237,0.4); transform:translateY(-1px); }
     .status-dot { animation: pulse-v 1.5s ease-in-out infinite; }
@@ -30,8 +30,8 @@
 
     /* Tab system */
     .tab-btn { transition: all .2s; border-bottom: 2px solid transparent; }
-    .tab-btn.active { border-bottom-color: #7C3AED; color: #fff; }
-    .tab-btn:not(.active):hover { color: #94A3B8; }
+    .tab-btn.active { border-bottom-color: #7C3AED; color: var(--rima-text); }
+    .tab-btn:not(.active):hover { color: var(--rima-text-muted); }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; height: 100%; }
     #panel-global.tab-panel.active { display: flex; min-height: 0; }
@@ -42,28 +42,28 @@
 
     /* Referent row */
     .ref-row { transition: all .15s; border-left: 2px solid transparent; }
-    .ref-row:hover { background: rgba(255,255,255,0.05); border-left-color: rgba(124,58,237,0.4); }
+    .ref-row:hover { background: var(--rima-hover); border-left-color: rgba(124,58,237,0.4); }
     .ref-row.selected { background: rgba(124,58,237,0.1); border-left-color: #7C3AED; }
 
     /* Fuerza bar */
     .fuerza-bar { height: 3px; border-radius: 2px; background: linear-gradient(90deg,#7C3AED,#06B6D4); }
 
     /* Score badge */
-    .score-high { background: rgba(52,211,153,0.15); color: #34D399; border: 1px solid rgba(52,211,153,0.25); }
-    .score-mid  { background: rgba(251,191,36,0.15); color: #FBBF24; border: 1px solid rgba(251,191,36,0.25); }
-    .score-low  { background: rgba(148,163,184,0.1); color: #94A3B8; border: 1px solid rgba(148,163,184,0.15); }
+    .score-high { background: rgba(52,211,153,0.15); color: var(--rima-c-emerald); border: 1px solid rgba(52,211,153,0.25); }
+    .score-mid  { background: rgba(251,191,36,0.15); color: var(--rima-c-amber); border: 1px solid rgba(251,191,36,0.25); }
+    .score-low  { background: rgba(148,163,184,0.1); color: var(--rima-text-muted); border: 1px solid rgba(148,163,184,0.15); }
 
     /* Post row */
-    .post-row { transition: background .15s; border: 1px solid rgba(255,255,255,0.05); }
-    .post-row:hover { background: rgba(255,255,255,0.04); border-color: rgba(124,58,237,0.2); }
+    .post-row { transition: background .15s; border: 1px solid var(--rima-border); }
+    .post-row:hover { background: var(--rima-surface-tint); border-color: rgba(124,58,237,0.2); }
 
     /* Modal */
     .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.72); backdrop-filter:blur(6px); z-index:50; display:flex; align-items:center; justify-content:center; padding:24px; }
     .modal-backdrop.hidden { display:none; }
-    .modal-panel { background:#12121C; border:1px solid rgba(255,255,255,0.09); border-radius:20px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto; box-shadow:0 24px 80px rgba(0,0,0,0.7); }
-    .badge-venta { background:rgba(52,211,153,0.12); color:#34D399; border:1px solid rgba(52,211,153,0.25); }
-    .badge-edu { background:rgba(56,189,248,0.12); color:#38BDF8; border:1px solid rgba(56,189,248,0.25); }
-    .badge-conexion { background:rgba(251,191,36,0.12); color:#FBBF24; border:1px solid rgba(251,191,36,0.25); }
+    .modal-panel { background:var(--rima-surface-solid); border:1px solid var(--rima-border-strong); border-radius:20px; width:100%; max-width:480px; max-height:85vh; overflow-y:auto; box-shadow:0 24px 80px rgba(0,0,0,0.7); }
+    .badge-venta { background:rgba(52,211,153,0.12); color:var(--rima-c-emerald); border:1px solid rgba(52,211,153,0.25); }
+    .badge-edu { background:rgba(56,189,248,0.12); color:var(--rima-c-sky); border:1px solid rgba(56,189,248,0.25); }
+    .badge-conexion { background:rgba(251,191,36,0.12); color:var(--rima-c-amber); border:1px solid rgba(251,191,36,0.25); }
 
     /* Content thumb */
     .content-thumb {
@@ -256,6 +256,10 @@
         </div>
         <div class="px-3 py-2" id="ranking-ig-list"></div>
         <div class="px-3 py-2 border-t border-white/5" id="ranking-yt-note"></div>
+        <div class="px-3 py-3 border-t border-white/5 hidden" id="ranking-suggestions">
+          <p class="text-[9px] uppercase tracking-widest text-slate-600 font-semibold mb-2">Sugerencias para vos</p>
+          <div id="ranking-suggestions-list" class="space-y-2"></div>
+        </div>
       </div>
       <div class="flex-1 flex flex-col min-h-0 overflow-hidden p-5 gap-4 mercado-detail-pane">
         <div class="glass rounded-2xl p-4 flex-shrink-0" id="mercado-detail-card"></div>
@@ -847,7 +851,64 @@ async function loadMercado() {
   }
 }
 
+// Sugerencias de referentes — antes vivían solo en un popup global; acá se
+// muestran inline, debajo del ranking de perfiles ya trackeados, respetando
+// el mismo gate de "día 3+" que ya calcula /api/referentes/discovery
+// (should_show_popup). Ver main.py: maybeShowReferentesDiscovery se
+// desactiva en /mercado para no duplicar el aviso como popup.
+async function loadReferentesSuggestions() {
+  try {
+    const r = await fetch('/api/referentes/discovery');
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.status === 'running' || !d.should_show_popup) return;
+    const suggestions = d.suggestions || [];
+    const box = document.getElementById('ranking-suggestions');
+    const list = document.getElementById('ranking-suggestions-list');
+    if (!box || !list || !suggestions.length) return;
+    list.innerHTML = suggestions.map(function (s) {
+      const pic = s.profile_pic_url || '';
+      const displayName = s.full_name || s.nombre_nicho || s.username;
+      const avatar = pic
+        ? '<img class="w-7 h-7 rounded-full object-cover flex-shrink-0" src="' + esc(pic) + '" alt="" />'
+        : '<div class="w-7 h-7 rounded-full flex-shrink-0" style="background:rgba(139,92,246,0.25)"></div>';
+      return '<div class="flex items-start gap-2 p-2 rounded-lg glass">'
+        + avatar
+        + '<div class="flex-1 min-w-0">'
+        + '<p class="text-[10px] font-semibold text-white truncate">@' + esc(s.username) + '</p>'
+        + '<p class="text-[9px] text-slate-500 leading-snug">' + esc(s.motivo || displayName) + '</p>'
+        + '</div>'
+        + '<button type="button" class="text-[9px] font-semibold text-violet-300 px-2 py-1 rounded-lg flex-shrink-0 border-0 cursor-pointer" '
+        + 'style="background:rgba(139,92,246,0.15)" onclick="addSuggestedReferente(\'' + esc(s.username).replace(/'/g, "\\'") + '\', this)">+ Agregar</button>'
+        + '</div>';
+    }).join('');
+    box.classList.remove('hidden');
+  } catch (e) {}
+}
+
+window.addSuggestedReferente = async function (username, btn) {
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const r = await fetch('/api/referentes/discovery/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: [username] }),
+    });
+    if (!r.ok) throw new Error('request failed');
+    const row = btn.closest('div');
+    if (row) row.remove();
+    if (window.rimaToast) rimaToast('Referente agregado');
+    loadMercado();
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '+ Agregar';
+    if (window.rimaToast) rimaToast('Error al agregar', 'error');
+  }
+};
+
 loadMercado();
+loadReferentesSuggestions();
 </script>
 </body>
 </html>

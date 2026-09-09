@@ -6,36 +6,36 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
-    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border);backdrop-filter:blur(12px)}
+    .gh:hover{background:var(--rima-hover-strong);border-color:rgba(124,58,237,0.3);transition:all .2s}
     .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
     .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
-    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .si{transition:all .18s}.si:hover{background:var(--rima-hover)}
     .tab-btn{transition:all .2s;border-bottom:2px solid transparent;padding-bottom:10px;cursor:pointer}
-    .tab-btn.active{border-bottom-color:#1877F2;color:#fff}
+    .tab-btn.active{border-bottom-color:#1877F2;color:var(--rima-text)}
     .tab-panel{display:none}.tab-panel.active{display:block}
     @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
     .pulsing{animation:pulse-v 2s ease-in-out infinite}
-    .kpi-ok{color:#34D399}
-    .kpi-warn{color:#FBBF24}
-    .kpi-bad{color:#F87171}
-    .audience-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;transition:all .2s;cursor:pointer}
+    .kpi-ok{color:var(--rima-c-emerald)}
+    .kpi-warn{color:var(--rima-c-amber)}
+    .kpi-bad{color:var(--rima-c-rose)}
+    .audience-card{background:var(--rima-surface-tint);border:1px solid var(--rima-border-strong);border-radius:16px;transition:all .2s;cursor:pointer}
     .audience-card:hover{border-color:rgba(24,119,242,0.4);background:rgba(24,119,242,0.04)}
     .audience-card.active-card{background:rgba(24,119,242,0.08);border-color:rgba(24,119,242,0.4)}
-    .angle-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;transition:all .15s}
-    .angle-card:hover{background:rgba(255,255,255,0.05)}
-    .temp-hot{background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.3);color:#FB7185}
-    .temp-warm{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:#FBBF24}
+    .angle-card{background:var(--rima-surface-tint);border:1px solid var(--rima-border-strong);border-radius:16px;transition:all .15s}
+    .angle-card:hover{background:var(--rima-hover)}
+    .temp-hot{background:rgba(244,63,94,0.1);border-color:rgba(244,63,94,0.3);color:var(--rima-c-rose)}
+    .temp-warm{background:rgba(245,158,11,0.1);border-color:rgba(245,158,11,0.3);color:var(--rima-c-amber)}
     .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
-    .badge-active{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
-    .badge-learning{background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.25)}
-    .badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}
-    .badge-warn{background:rgba(244,63,94,0.15);color:#F87171;border:1px solid rgba(244,63,94,0.25)}
-    .progress-bar{height:6px;border-radius:3px;overflow:hidden;background:rgba(255,255,255,0.06)}
-    .freq-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.06);position:relative}
+    .badge-active{background:rgba(52,211,153,0.15);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.25)}
+    .badge-learning{background:rgba(245,158,11,0.15);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.25)}
+    .badge-paused{background:rgba(148,163,184,0.1);color:var(--rima-c-slate);border:1px solid rgba(148,163,184,0.2)}
+    .badge-warn{background:rgba(244,63,94,0.15);color:var(--rima-c-rose);border:1px solid rgba(244,63,94,0.25)}
+    .progress-bar{height:6px;border-radius:3px;overflow:hidden;background:var(--rima-border)}
+    .freq-bar{height:8px;border-radius:4px;background:var(--rima-border);position:relative}
   </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -560,7 +560,7 @@
             <div class="rounded-xl p-4" style="background:rgba(148,163,184,0.05);border:1px solid rgba(148,163,184,0.15)">
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-3">
-                  <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);border:1px solid rgba(148,163,184,0.2);color:#94A3B8">Tibia</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-semibold" style="background:rgba(148,163,184,0.1);border:1px solid rgba(148,163,184,0.2);color:var(--rima-text-muted)">Tibia</span>
                   <p class="text-xs font-semibold text-white">Agendaron pero no compraron · CSV</p>
                 </div>
                 <button class="bp px-2.5 py-1 rounded-lg text-[9px] text-white cursor-pointer">Subir CSV</button>

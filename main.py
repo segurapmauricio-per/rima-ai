@@ -53,7 +53,7 @@ from core.referentes_store import (
     get_profiles, add_profile, update_profile, delete_profile,
     consume_manual_scrape, reset_manual_scrape_after_weekly,
     get_user_brand, set_user_brand, get_user_plan, cliente_id_from_brand,
-    active_ig_usernames, sync_ig_profiles_from_meta,
+    active_ig_usernames, sync_ig_profiles_from_meta, ensure_cliente_id,
 )
 from core.plan_limits import get_ref_limits, normalize_plan, MANUAL_SCRAPE_CREDITS
 from core.onboarding import (
@@ -66,7 +66,6 @@ from core.onboarding import (
 from core.onboarding_scrape import run_client_scrape
 from core.dashboard_stats import get_dashboard_stats
 from core.referentes_discovery import discover_similar_referentes
-from core.referentes_discovery_preview import get_preview_suggestions
 from core.activation_flow import (
     get_tour_state, mark_tour_seen, get_activation_state,
     start_activation, advance_activation, skip_activation,
@@ -168,54 +167,58 @@ def save_data(data: dict):
 # CSS compartido inyectado en <head>
 # â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 
-SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;height:100%;min-height:0;align-self:stretch;background:rgba(15,15,25,0.97);border-right:1px solid rgba(255,255,255,0.07);overflow:hidden">
-  <div style="padding:16px 18px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;gap:10px;flex-shrink:0">
+SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;flex-shrink:0;display:flex;flex-direction:column;height:100%;min-height:0;align-self:stretch;background:var(--rima-surface);border-right:1px solid var(--rima-border);overflow:hidden">
+  <div style="padding:16px 18px;border-bottom:1px solid var(--rima-border);display:flex;align-items:center;gap:10px;flex-shrink:0">
     <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,#7C3AED,#6D28D9);display:flex;align-items:center;justify-content:center;flex-shrink:0">
       <svg style="width:16px;height:16px;color:#fff" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"/></svg>
     </div>
     <div><p style="font-size:15px;font-weight:700;background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0">RIMA</p>
-    <p style="font-size:9px;color:#475569;margin:0">Marketing AI · LATAM</p></div>
+    <p style="font-size:9px;color:var(--rima-text-faint);margin:0">Marketing AI · LATAM</p></div>
   </div>
-  <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);flex-shrink:0">
+  <div style="padding:10px 14px;border-bottom:1px solid var(--rima-border);flex-shrink:0">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <div style="width:34px;height:34px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#7C3AED,#06B6D4);flex-shrink:0">
         <div style="width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#f43f5e,#fb923c,#fbbf24);display:flex;align-items:center;justify-content:center">
           <span id="rima-initials" style="font-size:11px;font-weight:700;color:#fff">FL</span>
         </div>
       </div>
-      <div><p id="rima-brand-name" style="font-size:12px;font-weight:600;color:#fff;margin:0">FitLife Studio</p>
-      <p id="rima-brand-handle" style="font-size:10px;color:#475569;margin:0">@fitlifestudio_mx</p></div>
+      <div><p id="rima-brand-name" style="font-size:12px;font-weight:600;color:var(--rima-text);margin:0">FitLife Studio</p>
+      <p id="rima-brand-handle" style="font-size:10px;color:var(--rima-text-faint);margin:0">@fitlifestudio_mx</p></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)"><p id="rima-kpi-followers" style="font-size:11px;font-weight:700;color:#A78BFA;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Seg.</p></div>
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2)"><p id="rima-kpi-refs" style="font-size:11px;font-weight:700;color:#22D3EE;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Refs.</p></div>
-      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p id="rima-kpi-plan" style="font-size:11px;font-weight:700;color:#34D399;margin:0">—</p><p style="font-size:8px;color:#475569;margin:0">Plan</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2)"><p id="rima-kpi-followers" style="font-size:11px;font-weight:700;color:var(--rima-c-violet);margin:0">—</p><p style="font-size:8px;color:var(--rima-text-faint);margin:0">Seg.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2)"><p id="rima-kpi-refs" style="font-size:11px;font-weight:700;color:var(--rima-c-cyan);margin:0">—</p><p style="font-size:8px;color:var(--rima-text-faint);margin:0">Refs.</p></div>
+      <div style="border-radius:8px;padding:5px;text-align:center;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.2)"><p id="rima-kpi-plan" style="font-size:11px;font-weight:700;color:var(--rima-c-emerald);margin:0">—</p><p style="font-size:8px;color:var(--rima-text-faint);margin:0">Plan</p></div>
     </div>
   </div>
   <nav id="rima-nav" style="flex:1 1 auto;min-height:0;padding:10px;overflow-y:auto;scrollbar-width:none"></nav>
-  <div id="rima-user-bar" style="position:relative;padding:8px 10px;border-top:1px solid rgba(255,255,255,0.06);flex-shrink:0">
+  <div id="rima-user-bar" style="position:relative;padding:8px 10px;border-top:1px solid var(--rima-border);flex-shrink:0">
     <div style="display:flex;align-items:center;gap:6px">
       <button type="button" id="rima-user-trigger" style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:10px;border:1px solid transparent;background:transparent;cursor:pointer;text-align:left;transition:background .15s">
-        <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--rima-chip-bg);border:1px solid var(--rima-border-strong);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden">
           <img id="rima-user-avatar-img" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:none" />
-          <span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>
+          <span id="rima-user-initials" style="font-size:11px;font-weight:700;color:var(--rima-text)">—</span>
         </div>
         <div style="flex:1;min-width:0">
-          <p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>
-          <p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">Plan —</p>
+          <p id="rima-user-name" style="font-size:11px;font-weight:600;color:var(--rima-text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>
+          <p id="rima-user-plan" style="font-size:10px;color:var(--rima-text-muted);margin:2px 0 0;line-height:1.2">Plan —</p>
         </div>
-        <svg id="rima-user-chevron" style="width:14px;height:14px;color:#475569;flex-shrink:0;transition:transform .15s" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15"/></svg>
+        <svg id="rima-user-chevron" style="width:14px;height:14px;color:var(--rima-text-faint);flex-shrink:0;transition:transform .15s" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 15L12 18.75 15.75 15"/></svg>
       </button>
-      <button type="button" id="rima-user-settings" title="Cerrar sesión" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s">
-        <svg style="width:14px;height:14px;color:#94A3B8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <button type="button" id="rima-theme-toggle" title="Cambiar tema" style="width:32px;height:32px;border-radius:8px;background:var(--rima-chip-bg);border:1px solid var(--rima-border-strong);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s">
+        <svg class="icon-moon" style="width:14px;height:14px;color:var(--rima-text-muted)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+        <svg class="icon-sun" style="width:14px;height:14px;color:var(--rima-text-muted);display:none" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+      </button>
+      <button type="button" id="rima-user-settings" title="Cerrar sesión" style="width:32px;height:32px;border-radius:8px;background:var(--rima-chip-bg);border:1px solid var(--rima-border-strong);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s">
+        <svg style="width:14px;height:14px;color:var(--rima-text-muted)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </button>
     </div>
-    <div id="rima-user-menu" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:#14141F;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:6px;box-shadow:0 -8px 32px rgba(0,0,0,0.45);z-index:200">
-      <div style="padding:8px 10px 6px;border-bottom:1px solid rgba(255,255,255,0.06);margin-bottom:4px">
-        <p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>
-        <p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">—</p>
+    <div id="rima-user-menu" style="display:none;position:absolute;bottom:calc(100% + 6px);left:8px;right:8px;background:var(--rima-surface-2);border:1px solid var(--rima-border-strong);border-radius:12px;padding:6px;box-shadow:0 -8px 32px rgba(0,0,0,0.45);z-index:200">
+      <div style="padding:8px 10px 6px;border-bottom:1px solid var(--rima-border);margin-bottom:4px">
+        <p id="rima-user-menu-email" style="font-size:11px;color:var(--rima-text-muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>
+        <p id="rima-user-menu-plan" style="font-size:10px;color:var(--rima-text-muted);margin:4px 0 0">—</p>
       </div>
-      <a href="/auth/logout" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:11px;color:#F87171;text-decoration:none;transition:background .12s">
+      <a href="/auth/logout" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;font-size:11px;color:var(--rima-danger);text-decoration:none;transition:background .12s">
         <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9"/></svg>
         Cerrar sesión
       </a>
@@ -224,16 +227,97 @@ SIDEBAR_HTML = """<aside id="rima-sidebar" style="width:240px;min-width:240px;fl
 </aside>"""
 
 SHARED_CSS = """
+<script>(function(){try{var t=localStorage.getItem('rima-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <style id="rima-shared">
+  /* Tokens de tema (paso 4: modo dia/noche) */
+  :root {
+    --rima-bg: #0A0A0F;
+    --rima-surface: rgba(15,15,25,0.97);
+    --rima-surface-solid: #12121C;
+    --rima-surface-2: #14141F;
+    --rima-surface-tint: rgba(255,255,255,0.03);
+    --rima-chip-bg: rgba(255,255,255,0.06);
+    --rima-input-bg: rgba(255,255,255,0.04);
+    --rima-hover: rgba(255,255,255,0.05);
+    --rima-hover-strong: rgba(255,255,255,0.08);
+    --rima-border: rgba(255,255,255,0.06);
+    --rima-border-strong: rgba(255,255,255,0.1);
+    --rima-text: #F1F5F9;
+    --rima-text-muted: #94A3B8;
+    --rima-text-faint: #64748B;
+    --rima-danger: #F87171;
+    --rima-c-violet: #A78BFA;
+    --rima-c-pink: #F472B6;
+    --rima-c-sky: #38BDF8;
+    --rima-c-blue: #60A5FA;
+    --rima-c-emerald: #34D399;
+    --rima-c-amber: #FBBF24;
+    --rima-c-rose: #FB7185;
+    --rima-c-cyan: #22D3EE;
+    --rima-c-orange: #FB923C;
+    --rima-c-slate: #94A3B8;
+  }
+  :root[data-theme="light"] {
+    --rima-bg: #F7F8FB;
+    --rima-surface: rgba(255,255,255,0.97);
+    --rima-surface-solid: #FFFFFF;
+    --rima-surface-2: #FFFFFF;
+    --rima-surface-tint: rgba(27,33,48,0.03);
+    --rima-chip-bg: rgba(27,33,48,0.05);
+    --rima-input-bg: rgba(27,33,48,0.035);
+    --rima-hover: rgba(27,33,48,0.04);
+    --rima-hover-strong: rgba(27,33,48,0.07);
+    --rima-border: #DDE2EC;
+    --rima-border-strong: #C9D0DC;
+    --rima-text: #1B2130;
+    --rima-text-muted: #5B6478;
+    --rima-text-faint: #848DA1;
+    --rima-danger: #DC2626;
+    --rima-c-violet: #6D28D9;
+    --rima-c-pink: #DB2777;
+    --rima-c-sky: #0284C7;
+    --rima-c-blue: #2563EB;
+    --rima-c-emerald: #059669;
+    --rima-c-amber: #B45309;
+    --rima-c-rose: #E11D48;
+    --rima-c-cyan: #0E7490;
+    --rima-c-orange: #C2410C;
+    --rima-c-slate: #5B6478;
+  }
+  html { background: var(--rima-bg); }
+  #rima-theme-toggle .icon-sun { display: none; }
+  #rima-theme-toggle[data-mode="light"] .icon-moon { display: none; }
+  #rima-theme-toggle[data-mode="light"] .icon-sun { display: block; }
+
+  /* Overrides Tailwind (paginas .html individuales aun con clases fijas) */
+  body { background: var(--rima-bg) !important; color: var(--rima-text) !important; }
+  [class*="text-white"]:not(.bp):not(.btn-primary) { color: var(--rima-text) !important; }
+  [style*="linear-gradient"][class*="text-white"] { color: #fff !important; }
+  [class*="text-slate-100"], [class*="text-slate-200"], [class*="text-slate-300"] { color: var(--rima-text) !important; }
+  [class*="text-slate-400"], [class*="text-slate-500"] { color: var(--rima-text-muted) !important; }
+  [class*="text-slate-600"], [class*="text-slate-700"] { color: var(--rima-text-faint) !important; }
+  [class*="border-white"] { border-color: var(--rima-border) !important; }
+  [class*="divide-white"] { border-color: var(--rima-border) !important; }
+  [class*="bg-white/"] { background-color: var(--rima-chip-bg) !important; }
+  [class*="text-violet-300"], [class*="text-violet-400"] { color: var(--rima-c-violet) !important; }
+  [class*="text-pink-300"], [class*="text-pink-400"] { color: var(--rima-c-pink) !important; }
+  [class*="text-sky-300"], [class*="text-sky-400"] { color: var(--rima-c-sky) !important; }
+  [class*="text-blue-300"], [class*="text-blue-400"] { color: var(--rima-c-blue) !important; }
+  [class*="text-emerald-300"], [class*="text-emerald-400"] { color: var(--rima-c-emerald) !important; }
+  [class*="text-amber-300"], [class*="text-amber-400"] { color: var(--rima-c-amber) !important; }
+  [class*="text-rose-300"], [class*="text-rose-400"] { color: var(--rima-c-rose) !important; }
+  [class*="text-cyan-300"], [class*="text-cyan-400"] { color: var(--rima-c-cyan) !important; }
+  [class*="text-orange-300"], [class*="text-orange-400"] { color: var(--rima-c-orange) !important; }
+
   /* Layout base */
   html { zoom: 1.1; }
   body { display:flex !important; height:calc(100vh / 1.1) !important; overflow:hidden !important; font-size: 13px !important; }
   #rima-sidebar { flex-shrink:0 !important; width:240px !important; min-width:240px !important;
     display:flex !important; flex-direction:column !important; height:100% !important; min-height:0 !important; align-self:stretch !important; overflow:hidden !important; }
   #rima-nav { flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; }
-  #rima-user-bar { flex-shrink:0 !important; z-index:50 !important; background:rgba(15,15,25,0.97) !important; font-size:11px !important; }
-  #rima-user-name { font-size:11px !important; font-weight:600 !important; color:#E2E8F0 !important; }
-  #rima-user-plan { font-size:10px !important; color:#64748B !important; }
+  #rima-user-bar { flex-shrink:0 !important; z-index:50 !important; background:var(--rima-surface) !important; font-size:11px !important; }
+  #rima-user-name { font-size:11px !important; font-weight:600 !important; color:var(--rima-text) !important; }
+  #rima-user-plan { font-size:10px !important; color:var(--rima-text-muted) !important; }
   #rima-user-initials { font-size:11px !important; font-weight:700 !important; }
   #rima-user-menu-email { font-size:11px !important; }
   #rima-user-menu-plan { font-size:10px !important; }
@@ -265,10 +349,11 @@ SHARED_CSS = """
   #rima-toast.error { background: linear-gradient(135deg,#DC2626,#991B1B); border-color: rgba(220,38,38,0.5); box-shadow: 0 8px 32px rgba(220,38,38,0.35); }
 
   /* User bar (footer sidebar) */
-  #rima-user-trigger:hover { background: rgba(255,255,255,0.05) !important; }
-  #rima-user-settings:hover { background: rgba(255,255,255,0.08) !important; border-color: rgba(124,58,237,0.3) !important; }
+  #rima-user-trigger:hover { background: var(--rima-hover) !important; }
+  #rima-theme-toggle:hover { background: var(--rima-hover-strong) !important; border-color: rgba(124,58,237,0.3) !important; }
+  #rima-user-settings:hover { background: var(--rima-hover-strong) !important; border-color: rgba(124,58,237,0.3) !important; }
   #rima-user-menu.open { display: block !important; }
-  #rima-user-menu a:hover { background: rgba(255,255,255,0.06); }
+  #rima-user-menu a:hover { background: var(--rima-hover); }
   #rima-user-bar.menu-open #rima-user-chevron { transform: rotate(180deg); }
 
   /* Overlay bloqueo brief incompleto */
@@ -280,11 +365,11 @@ SHARED_CSS = """
   #rima-brief-gate.show { display: flex; }
   #rima-brief-gate .gate-card {
     max-width: 420px; width: 100%; padding: 28px; border-radius: 20px;
-    background: #12121C; border: 1px solid rgba(124,58,237,0.35);
+    background: var(--rima-surface-solid); border: 1px solid rgba(124,58,237,0.35);
     box-shadow: 0 24px 64px rgba(0,0,0,0.5); text-align: center;
   }
-  #rima-brief-gate h3 { font-size: 15px; font-weight: 700; color: #fff; margin: 0 0 8px; }
-  #rima-brief-gate p { font-size: 12px; color: #94A3B8; line-height: 1.55; margin: 0 0 18px; }
+  #rima-brief-gate h3 { font-size: 15px; font-weight: 700; color: var(--rima-text); margin: 0 0 8px; }
+  #rima-brief-gate p { font-size: 12px; color: var(--rima-text-muted); line-height: 1.55; margin: 0 0 18px; }
   #rima-brief-gate a {
     display: inline-block; padding: 11px 22px; border-radius: 12px; font-size: 12px;
     font-weight: 600; color: #fff; text-decoration: none;
@@ -307,13 +392,13 @@ SHARED_CSS = """
   #rima-tour-card {
     position: fixed; z-index: 99981; max-width: 320px; width: calc(100% - 32px);
     padding: 16px 18px; border-radius: 16px;
-    background: #12121C; border: 1px solid rgba(124,58,237,0.45);
+    background: var(--rima-surface-solid); border: 1px solid rgba(124,58,237,0.45);
     box-shadow: 0 16px 48px rgba(0,0,0,0.5);
     display: none;
   }
   #rima-tour-card.show { display: block; }
-  #rima-tour-card h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: #fff; }
-  #rima-tour-card p { margin: 0 0 12px; font-size: 11px; line-height: 1.5; color: #94A3B8; }
+  #rima-tour-card h4 { margin: 0 0 6px; font-size: 13px; font-weight: 700; color: var(--rima-text); }
+  #rima-tour-card p { margin: 0 0 12px; font-size: 11px; line-height: 1.5; color: var(--rima-text-muted); }
   #rima-tour-card .tour-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   #rima-tour-card .tour-btn {
     padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 600;
@@ -323,11 +408,11 @@ SHARED_CSS = """
     background: linear-gradient(135deg,#7C3AED,#6D28D9); color: #fff;
   }
   #rima-tour-card .tour-btn-ghost {
-    background: transparent; color: #94A3B8; border: 1px solid rgba(255,255,255,0.1);
+    background: transparent; color: var(--rima-text-muted); border: 1px solid var(--rima-border-strong);
   }
   #rima-tour-dismiss {
     display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 10px;
-    font-size: 10px; color: #64748B; cursor: pointer;
+    font-size: 10px; color: var(--rima-text-muted); cursor: pointer;
   }
   #rima-nav [data-coming-soon="1"] { opacity: 0.45; cursor: not-allowed !important; pointer-events: none; }
   #rima-nav .nav-soon-badge {
@@ -351,30 +436,30 @@ SHARED_CSS = """
   #rima-activation .act-card {
     position: relative;
     width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto;
-    background: #12121C; border: 1px solid rgba(124,58,237,0.35);
+    background: var(--rima-surface-solid); border: 1px solid rgba(124,58,237,0.35);
     border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.5);
   }
   #rima-activation #act-close {
     position: absolute; top: 14px; left: 16px; width: 26px; height: 26px;
-    border: none; background: transparent; color: #64748B; font-size: 18px;
+    border: none; background: transparent; color: var(--rima-text-muted); font-size: 18px;
     line-height: 1; cursor: pointer; border-radius: 8px;
   }
-  #rima-activation #act-close:hover { color: #F1F5F9; background: rgba(255,255,255,0.06); }
-  #rima-activation h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #fff; }
-  #rima-activation .act-sub { font-size: 11px; color: #94A3B8; margin: 0 0 16px; line-height: 1.5; }
-  #rima-activation .act-step { font-size: 10px; color: #64748B; margin: 0 0 12px 30px; }
+  #rima-activation #act-close:hover { color: var(--rima-text); background: var(--rima-hover); }
+  #rima-activation h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: var(--rima-text); }
+  #rima-activation .act-sub { font-size: 11px; color: var(--rima-text-muted); margin: 0 0 16px; line-height: 1.5; }
+  #rima-activation .act-step { font-size: 10px; color: var(--rima-text-muted); margin: 0 0 12px 30px; }
   #rima-activation .ref-chip {
     display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px;
-    border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03); margin-bottom: 8px; cursor: pointer;
+    border-radius: 12px; border: 1px solid var(--rima-border);
+    background: var(--rima-surface-tint); margin-bottom: 8px; cursor: pointer;
   }
   #rima-activation .ref-chip.on { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.1); }
   #rima-activation .act-input {
-    width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 10px; padding: 10px 12px; color: #F1F5F9; font-size: 12px; margin-bottom: 10px;
+    width: 100%; background: var(--rima-input-bg); border: 1px solid var(--rima-border-strong);
+    border-radius: 10px; padding: 10px 12px; color: var(--rima-text); font-size: 12px; margin-bottom: 10px;
   }
   #rima-activation .act-progress {
-    height: 4px; border-radius: 2px; background: rgba(255,255,255,0.08); margin: 12px 0 16px;
+    height: 4px; border-radius: 2px; background: var(--rima-border-strong); margin: 12px 0 16px;
   }
   #rima-activation .act-progress > div {
     height: 100%; border-radius: 2px; background: linear-gradient(90deg,#7C3AED,#06B6D4);
@@ -393,20 +478,20 @@ SHARED_CSS = """
   #rima-activation #act-skip-all {
     align-self: flex-end; padding: 4px 8px; border-radius: 8px;
     font-size: 10px; font-weight: 500; border: none; cursor: pointer; font-family: inherit;
-    color: #64748B; background: transparent;
+    color: var(--rima-text-muted); background: transparent;
   }
-  #rima-activation #act-skip-all:hover { color: #94A3B8; }
+  #rima-activation #act-skip-all:hover { color: var(--rima-text); }
   #rima-activation .act-ref-induction {
     background: rgba(124,58,237,0.08); border: 1px solid rgba(124,58,237,0.2);
     border-radius: 14px; padding: 14px 16px; margin-bottom: 14px;
   }
   #rima-activation .act-induct-title {
-    font-size: 12px; font-weight: 700; color: #E2E8F0; margin: 0 0 10px;
+    font-size: 12px; font-weight: 700; color: var(--rima-text); margin: 0 0 10px;
   }
   #rima-activation .act-induct-list {
-    margin: 0 0 10px; padding-left: 18px; font-size: 11px; color: #94A3B8; line-height: 1.55;
+    margin: 0 0 10px; padding-left: 18px; font-size: 11px; color: var(--rima-text-muted); line-height: 1.55;
   }
-  #rima-activation .act-induct-hint { font-size: 10px; color: #64748B; margin: 0; }
+  #rima-activation .act-induct-hint { font-size: 10px; color: var(--rima-text-muted); margin: 0; }
 
   /* Popup descubrimiento referentes (día 3+) */
   #rima-ref-discovery {
@@ -418,42 +503,42 @@ SHARED_CSS = """
   #rima-ref-discovery .disc-card {
     position: relative;
     width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
-    background: #12121C; border: 1px solid rgba(6,182,212,0.35);
+    background: var(--rima-surface-solid); border: 1px solid rgba(6,182,212,0.35);
     border-radius: 20px; padding: 24px; box-shadow: 0 24px 64px rgba(0,0,0,0.5);
   }
   #rima-ref-discovery #disc-close {
     position: absolute; top: 14px; right: 16px; width: 26px; height: 26px;
-    border: none; background: transparent; color: #64748B; font-size: 18px;
+    border: none; background: transparent; color: var(--rima-text-muted); font-size: 18px;
     line-height: 1; cursor: pointer; border-radius: 8px;
   }
-  #rima-ref-discovery #disc-close:hover { color: #F1F5F9; background: rgba(255,255,255,0.06); }
+  #rima-ref-discovery #disc-close:hover { color: var(--rima-text); background: var(--rima-hover); }
   #rima-ref-preview-btn {
     position: fixed; bottom: 20px; right: 20px; z-index: 99950;
     padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(6,182,212,0.4);
-    background: rgba(6,182,212,0.12); color: #67E8F9; font-size: 11px; font-weight: 600;
+    background: rgba(6,182,212,0.12); color: var(--rima-c-cyan); font-size: 11px; font-weight: 600;
     cursor: pointer; font-family: inherit; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
   }
   #rima-ref-preview-btn:hover {
-    background: rgba(6,182,212,0.2); border-color: rgba(6,182,212,0.55); color: #A5F3FC;
+    background: rgba(6,182,212,0.2); border-color: rgba(6,182,212,0.55); color: var(--rima-c-cyan);
   }
-  #rima-ref-discovery h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: #fff; }
-  #rima-ref-discovery .disc-sub { font-size: 11px; color: #94A3B8; margin: 0 0 16px; line-height: 1.5; }
+  #rima-ref-discovery h3 { margin: 0 0 6px; font-size: 15px; font-weight: 700; color: var(--rima-text); }
+  #rima-ref-discovery .disc-sub { font-size: 11px; color: var(--rima-text-muted); margin: 0 0 16px; line-height: 1.5; }
   .ref-verified-row {
     display: flex; align-items: center; gap: 10px; padding: 10px 12px;
-    border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
-    background: rgba(255,255,255,0.03); margin-bottom: 8px;
+    border-radius: 12px; border: 1px solid var(--rima-border);
+    background: var(--rima-surface-tint); margin-bottom: 8px;
   }
   .ref-verified-row.selected { border-color: rgba(124,58,237,0.5); background: rgba(124,58,237,0.1); }
   .ref-verified-row .ref-avatar {
     width: 40px; height: 40px; border-radius: 50%; object-fit: cover;
-    background: rgba(255,255,255,0.06); flex-shrink: 0;
+    background: var(--rima-chip-bg); flex-shrink: 0;
   }
   .ref-verified-row .ref-info { flex: 1; min-width: 0; }
   .ref-verified-row .ref-info a {
-    font-size: 12px; font-weight: 600; color: #fff; text-decoration: none;
+    font-size: 12px; font-weight: 600; color: var(--rima-text); text-decoration: none;
   }
-  .ref-verified-row .ref-info a:hover { color: #A78BFA; text-decoration: underline; }
-  .ref-verified-row .ref-motivo { font-size: 10px; color: #94A3B8; margin: 3px 0 0; }
+  .ref-verified-row .ref-info a:hover { color: var(--rima-c-violet); text-decoration: underline; }
+  .ref-verified-row .ref-motivo { font-size: 10px; color: var(--rima-text-muted); margin: 3px 0 0; }
   .ref-verified-row .ref-check {
     width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; accent-color: #7C3AED;
   }
@@ -467,9 +552,9 @@ SHARED_CSS = """
   }
   #rima-ref-discovery #disc-dismiss {
     align-self: center; padding: 6px 10px; border: none; background: transparent;
-    font-size: 11px; color: #64748B; cursor: pointer; font-family: inherit;
+    font-size: 11px; color: var(--rima-text-muted); cursor: pointer; font-family: inherit;
   }
-  #rima-ref-discovery #disc-dismiss:hover { color: #94A3B8; }
+  #rima-ref-discovery #disc-dismiss:hover { color: var(--rima-text); }
 </style>
 """
 
@@ -512,9 +597,9 @@ SHARED_JS = """
     slate:   'rgba(100,116,139,0.15)',
   };
   var TEXT_COLOR_MAP = {
-    violet:'#A78BFA', pink:'#F472B6', sky:'#38BDF8', blue:'#60A5FA',
-    emerald:'#34D399', amber:'#FBBF24', rose:'#FB7185', cyan:'#22D3EE',
-    orange:'#FB923C', slate:'#94A3B8',
+    violet:'var(--rima-c-violet)', pink:'var(--rima-c-pink)', sky:'var(--rima-c-sky)', blue:'var(--rima-c-blue)',
+    emerald:'var(--rima-c-emerald)', amber:'var(--rima-c-amber)', rose:'var(--rima-c-rose)', cyan:'var(--rima-c-cyan)',
+    orange:'var(--rima-c-orange)', slate:'var(--rima-c-slate)',
   };
 
   var TOUR_SLUG = {'/home':'dashboard','/calendario':'calendario','/contenido':'contenido','/mercado':'mercado','/marca':'marca','/referencias':'referencias','/imagenes':'imagenes','/videos':'videos','/credenciales':'credenciales'};
@@ -525,7 +610,7 @@ SHARED_JS = """
     var bg = isActive
       ? 'background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)'
       : 'background:transparent;border-color:transparent';
-    var textColor = isActive ? 'color:#fff;font-weight:600' : 'color:#94A3B8;font-weight:400';
+    var textColor = isActive ? 'color:var(--rima-text);font-weight:600' : 'color:var(--rima-text-muted);font-weight:400';
     var iconBg = COLOR_MAP[item.color] || 'rgba(124,58,237,0.15)';
     var iconColor = TEXT_COLOR_MAP[item.color] || '#A78BFA';
 
@@ -550,7 +635,7 @@ SHARED_JS = """
       + badge;
     if (!coming) {
       el.addEventListener('click', function(e) { window.location.href = item.href; });
-      el.addEventListener('mouseover', function() { if (!this.dataset.active) this.style.background = 'rgba(255,255,255,0.05)'; });
+      el.addEventListener('mouseover', function() { if (!this.dataset.active) this.style.background = 'var(--rima-hover)'; });
       el.addEventListener('mouseout',  function() { if (!this.dataset.active) this.style.background = 'transparent'; });
     }
     return el;
@@ -600,7 +685,7 @@ SHARED_JS = """
       var section = document.createElement('div');
       section.style.cssText = 'margin-bottom:12px';
       var label = document.createElement('p');
-      label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0';
+      label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--rima-text-faint);font-weight:700;padding:0 8px;margin:0 0 4px 0';
       label.textContent = g;
       section.appendChild(label);
       var list = document.createElement('div');
@@ -648,7 +733,7 @@ SHARED_JS = """
       var section = document.createElement('div');
       section.style.cssText = 'margin-bottom:12px';
       var label = document.createElement('p');
-      label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0';
+      label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--rima-text-faint);font-weight:700;padding:0 8px;margin:0 0 4px 0';
       label.textContent = g;
       section.appendChild(label);
       var list = document.createElement('div');
@@ -663,6 +748,32 @@ SHARED_JS = """
     document.addEventListener('DOMContentLoaded', initSidebar);
   } else {
     initSidebar();
+  }
+
+  // â"€â"€ Toggle modo dia/noche (paso 4) â"€â"€
+  function initThemeToggle() {
+    var btn = document.getElementById('rima-theme-toggle');
+    if (!btn) return;
+    var moon = btn.querySelector('.icon-moon');
+    var sun = btn.querySelector('.icon-sun');
+    function currentTheme() { return document.documentElement.getAttribute('data-theme') || 'dark'; }
+    function paint(mode) {
+      btn.setAttribute('data-mode', mode);
+      if (moon) moon.style.display = mode === 'light' ? 'none' : '';
+      if (sun) sun.style.display = mode === 'light' ? '' : 'none';
+    }
+    paint(currentTheme());
+    btn.addEventListener('click', function() {
+      var next = currentTheme() === 'light' ? 'dark' : 'light';
+      try { localStorage.setItem('rima-theme', next); } catch (e) {}
+      document.documentElement.setAttribute('data-theme', next);
+      paint(next);
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initThemeToggle);
+  } else {
+    initThemeToggle();
   }
 
   // â"€â"€ Toast helper â"€â"€
@@ -859,6 +970,10 @@ SHARED_JS = """
       if (handle) setUserBarText('rima-brand-handle', handle.indexOf('@') === 0 ? handle : '@' + handle);
     } catch(e) {}
   }
+  // Expuesto para que otras páginas (ej. rima-marca.html, con su propio
+  // guardado a /api/brand) puedan refrescar el nombre/handle de la barra
+  // lateral apenas guardan, sin esperar a una navegación/reload.
+  window.loadProfile = loadProfile;
 
   // â"€â"€ Wiring de botones "Guardar" â"€â"€
   document.querySelectorAll('button').forEach(function(btn) {
@@ -894,7 +1009,6 @@ SHARED_JS = """
     if (path === '/home') loadHomeDashboard();
     if (document.getElementById('rima-nav')) {
       initDashboardTour();
-      ensureRefPreviewButton();
       setTimeout(maybeShowReferentesDiscovery, 1500);
     }
   }
@@ -963,10 +1077,10 @@ SHARED_JS = """
     modal.id = 'rima-modal';
     modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
     modal.innerHTML = `
-      <div style="background:#0F0F1A;border:1px solid rgba(124,58,237,0.4);border-radius:20px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">
+      <div style="background:var(--rima-surface-solid);border:1px solid rgba(124,58,237,0.4);border-radius:20px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-          <h2 style="font-size:15px;font-weight:700;color:#fff">Generar con RIMA</h2>
-          <button onclick="document.getElementById('rima-modal').style.display='none'" style="background:transparent;border:none;color:#94A3B8;cursor:pointer;font-size:18px">âœ•</button>
+          <h2 style="font-size:15px;font-weight:700;color:var(--rima-text)">Generar con RIMA</h2>
+          <button onclick="document.getElementById('rima-modal').style.display='none'" style="background:transparent;border:none;color:var(--rima-text-muted);cursor:pointer;font-size:18px">âœ•</button>
         </div>
         <div style="display:grid;gap:10px;margin-bottom:18px">
           ${[
@@ -978,8 +1092,8 @@ SHARED_JS = """
             ['r-precio','Precio','Ej: $2,500 USD'],
             ['r-garantia','GarantÃ­a (opcional)','Ej: Si no llegas a $10K en 90 dÃ­as, devolvemos el 100%'],
           ].map(([id,lbl,ph]) =>
-            '<label style="font-size:10px;color:#94A3B8;font-weight:600;text-transform:uppercase;letter-spacing:.05em">'+lbl+'</label>' +
-            '<input id="'+id+'" placeholder="'+ph+'" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#fff;font-size:12px;outline:none;width:100%"/>'
+            '<label style="font-size:10px;color:var(--rima-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">'+lbl+'</label>' +
+            '<input id="'+id+'" placeholder="'+ph+'" style="background:var(--rima-input-bg);border:1px solid var(--rima-border-strong);border-radius:10px;padding:10px 12px;color:var(--rima-text);font-size:12px;outline:none;width:100%"/>'
           ).join('')}
         </div>
         <button onclick="enviarGenerar()" id="rima-gen-btn" style="width:100%;background:linear-gradient(135deg,#7C3AED,#6D28D9);border:none;border-radius:12px;padding:12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">
@@ -1313,17 +1427,17 @@ SHARED_JS = """
     } else if (ACT.step === 2) {
       title.textContent = 'Estudio de mercado';
       sub.textContent = 'Analizamos el contenido de tus referentes para detectar patrones ganadores.';
-      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Listo para ejecutar el agente.</p>';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:var(--rima-text-muted)">Listo para ejecutar el agente.</p>';
       btn.textContent = 'Ejecutar estudio de mercado';
     } else if (ACT.step === 3) {
       title.textContent = 'Plan mensual';
       sub.textContent = 'Generamos tu calendario de contenido para los próximos 30 días.';
-      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Un click y RIMA arma el plan del mes.</p>';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:var(--rima-text-muted)">Un click y RIMA arma el plan del mes.</p>';
       btn.textContent = 'Generar calendario';
     } else {
       title.textContent = 'Plan semanal';
       sub.textContent = 'Con el estudio y el calendario listos, activamos las propuestas de esta semana.';
-      body.innerHTML = '<p id="act-status" style="font-size:11px;color:#94A3B8">Último paso: orquestador semanal.</p>';
+      body.innerHTML = '<p id="act-status" style="font-size:11px;color:var(--rima-text-muted)">Último paso: orquestador semanal.</p>';
       btn.textContent = 'Generar plan semanal';
     }
   }
@@ -1438,7 +1552,7 @@ SHARED_JS = """
       if (body4) {
         body4.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:4px 0">'
           + '<div style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(124,58,237,0.25);border-top-color:#7C3AED;animation:rima-spin .8s linear infinite;flex-shrink:0"></div>'
-          + '<p id="act-status" style="font-size:11px;color:#94A3B8;margin:0">Cargando… esto puede tardar unos minutos. Mezclamos tu estudio de mercado con el calendario del mes.</p>'
+          + '<p id="act-status" style="font-size:11px;color:var(--rima-text-muted);margin:0">Cargando… esto puede tardar unos minutos. Mezclamos tu estudio de mercado con el calendario del mes.</p>'
           + '</div>'
           + '<style>@keyframes rima-spin{to{transform:rotate(360deg)}}</style>';
       }
@@ -1462,7 +1576,7 @@ SHARED_JS = """
       } catch(e) {
         if (skipBtn) skipBtn.disabled = false;
         var errBody = document.getElementById('act-body');
-        if (errBody) errBody.innerHTML = '<p id="act-status" style="font-size:11px;color:#F87171">' + (e.message || 'Error') + '</p>';
+        if (errBody) errBody.innerHTML = '<p id="act-status" style="font-size:11px;color:var(--rima-danger)">' + (e.message || 'Error') + '</p>';
         btn.disabled = false;
         btn.textContent = 'Generar plan semanal';
       }
@@ -1580,6 +1694,9 @@ SHARED_JS = """
 
   async function maybeShowReferentesDiscovery() {
     if (window.location.pathname === '/onboarding' || window.location.pathname === '/login') return;
+    // En /mercado las sugerencias se muestran inline bajo el ranking, no
+    // como popup — ver el script propio de rima-mercado.html.
+    if (window.location.pathname === '/mercado') return;
     if (!document.getElementById('rima-nav')) return;
     if (window.RIMA_USER && window.RIMA_USER.role === 'admin') return;
     var tourOv = document.getElementById('rima-tour-overlay');
@@ -1597,34 +1714,6 @@ SHARED_JS = """
       if (!d.should_show_popup) return;
       showRefDiscoveryPopup(d.suggestions || [], false);
     } catch(e) {}
-  }
-
-  async function previewRefDiscovery() {
-    try {
-      var r = await fetch('/api/referentes/discovery/preview');
-      if (!r.ok) return;
-      var d = await r.json();
-      showRefDiscoveryPopup(d.suggestions || [], true);
-    } catch(e) {}
-  }
-
-  function ensureRefPreviewButton() {
-    if (!document.getElementById('rima-nav')) return;
-    var params = new URLSearchParams(window.location.search);
-    var email = (window.RIMA_USER && window.RIMA_USER.email) || '';
-    var isTest = /@test\\.com$/i.test(email);
-    var forcePreview = params.get('preview_discovery') === '1';
-    if (!isTest && !forcePreview) return;
-    if (!document.getElementById('rima-ref-preview-btn')) {
-      var btn = document.createElement('button');
-      btn.id = 'rima-ref-preview-btn';
-      btn.type = 'button';
-      btn.textContent = 'Ver popup referentes';
-      btn.title = 'Vista previa del aviso de referentes (día 3+)';
-      btn.onclick = previewRefDiscovery;
-      document.body.appendChild(btn);
-    }
-    if (forcePreview) setTimeout(previewRefDiscovery, 600);
   }
 
 })();
@@ -1662,9 +1751,11 @@ NAV_ITEMS_PY = [
 ]
 
 COLOR_HEX = {
-    "violet": "#A78BFA", "pink": "#F472B6", "sky": "#38BDF8", "blue": "#60A5FA",
-    "emerald": "#34D399", "amber": "#FBBF24", "rose": "#FB7185", "cyan": "#22D3EE",
-    "orange": "#FB923C", "slate": "#94A3B8",
+    "violet": "var(--rima-c-violet)", "pink": "var(--rima-c-pink)",
+    "sky": "var(--rima-c-sky)", "blue": "var(--rima-c-blue)",
+    "emerald": "var(--rima-c-emerald)", "amber": "var(--rima-c-amber)",
+    "rose": "var(--rima-c-rose)", "cyan": "var(--rima-c-cyan)",
+    "orange": "var(--rima-c-orange)", "slate": "var(--rima-c-slate)",
 }
 COLOR_BG = {
     "violet": "rgba(124,58,237,0.15)", "pink": "rgba(236,72,153,0.15)",
@@ -1685,7 +1776,7 @@ def _build_nav_html(current_path: str) -> str:
 
     html = ""
     for g in order:
-        html += f'<div style="margin-bottom:12px"><p style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:#334155;font-weight:700;padding:0 8px;margin:0 0 4px 0">{g}</p><div style="display:flex;flex-direction:column;gap:2px">'
+        html += f'<div style="margin-bottom:12px"><p style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--rima-text-faint);font-weight:700;padding:0 8px;margin:0 0 4px 0">{g}</p><div style="display:flex;flex-direction:column;gap:2px">'
         for label, href, color, icon in groups[g]:
             is_active = (href == current_path) or (href != "/" and current_path.startswith(href))
             coming = href in COMING_SOON_ROUTES
@@ -1694,10 +1785,10 @@ def _build_nav_html(current_path: str) -> str:
             soon_attr = ' data-coming-soon="1"' if coming else ""
             if is_active:
                 bg = "background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(6,182,212,0.08));border-color:rgba(124,58,237,0.45)"
-                tc = "color:#fff;font-weight:600"
+                tc = "color:var(--rima-text);font-weight:600"
             else:
                 bg = "background:transparent;border-color:transparent"
-                tc = "color:#94A3B8;font-weight:400"
+                tc = "color:var(--rima-text-muted);font-weight:400"
             ic = COLOR_HEX.get(color, "#A78BFA")
             ib = COLOR_BG.get(color, "rgba(124,58,237,0.15)")
             soon_badge = '<span class="nav-soon-badge">Próximamente</span>' if coming else ""
@@ -1779,24 +1870,24 @@ def _apply_session_to_sidebar(sidebar: str, session: dict) -> str:
         )
     else:
         sidebar = sidebar.replace(
-            '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">—</span>',
-            f'<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:#CBD5E1">{initials}</span>',
+            '<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:var(--rima-text)">—</span>',
+            f'<span id="rima-user-initials" style="font-size:11px;font-weight:700;color:var(--rima-text)">{initials}</span>',
         )
     sidebar = sidebar.replace(
-        '<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>',
-        f'<p id="rima-user-name" style="font-size:11px;font-weight:600;color:#E2E8F0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">{name}</p>',
+        '<p id="rima-user-name" style="font-size:11px;font-weight:600;color:var(--rima-text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">Cargando…</p>',
+        f'<p id="rima-user-name" style="font-size:11px;font-weight:600;color:var(--rima-text);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3">{name}</p>',
     )
     sidebar = sidebar.replace(
-        '<p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">Plan —</p>',
-        f'<p id="rima-user-plan" style="font-size:10px;color:#64748B;margin:2px 0 0;line-height:1.2">{plan_label}</p>',
+        '<p id="rima-user-plan" style="font-size:10px;color:var(--rima-text-muted);margin:2px 0 0;line-height:1.2">Plan —</p>',
+        f'<p id="rima-user-plan" style="font-size:10px;color:var(--rima-text-muted);margin:2px 0 0;line-height:1.2">{plan_label}</p>',
     )
     sidebar = sidebar.replace(
-        '<p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>',
-        f'<p id="rima-user-menu-email" style="font-size:11px;color:#94A3B8;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{email}</p>',
+        '<p id="rima-user-menu-email" style="font-size:11px;color:var(--rima-text-muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</p>',
+        f'<p id="rima-user-menu-email" style="font-size:11px;color:var(--rima-text-muted);margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{email}</p>',
     )
     sidebar = sidebar.replace(
-        '<p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">—</p>',
-        f'<p id="rima-user-menu-plan" style="font-size:10px;color:#64748B;margin:4px 0 0">{plan_label}</p>',
+        '<p id="rima-user-menu-plan" style="font-size:10px;color:var(--rima-text-muted);margin:4px 0 0">—</p>',
+        f'<p id="rima-user-menu-plan" style="font-size:10px;color:var(--rima-text-muted);margin:4px 0 0">{plan_label}</p>',
     )
     return sidebar
 
@@ -2768,7 +2859,7 @@ async def _provision_user_from_payment(email: str, name: str, plan: str, brand_n
             "onboarding_completed": False,
             "onboarding_step": 1,
             "onboarding_scrape": {"status": "idle"},
-            "brand": {"brand_name": brand_name, "plan": plan_norm},
+            "brand": {"brand_name": brand_name, "plan": plan_norm, "cliente_id": cliente_id},
         }
         save_data(d)
         print(f"[RIMA] Usuario creado via Gumroad: {email} | Plan: {plan_norm} | cliente_id: {cliente_id}")
@@ -2778,6 +2869,7 @@ async def _provision_user_from_payment(email: str, name: str, plan: str, brand_n
         users[email]["status"] = "active"
         existing_brand = users[email].setdefault("brand", {})
         existing_brand.setdefault("brand_name", brand_name)
+        existing_brand.setdefault("cliente_id", cliente_id)
         existing_brand["plan"] = plan_norm
         save_data(d)
         print(f"[RIMA] Usuario actualizado via Gumroad: {email} | Plan: {plan_norm}")
@@ -3254,9 +3346,16 @@ def clear_planned_content(user: dict = Depends(get_current_user)):
 # ── API: Publicaciones desde SQLite ──
 
 def _get_cliente_id(user: dict) -> str:
+    """cliente_id estable de la cuenta — asignado una sola vez y persistido
+    en brand["cliente_id"] (ver ensure_cliente_id), no recalculado del
+    brand_name vigente en cada request."""
     data = load_data()
-    brand = get_user_brand(data, user.get("email", ""))
-    return cliente_id_from_brand(brand)
+    email = user.get("email", "")
+    ya_tenia = bool(((data.get("users", {}).get(email) or {}).get("brand") or {}).get("cliente_id"))
+    cid = ensure_cliente_id(data, email)
+    if not ya_tenia:
+        save_data(data)
+    return cid
 
 @app.get("/api/publicaciones")
 def api_get_publicaciones(mes: str = None, status: str = None,
@@ -4093,7 +4192,8 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
     if not prompt:
         prompt = (slide.get("prompt_sugerido") or slide.get("prompt_usado")
                   or (spec_a_prompt(spec, estetica) if spec else ""))
-    if not prompt and pub.get("tipo") == "carrusel":
+    modo_visual_prod = prod.get("modo_visual") or ""
+    if not prompt and pub.get("tipo") == "carrusel" and modo_visual_prod != "fondo_limpio":
         from agents.carousel_generator.agent import build_integrated_prompt, build_style_guide
         copy_j = pub.get("copy_json") or {}
         if isinstance(copy_j, str):
@@ -4170,7 +4270,7 @@ def api_generar_imagen_slide(pub_id: str, req: GenerarImagenSlideRequest,
         "generated_at": datetime.now().isoformat(),
     })
     if pub.get("tipo") == "carrusel":
-        slide["texto_en_imagen"] = True
+        slide["texto_en_imagen"] = modo_visual_prod != "fondo_limpio"
     slide.pop("match_score", None)
     update_publicacion_field(cid, pub_id, "produccion_json", prod)
     return {"ok": True, "slide_index": idx, "slide": slide,
@@ -4243,11 +4343,21 @@ def api_generar_carrusel_ia(pub_id: str, req: GenerarCarruselIARequest,
         "enfoque": pub.get("enfoque", ""),
         "fecha": pub.get("fecha", ""),
     }
-    slides = refresh_kie_prompts(slides, style_guide, slot_context)
-    attached = attach_carousel_plan(pub, copy_j, style_guide, slides, prod)
-    prod = attached["produccion"]
-    copy_j = attached["copy_json"]
-    slides = prod.get("slides") or slides
+    # Si la producción ya viene en "fondo_limpio" (default desde 2026-09-07:
+    # fondo KIE limpio o foto real del cliente + composición Claude/Playwright
+    # al aprobar), NO pisamos eso con refresh_kie_prompts/attach_carousel_plan
+    # — esas dos fuerzan "texto_integrado" y reconstruyen el prompt con el
+    # texto horneado, que es justo el modo que dejamos de usar por defecto.
+    # Los slides ya traen su prompt_sugerido (fondo limpio) desde
+    # match_images_to_slides en agents/visual_composer.
+    modo_visual_actual = prod.get("modo_visual") or "texto_integrado"
+    if modo_visual_actual != "fondo_limpio":
+        slides = refresh_kie_prompts(slides, style_guide, slot_context)
+        attached = attach_carousel_plan(pub, copy_j, style_guide, slides, prod)
+        prod = attached["produccion"]
+        copy_j = attached["copy_json"]
+        slides = prod.get("slides") or slides
+        modo_visual_actual = "texto_integrado"
 
     # Generación KIE en background: 7 slides × ~20s c/u superan cualquier
     # timeout de proxy. La UI hace polling a /api/jobs/{job_id}.
@@ -4267,6 +4377,7 @@ def api_generar_carrusel_ia(pub_id: str, req: GenerarCarruselIARequest,
             slide_indices=slide_indices,
             skip_existing=skip_existing,
             copy_json=copy_j,
+            modo_visual=modo_visual_actual,
         )
         prod["slides"] = batch.get("slides") or slides
         prod["kie_batch_at"] = datetime.now().isoformat()
@@ -4282,7 +4393,7 @@ def api_generar_carrusel_ia(pub_id: str, req: GenerarCarruselIARequest,
             "total_targets": batch.get("total_targets", 0),
             "results": batch.get("results", []),
             "errors": batch.get("errors", []),
-            "modo_visual": "texto_integrado",
+            "modo_visual": modo_visual_actual,
             "modelo_kie": batch.get("modelo_kie") or prod.get("kie_model"),
             "carousel_plan": prod.get("carousel_plan"),
             "produccion": prod,
@@ -4893,11 +5004,6 @@ def _maybe_schedule_referentes_discovery(
     mark_referentes_discovery_running(rec)
     if background_tasks is not None:
         background_tasks.add_task(_run_referentes_discovery_background, email)
-
-
-@app.get("/api/referentes/discovery/preview")
-def api_referentes_discovery_preview(user: dict = Depends(get_current_user)):
-    return {"preview": True, "suggestions": get_preview_suggestions()}
 
 
 @app.get("/api/referentes/discovery")

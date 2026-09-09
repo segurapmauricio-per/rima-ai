@@ -6,39 +6,39 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
-    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border);backdrop-filter:blur(12px)}
+    .gh:hover{background:var(--rima-hover-strong);border-color:rgba(124,58,237,0.3);transition:all .2s}
     .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
     .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
-    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .si{transition:all .18s}.si:hover{background:var(--rima-hover)}
     .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
-    .badge-ok{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
-    .badge-gen{background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.25)}
-    .badge-warn{background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.25)}
-    .badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}
+    .badge-ok{background:rgba(52,211,153,0.15);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.25)}
+    .badge-gen{background:rgba(124,58,237,0.15);color:var(--rima-c-violet);border:1px solid rgba(124,58,237,0.25)}
+    .badge-warn{background:rgba(245,158,11,0.15);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.25)}
+    .badge-paused{background:rgba(148,163,184,0.1);color:var(--rima-c-slate);border:1px solid rgba(148,163,184,0.2)}
 
     /* Agent card */
-    .agent-card{border-radius:16px;padding:16px;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.03);transition:all .18s;cursor:pointer;display:flex;flex-direction:column;gap:10px}
+    .agent-card{border-radius:16px;padding:16px;border:1px solid var(--rima-border);background:var(--rima-surface-tint);transition:all .18s;cursor:pointer;display:flex;flex-direction:column;gap:10px}
     .agent-card:hover{border-color:rgba(124,58,237,0.35);background:rgba(124,58,237,0.05);transform:translateY(-1px)}
     .agent-card.processing{border-color:rgba(124,58,237,0.35);background:rgba(124,58,237,0.07)}
 
     /* Mini stat */
-    .mini-stat{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:10px 14px}
+    .mini-stat{background:var(--rima-surface-tint);border:1px solid var(--rima-border);border-radius:10px;padding:10px 14px}
 
     /* Activity row */
-    .activity-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.05);transition:all .15s;cursor:pointer}
+    .activity-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--rima-border);transition:all .15s;cursor:pointer}
     .activity-row:hover{padding-left:4px}
     .activity-row:last-child{border-bottom:none}
 
     /* Pending item */
-    .pending-item{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;transition:all .15s;cursor:pointer}
+    .pending-item{background:var(--rima-surface-tint);border:1px solid var(--rima-border);border-radius:12px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;transition:all .15s;cursor:pointer}
     .pending-item:hover{border-color:rgba(124,58,237,0.3)}
 
     /* KPI card */
-    .kpi-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px;flex:1}
+    .kpi-card{background:var(--rima-chip-bg);border:1px solid var(--rima-border-strong);border-radius:14px;padding:16px;flex:1}
 
     @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
     .pulsing{animation:pulse-v 2s ease-in-out infinite}
@@ -282,7 +282,7 @@
             <span class="badge badge-warn" id="pendientes-count">0 items</span>
           </div>
           <div class="p-3 space-y-2" id="pendientes-list">
-            <p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Cargando…</p>
+            <p style="font-size:10px;color:var(--rima-text-muted);text-align:center;padding:8px 0">Cargando…</p>
           </div>
         </div>
 
@@ -293,7 +293,7 @@
             <p class="text-[9px] text-slate-500 mt-0.5" id="semana-subtitle">—</p>
           </div>
           <div class="p-3 space-y-1.5" id="semana-list">
-            <p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Cargando…</p>
+            <p style="font-size:10px;color:var(--rima-text-muted);text-align:center;padding:8px 0">Cargando…</p>
           </div>
         </div>
 
@@ -389,14 +389,14 @@
     var count = document.getElementById('pendientes-count');
     count.textContent = items.length + (items.length === 1 ? ' item' : ' items');
     if (!items.length) {
-      list.innerHTML = '<p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Sin pendientes 🎉</p>';
+      list.innerHTML = '<p style="font-size:10px;color:var(--rima-text-muted);text-align:center;padding:8px 0">Sin pendientes 🎉</p>';
       return;
     }
     list.innerHTML = items.map(function (it) {
       var warn = it.warning;
-      var borderColor = warn ? 'rgba(244,63,94,0.35)' : 'rgba(255,255,255,0.06)';
+      var borderColor = warn ? 'rgba(244,63,94,0.35)' : 'var(--rima-border)';
       var bg = warn ? 'rgba(244,63,94,0.06)' : 'transparent';
-      var textColor = warn ? '#FCA5A5' : '#CBD5E1';
+      var textColor = warn ? 'var(--rima-c-rose)' : 'var(--rima-text)';
       return '<div class="pending-item" style="cursor:pointer;border-color:' + borderColor + ';background:' + bg + '" onclick="window.location.href=\'' + it.href + '\'">'
         + '<div class="flex-1 min-w-0">'
         + '<p class="text-[10px] font-medium truncate" style="color:' + textColor + '">' + it.label + '</p>'
@@ -409,20 +409,19 @@
     var sub = document.getElementById('semana-subtitle');
     sub.textContent = items.length + (items.length === 1 ? ' publicación' : ' publicaciones') + ' esta semana';
     if (!items.length) {
-      list.innerHTML = '<p style="font-size:10px;color:#64748B;text-align:center;padding:8px 0">Sin piezas programadas esta semana</p>';
+      list.innerHTML = '<p style="font-size:10px;color:var(--rima-text-muted);text-align:center;padding:8px 0">Sin piezas programadas esta semana</p>';
       return;
     }
     list.innerHTML = items.map(function (p) {
       var atrasada = p.atrasada;
       var dotColor = atrasada ? 'bg-rose-500' : (p.status === 'publicado' ? 'bg-emerald-400' : 'bg-slate-600');
-      var textClass = atrasada ? '' : 'text-slate-300';
-      var textStyle = atrasada ? 'color:#FCA5A5' : '';
+      var textStyle = atrasada ? 'color:var(--rima-c-rose)' : 'color:var(--rima-text)';
       var statusLabel = atrasada ? 'Programada sin publicar ⚠' : (STATUS_LABEL[p.status] || p.status || '');
       return '<div class="activity-row">'
         + '<div class="w-1.5 h-1.5 rounded-full ' + dotColor + ' flex-shrink-0"></div>'
         + '<div class="flex-1 min-w-0">'
-        + '<p class="text-[10px] font-medium truncate ' + textClass + '" style="' + textStyle + '">' + (TIPO_LABEL[p.tipo] || p.tipo) + ' — ' + (p.tematica || 'Sin temática') + '</p>'
-        + '<p class="text-[9px]" style="' + (atrasada ? 'color:#F87171' : 'color:#64748B') + '">' + fmtFechaCorta(p.fecha) + ' · ' + statusLabel + '</p>'
+        + '<p class="text-[10px] font-medium truncate" style="' + textStyle + '">' + (TIPO_LABEL[p.tipo] || p.tipo) + ' — ' + (p.tematica || 'Sin temática') + '</p>'
+        + '<p class="text-[9px]" style="' + (atrasada ? 'color:var(--rima-c-rose)' : 'color:var(--rima-text-muted)') + '">' + fmtFechaCorta(p.fecha) + ' · ' + statusLabel + '</p>'
         + '</div></div>';
     }).join('');
   }

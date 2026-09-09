@@ -6,20 +6,20 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
-    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border);backdrop-filter:blur(12px)}
+    .gh:hover{background:var(--rima-hover-strong);border-color:rgba(124,58,237,0.3);transition:all .2s}
     .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
-    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .si{transition:all .18s}.si:hover{background:var(--rima-hover)}
     .reel-tab{transition:all .2s;cursor:pointer;border-bottom:3px solid transparent}
     .reel-tab.active{border-bottom-color:#7C3AED}
     .reel-panel{display:none}.reel-panel.active{display:flex;gap:20px}
-    .drop-zone{border:2px dashed rgba(255,255,255,0.1);border-radius:16px;transition:all .2s}
+    .drop-zone{border:2px dashed var(--rima-border-strong);border-radius:16px;transition:all .2s}
     .drop-zone:hover{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.04)}
-    .step-num{width:22px;height:22px;border-radius:50%;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#A78BFA;flex-shrink:0}
-    .step-done{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4)}.step-done span{color:#34D399}
+    .step-num{width:22px;height:22px;border-radius:50%;background:rgba(124,58,237,0.2);border:1px solid rgba(124,58,237,0.4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--rima-c-violet);flex-shrink:0}
+    .step-done{background:rgba(52,211,153,0.15);border-color:rgba(52,211,153,0.4)}.step-done span{color:var(--rima-c-emerald)}
     @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
     .pulsing{animation:pulse-v 2s ease-in-out infinite}
   </style>
@@ -66,7 +66,7 @@
         <div class="si rounded-lg px-3 py-2 cursor-pointer border flex items-center gap-2.5" style="background:linear-gradient(135deg,rgba(124,58,237,.18),rgba(6,182,212,.08));border-color:rgba(124,58,237,.45)">
           <div class="w-5 h-5 rounded bg-orange-500/20 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg></div>
           <span class="text-[11px] font-semibold text-white">Videos</span>
-          <span class="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-medium" style="background:rgba(251,146,60,0.2);color:#FB923C;border:1px solid rgba(251,146,60,0.3)">5 pend.</span>
+          <span class="ml-auto text-[9px] px-1.5 py-0.5 rounded-full font-medium" style="background:rgba(251,146,60,0.2);color:var(--rima-c-orange);border:1px solid rgba(251,146,60,0.3)">5 pend.</span>
         </div>
         <div class="si glass rounded-lg px-3 py-2 cursor-pointer border border-transparent flex items-center gap-2.5"><div class="w-5 h-5 rounded bg-slate-500/15 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912"/></svg></div><span class="text-[11px] text-slate-400">Credenciales</span><span class="ml-auto w-1.5 h-1.5 rounded-full bg-amber-400"></span></div>
       </div>
@@ -89,7 +89,7 @@
         <div class="flex items-center gap-2 mb-0.5">
           <svg class="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z"/></svg>
           <h1 class="text-sm font-semibold text-white">Videos · Reels pendientes</h1>
-          <span class="text-[9px] px-2 py-0.5 rounded-full font-medium border pulsing" style="background:rgba(251,146,60,0.15);color:#FB923C;border-color:rgba(251,146,60,0.3)">5 para grabar esta semana</span>
+          <span class="text-[9px] px-2 py-0.5 rounded-full font-medium border pulsing" style="background:rgba(251,146,60,0.15);color:var(--rima-c-orange);border-color:rgba(251,146,60,0.3)">5 para grabar esta semana</span>
         </div>
         <p class="text-[11px] text-slate-500">Selecciona un reel para ver el guión completo antes de grabar</p>
       </div>
@@ -105,7 +105,7 @@
       <button onclick="switchReel('r1')" id="tab-r1" class="reel-tab active flex-shrink-0 px-4 py-2.5 rounded-t-lg text-left" style="background:rgba(124,58,237,0.1);min-width:160px">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-[9px] font-bold text-violet-300">Reel 1</span>
-          <span id="badge-r1" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:#FBBF24">Pendiente idea</span>
+          <span id="badge-r1" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:var(--rima-c-amber)">Pendiente idea</span>
         </div>
         <p class="text-[10px] font-semibold text-white truncate">Rutina 5AM</p>
         <p class="text-[9px] text-slate-500">Lun 8 Jun · Transformación</p>
@@ -114,7 +114,7 @@
       <button onclick="switchReel('r2')" id="tab-r2" class="reel-tab flex-shrink-0 px-4 py-2.5 rounded-t-lg text-left glass" style="min-width:160px">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-[9px] font-bold text-slate-400">Reel 2</span>
-          <span id="badge-r2" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:#FBBF24">Pendiente idea</span>
+          <span id="badge-r2" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:var(--rima-c-amber)">Pendiente idea</span>
         </div>
         <p class="text-[10px] font-semibold text-slate-300 truncate">Error proteínas</p>
         <p class="text-[9px] text-slate-500">Mar 9 Jun · Educación</p>
@@ -123,7 +123,7 @@
       <button onclick="switchReel('r3')" id="tab-r3" class="reel-tab flex-shrink-0 px-4 py-2.5 rounded-t-lg text-left glass" style="min-width:160px">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-[9px] font-bold text-slate-400">Reel 3</span>
-          <span id="badge-r3" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:#FBBF24">Pendiente idea</span>
+          <span id="badge-r3" class="text-[8px] px-1.5 py-0.5 rounded" style="background:rgba(245,158,11,0.2);color:var(--rima-c-amber)">Pendiente idea</span>
         </div>
         <p class="text-[10px] font-semibold text-slate-300 truncate">HIIT sin equipo</p>
         <p class="text-[9px] text-slate-500">Mié 10 Jun · Entrenamiento</p>
@@ -173,7 +173,7 @@
               </div>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.15);color:#FBBF24;border:1px solid rgba(245,158,11,0.3)">Pendiente video</span>
+              <span class="text-[9px] px-2.5 py-1 rounded-full font-semibold" style="background:rgba(245,158,11,0.15);color:var(--rima-c-amber);border:1px solid rgba(245,158,11,0.3)">Pendiente video</span>
               <a href="https://instagram.com/alexfit_mx" target="_blank" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] text-sky-400 cursor-pointer glass gh">
                 <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/></svg>
                 Ver referente
@@ -393,10 +393,10 @@ function syncTabBadge(reelId) {
   const badge = document.getElementById('badge-' + reelId);
   if (!badge) return;
   const MAP = {
-    1: { label: 'Pendiente idea',   style: 'background:rgba(245,158,11,0.2);color:#FBBF24' },
-    2: { label: 'Aprobando guión',  style: 'background:rgba(251,146,60,0.2);color:#FB923C' },
-    3: { label: 'Grabando clips',   style: 'background:rgba(6,182,212,0.2);color:#22D3EE'  },
-    4: { label: 'Listo',            style: 'background:rgba(52,211,153,0.2);color:#34D399'  },
+    1: { label: 'Pendiente idea',   style: 'background:rgba(245,158,11,0.2);color:var(--rima-c-amber)' },
+    2: { label: 'Aprobando guión',  style: 'background:rgba(251,146,60,0.2);color:var(--rima-c-orange)' },
+    3: { label: 'Grabando clips',   style: 'background:rgba(6,182,212,0.2);color:var(--rima-c-cyan)'  },
+    4: { label: 'Listo',            style: 'background:rgba(52,211,153,0.2);color:var(--rima-c-emerald)'  },
   };
   const info = MAP[step] || MAP[1];
   badge.textContent = info.label;
@@ -475,12 +475,12 @@ function renderReelRight(reelId) {
   clipsCard.innerHTML =
     '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">'
     + '<p style="font-size:12px;font-weight:600;color:#fff;margin:0">Clips para edición</p>'
-    + '<p style="font-size:9px;color:#475569;margin:2px 0 0">Sube los clips en orden del guión</p>'
+    + '<p style="font-size:9px;color:var(--rima-text-faint);margin:2px 0 0">Sube los clips en orden del guión</p>'
     + '</div>'
     + '<div id="clips-list-'+reelId+'" style="padding:10px;display:flex;flex-direction:column;gap:6px"></div>'
     + '<div style="padding:0 10px 10px;display:flex;flex-direction:column;gap:6px">'
     + '<input type="file" id="clip-input-'+reelId+'" accept="video/*" multiple style="display:none"/>'
-    + '<button id="add-clip-btn-'+reelId+'" style="width:100%;padding:8px;border-radius:10px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);color:#A78BFA;font-size:10px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">'
+    + '<button id="add-clip-btn-'+reelId+'" style="width:100%;padding:8px;border-radius:10px;background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);color:var(--rima-c-violet);font-size:10px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">'
     + '<svg style="width:12px;height:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>'
     + '+ Agregar clip(s)</button>'
     + '<button id="edit-btn-'+reelId+'" style="width:100%;padding:8px;border-radius:10px;background:linear-gradient(135deg,rgba(124,58,237,0.6),rgba(6,182,212,0.4));border:1px solid rgba(124,58,237,0.4);color:#fff;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">'
@@ -488,7 +488,7 @@ function renderReelRight(reelId) {
     + 'Editar →</button>'
     + '</div>'
     + '<div style="margin:0 10px 10px;padding:8px 10px;border-radius:8px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05)">'
-    + '<p style="font-size:9px;color:#334155;line-height:1.5;margin:0">Sube los clips en el orden exacto del guión. "Editar" envía los clips al agente editor que ensambla, corta silencios y agrega subtítulos.</p>'
+    + '<p style="font-size:9px;color:var(--rima-text-faint);line-height:1.5;margin:0">Sube los clips en el orden exacto del guión. "Editar" envía los clips al agente editor que ensambla, corta silencios y agrega subtítulos.</p>'
     + '</div>';
   container.appendChild(clipsCard);
 
@@ -529,11 +529,11 @@ function mkApprovalCard(reelId, opts) {
   card.style.border = '1px solid rgba(245,158,11,0.35)';
   card.innerHTML =
     '<div style="padding:12px 16px;background:rgba(245,158,11,0.07);border-bottom:1px solid rgba(245,158,11,0.15)">'
-    + '<p style="font-size:11px;font-weight:600;color:#FBBF24;margin:0">' + opts.title + '</p>'
-    + '<p style="font-size:9px;color:#92400E;margin:2px 0 0">' + opts.sub + '</p>'
+    + '<p style="font-size:11px;font-weight:600;color:var(--rima-c-amber);margin:0">' + opts.title + '</p>'
+    + '<p style="font-size:9px;color:var(--rima-text-muted);margin:2px 0 0">' + opts.sub + '</p>'
     + '</div>'
     + '<div style="padding:12px">'
-    + '<p style="font-size:10px;color:#94A3B8;margin:0 0 10px;line-height:1.5">' + opts.body + '</p>'
+    + '<p style="font-size:10px;color:var(--rima-text-muted);margin:0 0 10px;line-height:1.5">' + opts.body + '</p>'
     + '<button id="approve-btn-'+reelId+'" style="width:100%;padding:9px;border-radius:10px;background:linear-gradient(135deg,#D97706,#B45309);border:none;color:#fff;font-size:11px;font-weight:600;cursor:pointer">'
     + opts.btnText + '</button>'
     + '</div>';
@@ -547,13 +547,13 @@ function mkApprovalCard(reelId, opts) {
 
 // ── Pasos de estado ──
 function mkStep(n, title, sub, done, dim) {
-  const color  = done ? '#34D399' : '#A78BFA';
+  const color  = done ? 'var(--rima-c-emerald)' : 'var(--rima-c-violet)';
   const bg     = done ? 'rgba(52,211,153,0.15)' : 'rgba(124,58,237,0.2)';
   const border = done ? 'rgba(52,211,153,0.4)'  : 'rgba(124,58,237,0.4)';
   return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;opacity:' + (dim ? '0.3' : '1') + '">'
     + '<div style="width:22px;height:22px;border-radius:50%;background:' + bg + ';border:1px solid ' + border + ';display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:' + color + ';flex-shrink:0">' + (done ? '✓' : n) + '</div>'
-    + '<div><p style="font-size:10px;font-weight:500;color:' + (done ? '#34D399' : '#94A3B8') + ';margin:0">' + title + '</p>'
-    + '<p style="font-size:9px;color:#334155;margin:0">' + sub + '</p></div>'
+    + '<div><p style="font-size:10px;font-weight:500;color:' + (done ? 'var(--rima-c-emerald)' : 'var(--rima-text-muted)') + ';margin:0">' + title + '</p>'
+    + '<p style="font-size:9px;color:var(--rima-text-faint);margin:0">' + sub + '</p></div>'
     + '</div>';
 }
 
@@ -564,21 +564,21 @@ function renderClipsList(reelId, clips) {
   list.innerHTML = '';
 
   if (!clips || clips.length === 0) {
-    list.innerHTML = '<div style="padding:12px;text-align:center;color:#334155;font-size:10px">Sin clips aún. Arrastra o usa "+ Agregar clip(s)"</div>';
+    list.innerHTML = '<div style="padding:12px;text-align:center;color:var(--rima-text-faint);font-size:10px">Sin clips aún. Arrastra o usa "+ Agregar clip(s)"</div>';
     return;
   }
   clips.forEach(function(clip, idx) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.2)';
     row.innerHTML =
-      '<div style="width:20px;height:20px;border-radius:6px;background:rgba(52,211,153,0.2);color:#34D399;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">' + (idx+1) + '</div>'
+      '<div style="width:20px;height:20px;border-radius:6px;background:rgba(52,211,153,0.2);color:var(--rima-c-emerald);display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0">' + (idx+1) + '</div>'
       + '<div style="flex:1;min-width:0">'
-      + '<p style="font-size:10px;font-weight:500;color:#CBD5E1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0">' + (clip.original || clip.name) + '</p>'
-      + '<p style="font-size:8px;color:#334155;margin:0">' + clip.size_mb + ' MB · ' + fmtDate(clip.uploaded_at) + '</p>'
+      + '<p style="font-size:10px;font-weight:500;color:var(--rima-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0">' + (clip.original || clip.name) + '</p>'
+      + '<p style="font-size:8px;color:var(--rima-text-faint);margin:0">' + clip.size_mb + ' MB · ' + fmtDate(clip.uploaded_at) + '</p>'
       + '</div>';
     const delBtn = document.createElement('button');
     delBtn.style.cssText = 'width:20px;height:20px;border-radius:5px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.2);display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0';
-    delBtn.innerHTML = '<svg style="width:10px;height:10px;color:#fb7185" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    delBtn.innerHTML = '<svg style="width:10px;height:10px;color:var(--rima-c-rose)" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
     delBtn.addEventListener('click', async function() {
       if (!confirm('¿Eliminar este clip?')) return;
       try {
@@ -653,27 +653,27 @@ function renderFinalCard(reelId, card, final) {
   if (final) {
     card.innerHTML =
       '<div style="padding:12px 16px;border-bottom:1px solid rgba(52,211,153,0.15);background:rgba(52,211,153,0.05)">'
-      + '<p style="font-size:12px;font-weight:600;color:#34D399;margin:0">Video final listo</p>'
-      + '<p style="font-size:9px;color:#064E3B;margin:2px 0 0">El cliente puede ver y descargar el reel</p>'
+      + '<p style="font-size:12px;font-weight:600;color:var(--rima-c-emerald);margin:0">Video final listo</p>'
+      + '<p style="font-size:9px;color:var(--rima-text-muted);margin:2px 0 0">El cliente puede ver y descargar el reel</p>'
       + '</div>'
       + '<div style="padding:12px">'
       + '<video controls style="width:100%;border-radius:10px;background:#000;max-height:220px" src="' + final.url + '"></video>'
-      + '<p style="font-size:9px;color:#334155;margin:6px 0 0;text-align:center">' + final.name + ' · ' + final.size_mb + ' MB</p>'
-      + '<a href="' + final.url + '" download style="display:block;margin-top:10px;padding:7px;border-radius:10px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);text-align:center;font-size:10px;font-weight:600;color:#34D399;text-decoration:none">Descargar video final</a>'
+      + '<p style="font-size:9px;color:var(--rima-text-faint);margin:6px 0 0;text-align:center">' + final.name + ' · ' + final.size_mb + ' MB</p>'
+      + '<a href="' + final.url + '" download style="display:block;margin-top:10px;padding:7px;border-radius:10px;background:rgba(52,211,153,0.1);border:1px solid rgba(52,211,153,0.25);text-align:center;font-size:10px;font-weight:600;color:var(--rima-c-emerald);text-decoration:none">Descargar video final</a>'
       + '</div>';
   } else {
     card.innerHTML =
       '<div style="padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.05)">'
       + '<p style="font-size:12px;font-weight:600;color:#fff;margin:0">Video final</p>'
-      + '<p style="font-size:9px;color:#475569;margin:2px 0 0">Disponible cuando el editor entregue el reel</p>'
+      + '<p style="font-size:9px;color:var(--rima-text-faint);margin:2px 0 0">Disponible cuando el editor entregue el reel</p>'
       + '</div>'
       + '<div style="padding:12px">'
       + '<div style="aspect-ratio:9/16;max-height:160px;border-radius:10px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.08);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;margin-bottom:10px">'
-      + '<svg style="width:28px;height:28px;color:#1e293b" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
-      + '<p style="font-size:9px;color:#1e293b;margin:0">Pendiente edición</p>'
+      + '<svg style="width:28px;height:28px;color:var(--rima-text-muted)" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>'
+      + '<p style="font-size:9px;color:var(--rima-text-muted);margin:0">Pendiente edición</p>'
       + '</div>'
       + '<input type="file" id="final-input-'+reelId+'" accept="video/*" style="display:none"/>'
-      + '<button id="final-upload-btn-'+reelId+'" style="width:100%;padding:7px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#475569;font-size:10px;cursor:pointer">Subir video editado (editor)</button>'
+      + '<button id="final-upload-btn-'+reelId+'" style="width:100%;padding:7px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:var(--rima-text-faint);font-size:10px;cursor:pointer">Subir video editado (editor)</button>'
       + '</div>';
 
     setTimeout(function() {

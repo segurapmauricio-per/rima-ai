@@ -6,9 +6,9 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07)}
-    .f-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 12px;font-size:12px;color:#F1F5F9;outline:none}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border)}
+    .f-input{width:100%;background:var(--rima-input-bg);border:1px solid var(--rima-border-strong);border-radius:10px;padding:9px 12px;font-size:12px;color:var(--rima-text);outline:none}
     .btn-p{background:linear-gradient(135deg,#7C3AED,#6D28D9);color:#fff;font-size:11px;font-weight:600;padding:9px 16px;border-radius:10px;border:none;cursor:pointer}
   </style>
 </head>
@@ -75,9 +75,9 @@ async function changePassword(){
     new_password:document.getElementById('pw-new').value
   })});
   msg.classList.remove('hidden');
-  if(r.ok){msg.textContent='Contraseña actualizada';msg.style.color='#34D399';}
-  else{var d=await r.json().catch(function(){return{};});msg.textContent=d.detail||'Error';msg.style.color='#F87171';}
-  if(document.getElementById('pw-new').value!==document.getElementById('pw-cf').value){msg.textContent='Las contraseñas no coinciden';msg.style.color='#F87171';msg.classList.remove('hidden');}
+  if(r.ok){msg.textContent='Contraseña actualizada';msg.style.color='var(--rima-c-emerald)';}
+  else{var d=await r.json().catch(function(){return{};});msg.textContent=d.detail||'Error';msg.style.color='var(--rima-c-rose)';}
+  if(document.getElementById('pw-new').value!==document.getElementById('pw-cf').value){msg.textContent='Las contraseñas no coinciden';msg.style.color='var(--rima-c-rose)';msg.classList.remove('hidden');}
 }
 </script>
 </body>

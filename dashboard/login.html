@@ -7,9 +7,58 @@
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  :root {
+    --rima-bg: #0A0F1E;
+    --rima-card-bg: rgba(15, 23, 42, 0.85);
+    --rima-card-border: rgba(124,58,237,0.25);
+    --rima-text: #F1F5F9;
+    --rima-text-muted: #94A3B8;
+    --rima-text-faint: #64748B;
+    --rima-text-faintest: #475569;
+    --rima-text-ghost: #334155;
+    --rima-input-bg: rgba(30, 41, 59, 0.8);
+    --rima-input-border: rgba(100,116,139,0.3);
+    --rima-danger-bg: rgba(244,63,94,0.1);
+    --rima-danger-border: rgba(244,63,94,0.3);
+    --rima-danger-text: #FDA4AF;
+    --rima-google-bg: rgba(30,41,59,0.8);
+    --rima-google-bg-hover: rgba(30,41,59,1);
+    --rima-google-border: rgba(100,116,139,0.3);
+    --rima-google-border-hover: rgba(100,116,139,0.5);
+    --rima-google-text: #CBD5E1;
+    --rima-glow-1: rgba(124,58,237,0.18);
+    --rima-glow-2: rgba(6,182,212,0.12);
+    --rima-toggle-bg: rgba(255,255,255,0.06);
+    --rima-toggle-border: rgba(255,255,255,0.12);
+  }
+  :root[data-theme="light"] {
+    --rima-bg: #F7F8FB;
+    --rima-card-bg: rgba(255,255,255,0.92);
+    --rima-card-border: #DDE2EC;
+    --rima-text: #1B2130;
+    --rima-text-muted: #5B6478;
+    --rima-text-faint: #7A8296;
+    --rima-text-faintest: #98A0B3;
+    --rima-text-ghost: #B7BECC;
+    --rima-input-bg: rgba(27,33,48,0.04);
+    --rima-input-border: rgba(27,33,48,0.14);
+    --rima-danger-bg: rgba(225,29,72,0.08);
+    --rima-danger-border: rgba(225,29,72,0.25);
+    --rima-danger-text: #E11D48;
+    --rima-google-bg: #FFFFFF;
+    --rima-google-bg-hover: #FFFFFF;
+    --rima-google-border: #DDE2EC;
+    --rima-google-border-hover: #C9D0DC;
+    --rima-google-text: #1B2130;
+    --rima-glow-1: rgba(109,40,217,0.10);
+    --rima-glow-2: rgba(2,132,199,0.08);
+    --rima-toggle-bg: rgba(27,33,48,0.05);
+    --rima-toggle-border: rgba(27,33,48,0.12);
+  }
+
   body {
     min-height: 100vh;
-    background: #0A0F1E;
+    background: var(--rima-bg);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,16 +72,36 @@
     position: fixed;
     inset: 0;
     background:
-      radial-gradient(ellipse 80% 60% at 20% 20%, rgba(124,58,237,0.18) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 50% at 80% 80%, rgba(6,182,212,0.12) 0%, transparent 55%);
+      radial-gradient(ellipse 80% 60% at 20% 20%, var(--rima-glow-1) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 80%, var(--rima-glow-2) 0%, transparent 55%);
     pointer-events: none;
   }
+
+  #rima-theme-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 34px;
+    height: 34px;
+    border-radius: 9px;
+    background: var(--rima-toggle-bg);
+    border: 1px solid var(--rima-toggle-border);
+    color: var(--rima-text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background .15s;
+  }
+  #rima-theme-toggle:hover { background: var(--rima-input-bg); }
+  #rima-theme-toggle svg { width: 15px; height: 15px; }
+  #rima-theme-toggle .icon-sun { display: none; }
 
   .card {
     position: relative;
     width: 420px;
-    background: rgba(15, 23, 42, 0.85);
-    border: 1px solid rgba(124,58,237,0.25);
+    background: var(--rima-card-bg);
+    border: 1px solid var(--rima-card-border);
     border-radius: 20px;
     padding: 44px 40px 40px;
     backdrop-filter: blur(24px);
@@ -63,7 +132,7 @@
   .logo-text {
     font-size: 22px;
     font-weight: 700;
-    color: #F1F5F9;
+    color: var(--rima-text);
     letter-spacing: -0.5px;
   }
 
@@ -76,14 +145,14 @@
   h1 {
     font-size: 24px;
     font-weight: 700;
-    color: #F1F5F9;
+    color: var(--rima-text);
     margin-bottom: 6px;
     letter-spacing: -0.5px;
   }
 
   .subtitle {
     font-size: 13px;
-    color: #64748B;
+    color: var(--rima-text-faint);
     margin-bottom: 32px;
   }
 
@@ -91,7 +160,7 @@
     display: block;
     font-size: 12px;
     font-weight: 600;
-    color: #94A3B8;
+    color: var(--rima-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin-bottom: 8px;
@@ -99,12 +168,12 @@
 
   input {
     width: 100%;
-    background: rgba(30, 41, 59, 0.8);
-    border: 1px solid rgba(100,116,139,0.3);
+    background: var(--rima-input-bg);
+    border: 1px solid var(--rima-input-border);
     border-radius: 10px;
     padding: 12px 16px;
     font-size: 14px;
-    color: #F1F5F9;
+    color: var(--rima-text);
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
     margin-bottom: 20px;
@@ -115,7 +184,7 @@
     box-shadow: 0 0 0 3px rgba(124,58,237,0.12);
   }
 
-  input::placeholder { color: #475569; }
+  input::placeholder { color: var(--rima-text-faintest); }
 
   .password-field {
     position: relative;
@@ -133,7 +202,7 @@
     width: 40px;
     background: none;
     border: none;
-    color: #94A3B8;
+    color: var(--rima-text-muted);
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -141,7 +210,7 @@
     padding: 0;
   }
 
-  .toggle-password:hover { color: #F1F5F9; }
+  .toggle-password:hover { color: var(--rima-text); }
 
   button {
     width: 100%;
@@ -168,12 +237,12 @@
 
   .error {
     display: none;
-    background: rgba(244,63,94,0.1);
-    border: 1px solid rgba(244,63,94,0.3);
+    background: var(--rima-danger-bg);
+    border: 1px solid var(--rima-danger-border);
     border-radius: 8px;
     padding: 10px 14px;
     font-size: 13px;
-    color: #FDA4AF;
+    color: var(--rima-danger-text);
     margin-bottom: 20px;
     text-align: center;
   }
@@ -185,23 +254,23 @@
     align-items: center;
     gap: 12px;
     margin: 20px 0;
-    color: #334155;
+    color: var(--rima-text-ghost);
     font-size: 12px;
   }
   .divider::before, .divider::after {
     content: '';
     flex: 1;
     height: 1px;
-    background: rgba(100,116,139,0.2);
+    background: var(--rima-input-border);
   }
 
   .btn-google {
     width: 100%;
     padding: 12px;
-    background: rgba(30,41,59,0.8);
-    border: 1px solid rgba(100,116,139,0.3);
+    background: var(--rima-google-bg);
+    border: 1px solid var(--rima-google-border);
     border-radius: 10px;
-    color: #CBD5E1;
+    color: var(--rima-google-text);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -215,8 +284,8 @@
     letter-spacing: 0;
   }
   .btn-google:hover {
-    background: rgba(30,41,59,1);
-    border-color: rgba(100,116,139,0.5);
+    background: var(--rima-google-bg-hover);
+    border-color: var(--rima-google-border-hover);
     opacity: 1;
   }
 
@@ -224,7 +293,7 @@
     margin-top: 28px;
     text-align: center;
     font-size: 12px;
-    color: #334155;
+    color: var(--rima-text-ghost);
   }
 
   .spinner {
@@ -241,7 +310,12 @@
 </style>
 </head>
 <body>
+<script>(function(){try{var t=localStorage.getItem('rima-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
 <div class="card">
+  <button type="button" id="rima-theme-toggle" title="Cambiar tema">
+    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21.752 15.002A9.72 9.72 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/></svg>
+    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386-1.591 1.591M21 12h-2.25m-.386 6.364-1.591-1.591M12 18.75V21m-4.773-4.227-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z"/></svg>
+  </button>
   <div class="logo">
     <div class="logo-icon">R</div>
     <div class="logo-text">RIMA <span>AI</span></div>
@@ -285,13 +359,31 @@
     Continuar con Google
   </a>
 
-  <p style="margin-top:16px;font-size:11px;color:#475569;line-height:1.5;text-align:center">
-    Pruebas: <code style="color:#94A3B8">basico@test.com</code> (PB · Basic) · <code style="color:#94A3B8">pro@test.com</code> (SM · Pro) · <code style="color:#94A3B8">max@test.com</code> (TS · Max)<br>contraseña: <code style="color:#94A3B8">uno</code>
+  <p style="margin-top:16px;font-size:11px;color:var(--rima-text-faintest);line-height:1.5;text-align:center">
+    Pruebas: <code style="color:var(--rima-text-muted)">basico@test.com</code> (PB · Basic) · <code style="color:var(--rima-text-muted)">pro@test.com</code> (SM · Pro) · <code style="color:var(--rima-text-muted)">max@test.com</code> (TS · Max)<br>contraseña: <code style="color:var(--rima-text-muted)">uno</code>
   </p>
   <div class="footer">RIMA AI &copy; 2024 &mdash; Marketing Intelligence</div>
 </div>
 
 <script>
+(function () {
+  var btn = document.getElementById('rima-theme-toggle');
+  var moon = btn.querySelector('.icon-moon');
+  var sun = btn.querySelector('.icon-sun');
+  function currentTheme() { return document.documentElement.getAttribute('data-theme') || 'dark'; }
+  function paint(mode) {
+    if (moon) moon.style.display = mode === 'light' ? 'none' : '';
+    if (sun) sun.style.display = mode === 'light' ? '' : 'none';
+  }
+  paint(currentTheme());
+  btn.addEventListener('click', function () {
+    var next = currentTheme() === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem('rima-theme', next); } catch (e) {}
+    document.documentElement.setAttribute('data-theme', next);
+    paint(next);
+  });
+})();
+
 document.getElementById('toggle-password').addEventListener('click', function () {
   const input = document.getElementById('password');
   const btn = this;

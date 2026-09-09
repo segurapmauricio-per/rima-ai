@@ -6,35 +6,35 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:#0A0A0F;color:#F1F5F9}
-    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#334155;border-radius:2px}
-    .glass{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);backdrop-filter:blur(12px)}
-    .gh:hover{background:rgba(255,255,255,0.07);border-color:rgba(124,58,237,0.3);transition:all .2s}
+    *{box-sizing:border-box}body{font-family:'Inter',sans-serif;background:var(--rima-bg);color:var(--rima-text)}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--rima-border-strong);border-radius:2px}
+    .glass{background:var(--rima-chip-bg);border:1px solid var(--rima-border);backdrop-filter:blur(12px)}
+    .gh:hover{background:var(--rima-hover-strong);border-color:rgba(124,58,237,0.3);transition:all .2s}
     .gt{background:linear-gradient(135deg,#7C3AED,#06B6D4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
     .bp{background:linear-gradient(135deg,#7C3AED,#6D28D9);transition:all .2s}
     .bp:hover{box-shadow:0 4px 20px rgba(124,58,237,0.4);transform:translateY(-1px)}
-    .si{transition:all .18s}.si:hover{background:rgba(255,255,255,0.05)}
+    .si{transition:all .18s}.si:hover{background:var(--rima-hover)}
     .badge{font-size:9px;padding:2px 7px;border-radius:20px;font-weight:600}
-    .badge-ok{background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.25)}
-    .badge-gen{background:rgba(124,58,237,0.15);color:#A78BFA;border:1px solid rgba(124,58,237,0.25)}
+    .badge-ok{background:rgba(52,211,153,0.15);color:var(--rima-c-emerald);border:1px solid rgba(52,211,153,0.25)}
+    .badge-gen{background:rgba(124,58,237,0.15);color:var(--rima-c-violet);border:1px solid rgba(124,58,237,0.25)}
 
     /* Proposal tabs */
-    .prop-tab{border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:10px 16px;cursor:pointer;transition:all .2s;text-align:left}
+    .prop-tab{border:1px solid var(--rima-border-strong);border-radius:10px;padding:10px 16px;cursor:pointer;transition:all .2s;text-align:left}
     .prop-tab.active{background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(6,182,212,0.1));border-color:rgba(124,58,237,0.45)}
-    .prop-tab:not(.active):hover{background:rgba(255,255,255,0.05)}
+    .prop-tab:not(.active):hover{background:var(--rima-hover)}
 
     /* Section cards in editor */
-    .section-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;overflow:hidden;margin-bottom:12px}
-    .section-header{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
+    .section-card{background:var(--rima-surface-tint);border:1px solid var(--rima-border);border-radius:14px;overflow:hidden;margin-bottom:12px}
+    .section-header{padding:10px 14px;border-bottom:1px solid var(--rima-border);display:flex;align-items:center;justify-content:space-between;cursor:pointer}
     .section-body{padding:14px}
 
     /* Editable fields */
-    .field-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#64748B;margin-bottom:6px}
-    .edit-field{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.09);border-radius:8px;padding:8px 12px;font-size:11px;color:#F1F5F9;font-family:'Inter',sans-serif;resize:vertical;outline:none;transition:all .2s;line-height:1.6}
+    .field-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--rima-text-muted);margin-bottom:6px}
+    .edit-field{width:100%;background:var(--rima-input-bg);border:1px solid var(--rima-border-strong);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--rima-text);font-family:'Inter',sans-serif;resize:vertical;outline:none;transition:all .2s;line-height:1.6}
     .edit-field:focus{border-color:rgba(124,58,237,0.5);background:rgba(124,58,237,0.05);box-shadow:0 0 0 2px rgba(124,58,237,0.1)}
 
     /* Toggle switch */
-    .toggle{width:36px;height:20px;background:rgba(255,255,255,0.1);border-radius:10px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
+    .toggle{width:36px;height:20px;background:var(--rima-border-strong);border-radius:10px;position:relative;cursor:pointer;transition:all .2s;flex-shrink:0}
     .toggle.on{background:linear-gradient(135deg,#7C3AED,#6D28D9)}
     .toggle::after{content:'';position:absolute;width:14px;height:14px;background:white;border-radius:50%;top:3px;left:3px;transition:all .2s;box-shadow:0 1px 3px rgba(0,0,0,0.3)}
     .toggle.on::after{left:19px}
@@ -48,10 +48,10 @@
     .preview-faq{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06)}
 
     /* Script step */
-    .script-step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 12px;margin-bottom:6px}
+    .script-step{background:var(--rima-surface-tint);border:1px solid var(--rima-border);border-radius:10px;padding:10px 12px;margin-bottom:6px}
 
     /* Pillar card */
-    .pilar{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px;flex:1}
+    .pilar{background:var(--rima-surface-tint);border:1px solid var(--rima-border);border-radius:10px;padding:10px;flex:1}
 
     @keyframes pulse-v{0%,100%{opacity:1}50%{opacity:.5}}
     .pulsing{animation:pulse-v 2s ease-in-out infinite}
@@ -646,7 +646,7 @@ function openPreview(){
 }
 
 // Badge paused polyfill
-document.head.insertAdjacentHTML('beforeend','<style>.badge-paused{background:rgba(148,163,184,0.1);color:#94A3B8;border:1px solid rgba(148,163,184,0.2)}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>.badge-paused{background:rgba(148,163,184,0.1);color:var(--rima-c-slate);border:1px solid rgba(148,163,184,0.2)}</style>');
 </script>
 </body>
 </html>
