@@ -55,13 +55,22 @@ def ensure_cliente_id(data: dict, email: str) -> str:
     brand["cliente_id"] si todavía no lo tiene (primera vez que se llama para
     esa cuenta). El caller es responsable de save_data(data) si esta función
     generó uno nuevo — devuelve el mismo valor en llamadas siguientes, sin
-    volver a escribir, así que no hace falta save_data en cada request."""
+    volver a escribir, así que no hace falta save_data en cada request.
+
+    Si todavía no hay brand_name (cuenta que tocó Referencias/Estudio de
+    mercado antes de cargar su marca), cliente_id_from_brand cae al slug
+    genérico "default" — sin esto, CUALQUIER cuenta en esa situación
+    comparte el mismo cliente_id y se pisan entre sí (pasó el 9-sep-2026).
+    Acá se lo reemplaza por un id único apenas se asigna; si más tarde
+    carga un brand_name real, este id ya persistido no se recalcula."""
     user = get_user_record(data, email)
     brand = user.setdefault("brand", {})
     cid = (brand.get("cliente_id") or "").strip()
     if cid:
         return cid
     cid = cliente_id_from_brand(brand)
+    if cid == "default":
+        cid = f"default-{uuid.uuid4().hex[:8]}"
     brand["cliente_id"] = cid
     return cid
 
