@@ -39,6 +39,11 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   cuenta de su historial.
 - **(8-sep-2026)** Sugerencias de referentes inline en Estudio de Mercado (ya no popup) +
   contador de referentes sincronizado con lo que el estudio de mercado realmente scrapeó.
+- **(9-sep-2026)** Modo día/noche en las 17 páginas del dashboard + login + onboarding, con
+  toggle persistido en localStorage. Ver `PASO 4` en la skill `rima-ia`.
+- **(9-sep-2026)** `save_data()` escribe atómico (temp file + replace) y `load_data()` respalda
+  en vez de descartar un `rima_data.json` corrupto — corta el modo de falla que borraba datos
+  en silencio al matar el proceso a mitad de un guardado.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -46,14 +51,18 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - [ ] Sentry para tracking de errores en producción (KIE, scraping, agentes background)
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
-- [ ] Fix race condition scrape IG background (save_data concurrente) — confirmado como riesgo
-      real el 8-sep-2026 (corrompió `rima_data.json` en sesión de testing), sigue sin arreglarse
-      de fondo (no hay lock de escritura); mitigado por ahora usando `RIMA_RELOAD=0` +
-      `scripts\stop_rima.ps1` en vez de matar el proceso a mano.
-- [ ] Modo día/noche del dashboard — ver `PASO 4` en la skill `rima-ia`, y `SESION_2026-09-08.md`
-      sección 5 para el diagnóstico de por qué no es un cambio chico.
+- [ ] Lock real de escritura en `save_data()` — el fix del 9-sep corta la corrupción por proceso
+      matado a mitad de un write, pero dos requests guardando al mismo tiempo (ej. dos scrapes
+      en background) todavía pueden pisarse un `load → modify → save` del otro. Falta un lock
+      (archivo o `asyncio.Lock`) alrededor de esa sección.
 - [ ] Descargar y cachear localmente las fotos de perfil de referentes (hoy se guarda la URL
       firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
+- [ ] `cliente_id` compartido "default": las cuentas de prueba que nunca cargaron un
+      `brand_name` antes de tocar Referencias/Estudio de mercado caen todas en el mismo balde
+      `cliente_id="default"` y se pisan entre sí (pasó el 9-sep-2026 con la cuenta de IG real de
+      Mauricio). `ensure_cliente_id` ya es estable una vez asignado — falta decidir qué hacer con
+      el fallback inicial (¿UUID en vez de "default"? ¿forzar brand_name en el paso 1 del
+      onboarding?).
 
 ---
 
