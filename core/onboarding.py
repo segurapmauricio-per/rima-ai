@@ -6,7 +6,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from core.referentes_store import get_user_brand, cliente_id_from_brand
+from core.referentes_store import get_user_brand, cliente_id_from_brand, ensure_cliente_id
 from core.plan_limits import normalize_plan
 
 SKIP_ONBOARDING = os.getenv("RIMA_SKIP_ONBOARDING", "") == "1"
@@ -113,7 +113,7 @@ def get_onboarding_state(data: dict, email: str) -> dict:
     scrape = user.get("onboarding_scrape") or {"status": "idle"}
     missing = brief_missing_fields(brand)
     plan = normalize_plan(user.get("plan") or brand.get("plan") or "pro")
-    cid = cliente_id_from_brand(brand)
+    cid = ensure_cliente_id(data, email)
     assets = onboarding_assets_status(cid, plan)
 
     return {
@@ -163,7 +163,8 @@ def sync_brand_storage(data: dict, email: str, brand: dict, plan: str) -> str:
     from core.db import init_db, create_or_update_cliente, get_marca_visual, set_marca_visual
     from core.marca_visual import merge_from_brand
 
-    cid = cliente_id_from_brand(brand)
+    cid = ensure_cliente_id(data, email)
+    brand["cliente_id"] = cid
     brief = brand_to_brief_dict(brand, plan)
     ig = brief.get("ig_username") or ""
 
@@ -187,7 +188,7 @@ def cancel_cliente_sqlite(data: dict, email: str) -> None:
     from core.db import init_db, update_cliente_status, get_cliente, create_or_update_cliente
 
     brand = get_user_brand(data, email)
-    cid = cliente_id_from_brand(brand)
+    cid = ensure_cliente_id(data, email)
     init_db(cid)
     if not get_cliente(cid):
         create_or_update_cliente(cid, nombre=brand.get("brand_name") or cid, plan="basico")

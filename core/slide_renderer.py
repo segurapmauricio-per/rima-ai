@@ -285,12 +285,17 @@ def _draw_rich_line(
         tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
 
         if style == "pill":
+            # El pill debe envolver el glifo REAL, no la caja nominal de la
+            # fuente: bbox[1]/bbox[3] son el offset real del glifo respecto
+            # al punto (cx, y) donde se dibuja el texto (bbox[1] > 0 típico
+            # por el hueco de ascendente) — sin sumarlos el pill queda
+            # corrido hacia arriba y el texto se sale por abajo.
             bg = _hex_to_rgba(palette["accent"], 235)
             fill = palette["text_on_accent"]
             px1 = cx - pill_pad_x
-            py1 = y - pill_pad_y
+            py1 = y + bbox[1] - pill_pad_y
             px2 = cx + tw + pill_pad_x
-            py2 = y + th + pill_pad_y
+            py2 = y + bbox[3] + pill_pad_y
             _draw_rounded_rect(draw, (px1, py1, px2, py2), 10, bg)
             draw.text((cx, y), text, font=font, fill=fill)
         elif style == "accent":
@@ -566,11 +571,15 @@ def render_publicacion_visual(
     tipo = pub.get("tipo") or "carrusel"
     modo_visual = prod.get("modo_visual") or ""
 
-    # Carruseles en modo "fondo_limpio" (KIE genera solo el fondo, sin texto)
-    # se componen con Claude + Playwright, no con este overlay de Pillow.
-    # Ver docs/protocolo-generacion-imagenes-ia.md — Gemini no aplicaba el
-    # scrim de contraste de forma consistente en pruebas reales (2026-09-01).
-    if tipo == "carrusel" and modo_visual == "fondo_limpio":
+    # Piezas en modo "fondo_limpio" (KIE genera solo el fondo, sin texto, o
+    # el slide usa una foto real del cliente) se componen con Claude +
+    # Playwright, no con este overlay de Pillow — motor por defecto desde
+    # 2026-09-07 para carrusel e historia. Ver
+    # docs/protocolo-generacion-imagenes-ia.md — Gemini no aplicaba el scrim
+    # de contraste de forma consistente en pruebas reales (2026-09-01). El
+    # overlay de Pillow de abajo queda como fallback para producciones viejas
+    # que no traigan modo_visual="fondo_limpio".
+    if modo_visual == "fondo_limpio":
         from core.claude_slide_renderer import render_publicacion_visual_claude
         return render_publicacion_visual_claude(cliente_id, pub_id, pub, uploads_dir, marca)
     out_dir = uploads_dir / "renderizados" / pub_id

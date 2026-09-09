@@ -19,7 +19,7 @@ from core.marca_visual import (normalizar_marca, paleta_colores,
                                merge_style_guide_from_marca, style_hints_from_marca,
                                estilo_estetico_preset)
 from core.db import get_marca_visual
-from core.visual_spec import spec_desde_slide, spec_a_prompt_integrado
+from core.visual_spec import spec_desde_slide, spec_a_prompt_integrado, spec_a_prompt
 
 DEFAULT_STYLE = {
     "estilo_visual": "diseño gráfico moderno, bold y profesional, optimizado para Instagram",
@@ -120,6 +120,7 @@ def generate_carousel_batch(
     slide_indices: Optional[list[int]] = None,
     skip_existing: bool = True,
     copy_json: Optional[dict] = None,
+    modo_visual: str = "texto_integrado",
 ) -> dict:
     if not kie_client.is_configured():
         return {"ok": False, "status": "not_configured",
@@ -171,11 +172,23 @@ def generate_carousel_batch(
 
     for idx in sorted(targets):
         slide = slides[idx]
-        prompt = (
-            slide.get("prompt_usado")
-            or slide.get("prompt_sugerido")
-            or build_integrated_prompt(slide, style_guide, idx, total, slot_context)
-        )
+        if modo_visual == "fondo_limpio":
+            # Fondo limpio (sin texto) — el prompt integrado hornea texto,
+            # así que si por algún motivo no vino prompt_sugerido (no debería
+            # pasar, match_images_to_slides ya lo arma), recurrimos al
+            # template de fondo limpio, nunca al integrado.
+            spec_fallback = spec_desde_slide(slide, "carrusel", slot_context, paleta)
+            prompt = (
+                slide.get("prompt_usado")
+                or slide.get("prompt_sugerido")
+                or spec_a_prompt(spec_fallback)
+            )
+        else:
+            prompt = (
+                slide.get("prompt_usado")
+                or slide.get("prompt_sugerido")
+                or build_integrated_prompt(slide, style_guide, idx, total, slot_context)
+            )
         if paisaje_suffix:
             prompt = (prompt or "") + paisaje_suffix
         ratio = slide.get("ratio") or "1:1"
@@ -215,7 +228,7 @@ def generate_carousel_batch(
             "archivo_url": bib.get("archivo_url")
             or f"/uploads/clientes/{cliente_id}/generadas/{nombre}",
             "image_id": bib.get("id"),
-            "texto_en_imagen": True,
+            "texto_en_imagen": modo_visual != "fondo_limpio",
             "text_zone": {"zone": "center"},
             "spec_usada": spec,
             "prompt_usado": prompt,

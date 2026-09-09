@@ -33,7 +33,10 @@ Reglas:
 - secondary_text = complemento, takeaway o instrucción (opcional)
 - Marcá 1-2 palabras clave por slide con **asteriscos dobles** — el diseño las resalta con recuadro de color
 - Podés usar MAYÚSCULAS en 1 palabra impactante por slide (se pinta en color acento)
-- visual_suggestion DETALLADA para elegir/generar foto (escena, luz, encuadre 9:16)
+- visual_suggestion DETALLADA para elegir/generar foto: describí la escena y la luz en lenguaje \
+natural. El formato vertical ya está dado por el pipeline — NUNCA escribas "9:16", relaciones de \
+aspecto, ni ningún texto/número/reloj como parte de la escena, porque el generador de imágenes lo \
+puede renderizar como si fuera un objeto real dentro de la foto (ej. un reloj digital marcando "9:16")
 - Temática y enfoque del calendario son FIJOS — adaptá el copy, no cambies el tema
 - Copy directo, español LATAM natural (salvo idioma del cliente indicado)
 - Generá EXACTAMENTE 2 propuestas con ángulos distintos (tono, gancho o estructura)"""

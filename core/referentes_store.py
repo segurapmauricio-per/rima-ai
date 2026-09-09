@@ -36,8 +36,34 @@ def set_user_brand(data: dict, email: str, brand: dict) -> dict:
 
 
 def cliente_id_from_brand(brand: dict) -> str:
+    """cliente_id de una marca. Preferí siempre el que ya esté persistido en
+    brand["cliente_id"] (ver ensure_cliente_id) — el slug del nombre es solo
+    el valor inicial para cuentas nuevas que todavía no tienen uno asignado.
+    Si esta función recalculara el slug en cada llamada a partir del nombre
+    de marca VIGENTE, cambiar el nombre de marca desconectaría en silencio a
+    la cuenta de todo su historial (calendario, referentes, producciones)
+    indexado bajo el cliente_id anterior."""
+    cid = (brand.get("cliente_id") or "").strip()
+    if cid:
+        return cid
     name = brand.get("brand_name") or brand.get("business_name") or "default"
     return name.lower().replace(" ", "_")
+
+
+def ensure_cliente_id(data: dict, email: str) -> str:
+    """Devuelve el cliente_id de la cuenta, asignándolo y persistiéndolo en
+    brand["cliente_id"] si todavía no lo tiene (primera vez que se llama para
+    esa cuenta). El caller es responsable de save_data(data) si esta función
+    generó uno nuevo — devuelve el mismo valor en llamadas siguientes, sin
+    volver a escribir, así que no hace falta save_data en cada request."""
+    user = get_user_record(data, email)
+    brand = user.setdefault("brand", {})
+    cid = (brand.get("cliente_id") or "").strip()
+    if cid:
+        return cid
+    cid = cliente_id_from_brand(brand)
+    brand["cliente_id"] = cid
+    return cid
 
 
 def _norm_username(username: str) -> str:
@@ -70,13 +96,23 @@ def infer_nicho_from_meta(meta: dict) -> str:
 
 
 def sync_ig_profiles_from_meta(data: dict, email: str, meta_by_username: dict) -> int:
-    """Actualiza foto, seguidores y nicho en referentes tras un scrape."""
+    """Actualiza foto, seguidores y nicho en referentes tras un scrape, y
+    AGREGA a la lista trackeada los perfiles que el estudio de mercado
+    scrapeó pero que todavía no estaban ahí (ej. porque llegaron por
+    competitor_profiles o por un default del agente, no por el flujo manual
+    de Referencias). Sin este alta, el ranking de Estudio de Mercado muestra
+    cuentas que el contador "N referentes" de arriba no ve — quedan
+    desincronizados aunque sean, en los hechos, los mismos referentes."""
     if not email or not meta_by_username:
         return 0
     user = get_user_record(data, email)
+    profiles = _ensure_profiles(user)
+    ig_list = profiles.get("instagram", [])
     updated = 0
-    for p in _ensure_profiles(user).get("instagram", []):
+    vistos: set = set()
+    for p in ig_list:
         key = _norm_username(p.get("username", ""))
+        vistos.add(key)
         meta = meta_by_username.get(key)
         if not meta:
             continue
@@ -91,6 +127,26 @@ def sync_ig_profiles_from_meta(data: dict, email: str, meta_by_username: dict) -
         nicho = infer_nicho_from_meta(meta)
         if nicho:
             p["nombre_nicho"] = nicho
+        updated += 1
+
+    plan = get_user_plan(data, email)
+    limite = get_ref_limits(plan)["instagram"]
+    for key, meta in meta_by_username.items():
+        if key in vistos or len(ig_list) >= limite:
+            continue
+        ig_list.append({
+            "id": str(uuid.uuid4()),
+            "username": key,
+            "nombre_nicho": infer_nicho_from_meta(meta),
+            "tipos": [],
+            "seguidores": format_followers(meta.get("followers") or 0),
+            "profile_pic_url": meta.get("profile_pic_url", ""),
+            "ig_url": meta.get("profile_url") or f"https://www.instagram.com/{key}/",
+            "ultimo_scraping": None,
+            "estado": "activo",
+            "created_at": datetime.now().isoformat(),
+        })
+        vistos.add(key)
         updated += 1
     return updated
 

@@ -455,19 +455,24 @@ def slides_kie_integrado(slides: list, tipo: str,
 def compose_produccion(cliente_id: str, copy_json: dict, tipo: str,
                        slot_context: Optional[dict] = None,
                        modo: str = "produccion",
-                       modo_composicion: str = "texto_integrado") -> dict:
+                       modo_composicion: str = "fondo_limpio") -> dict:
     """Plan de slides + matching de biblioteca. modo=previsual tras generar copy.
 
-    modo_composicion (solo aplica a tipo="carrusel"):
-    - "texto_integrado" (default, comportamiento histórico): KIE genera cada
-      slide con el texto ya incrustado en la imagen.
-    - "fondo_limpio" (opt-in, no activado por defecto en ningún flujo todavía):
-      KIE genera solo el fondo, sin texto, y la composición final (texto,
-      scrim, resaltado) la hace Claude + Playwright vía
-      core/claude_slide_renderer — ver docs/protocolo-generacion-imagenes-ia.md
-      del proyecto Rima IA para el porqué. Requiere ANTHROPIC_API_KEY y
-      Playwright con Chromium instalado en el servidor; no probado todavía
-      contra la base de datos real, solo de forma aislada.
+    modo_composicion (solo aplica a tipo="carrusel"; historia siempre usa
+    fondo_limpio):
+    - "fondo_limpio" (default desde 2026-09-07): KIE genera solo el fondo,
+      sin texto — o el slide usa una foto real del cliente ya matcheada por
+      match_images_to_slides — y la composición final (texto, scrim,
+      resaltado) la hace Claude + Playwright vía core/claude_slide_renderer.
+      Ver docs/protocolo-generacion-imagenes-ia.md del proyecto Rima IA para
+      el porqué: el modelo de imagen no renderiza de forma confiable texto
+      largo en español ni aplica el scrim de contraste de forma consistente.
+      Requiere ANTHROPIC_API_KEY y Playwright con Chromium instalado en el
+      servidor.
+    - "texto_integrado" (legacy): KIE genera cada slide con el texto ya
+      incrustado en la imagen. Se mantiene por compatibilidad con
+      producciones existentes y regeneración manual, pero ya no es el modo
+      por defecto de ningún flujo.
     """
     slot_context = slot_context or {}
     slides = plan_slides(copy_json, tipo, slot_context)

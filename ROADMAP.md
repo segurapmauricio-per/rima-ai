@@ -1,5 +1,5 @@
 # RIMA AI — Roadmap de Producto
-<!-- Última actualización: Jun 17 2026 -->
+<!-- Última actualización: Sep 8 2026 -->
 
 ## Visión
 Sistema completo de adquisición de clientes con IA para negocios hispanohablantes.
@@ -31,6 +31,14 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - Pipeline historia E2E: copy A/B (3–5 slides) → KIE 1080×1920 → ZIP
 - Biblioteca de imágenes del cliente para historias
 - Face profile: referencia visual para KIE image_input
+- **(8-sep-2026)** Composición visual carrusel + historia vía Claude+Playwright por defecto
+  (`core/claude_slide_renderer.py`) — reemplaza texto horneado por KIE para carrusel; resaltado
+  en aura, no píldora; historias sin wordmark/paginador. Detalle en `SESION_2026-09-08.md`.
+- **(8-sep-2026)** `cliente_id` estable por cuenta (`core/referentes_store.py::ensure_cliente_id`)
+  — ya no se recalcula del `brand_name` vigente, así que renombrar la marca no desconecta a la
+  cuenta de su historial.
+- **(8-sep-2026)** Sugerencias de referentes inline en Estudio de Mercado (ya no popup) +
+  contador de referentes sincronizado con lo que el estudio de mercado realmente scrapeó.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -38,7 +46,14 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - [ ] Sentry para tracking de errores en producción (KIE, scraping, agentes background)
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
-- [ ] Fix race condition scrape IG background (save_data concurrente con brief)
+- [ ] Fix race condition scrape IG background (save_data concurrente) — confirmado como riesgo
+      real el 8-sep-2026 (corrompió `rima_data.json` en sesión de testing), sigue sin arreglarse
+      de fondo (no hay lock de escritura); mitigado por ahora usando `RIMA_RELOAD=0` +
+      `scripts\stop_rima.ps1` en vez de matar el proceso a mano.
+- [ ] Modo día/noche del dashboard — ver `PASO 4` en la skill `rima-ia`, y `SESION_2026-09-08.md`
+      sección 5 para el diagnóstico de por qué no es un cambio chico.
+- [ ] Descargar y cachear localmente las fotos de perfil de referentes (hoy se guarda la URL
+      firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
 
 ---
 
@@ -79,6 +94,16 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   - Output: Reel listo para publicar
   - Integración: Creatomate API o Runway (no construido desde cero)
   - Habilita auto-publish de Reels
+
+- [ ] **Trial Reels (variaciones para atraer clientes)**
+  - Mismo patrón que `visual_composer`/KIE para imágenes: Claude analiza un reel con buen
+    desempeño (transcript, timing, hook) y genera una spec de edición (intro distinta, recorte,
+    texto overlay, orden de clips) — Claude no renderiza video, solo decide qué cambiar
+  - Ejecución del render: ffmpeg (barato, propio, evaluar primero) o Submagic (ya en stack para
+    otros usos de video, costo por minuto) — decidir cuál alcanza antes de sumar dependencia
+  - Uso: generar variantes reales (no duplicados) de un reel que ya funcionó, para publicar como
+    contenido de prueba/gancho y atraer clientes nuevos
+  - Depende de: Publicación automática Instagram (arriba) para publicar las variantes solas
 
 - [ ] **Landing page pre-armada con VSL**
   - Estructura Hormozi: problema → mecanismo → oferta → CTA
@@ -121,6 +146,23 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   - Análisis de qué videos del nicho están funcionando en YouTube/TikTok
   - Sugerencias de temas para crear basadas en búsquedas del cliente ideal
   - Clasificados por etapa del funnel
+
+---
+
+## Estrategia de contenido propio (RIMA vendiéndose a sí misma)
+**Objetivo:** usar RIMA IA para generar el contenido de RIMA IA — dogfooding como prueba social
+y como canal de adquisición hacia infoproductores/coaches (el segmento que más necesita publicar
+seguido y menos tiempo tiene).
+
+- [ ] **Árbol de contenido temático** — pilares de tema para decidir qué genera más leads,
+  medido por cuenta propia antes de generalizarlo a clientes:
+  - ManyChat / automatización de DMs
+  - Claude / IA aplicada a marketing
+  - Marketing y adquisición de clientes
+  - Generación de imágenes con IA (KIE, resultado del propio producto)
+  - Recursos gratuitos (lead magnets, plantillas, mini-guías)
+  - Pendiente: instrumentar qué pilar convierte mejor (leads/DMs por pilar) para retroalimentar
+    el Monthly Planner con pesos reales en vez de la distribución genérica actual
 
 ---
 

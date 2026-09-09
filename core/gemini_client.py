@@ -12,6 +12,21 @@ _project = os.getenv("GOOGLE_CLOUD_PROJECT", "rima-ai-498117")
 client = genai.Client(vertexai=True, project=_project, location="us-central1")
 
 
+import re
+
+_PREAMBLE_LINE_RE = re.compile(
+    r"^\s*(THOUGHT|REASONING|NOTE|ANALYSIS)\s*:.*(?:\n+|$)",
+    re.IGNORECASE,
+)
+
+
+def _strip_leaked_preamble(text: str) -> str:
+    """Saca una línea de razonamiento tipo 'THOUGHT: ...' que el modelo a veces
+    antepone a la transcripción pese a la instrucción — defensa además del
+    prompt, no reemplazo (ver transcribe_video)."""
+    return _PREAMBLE_LINE_RE.sub("", text, count=1).strip()
+
+
 class GeminiClient:
     def __init__(self, model="google/gemini-2.5-flash"):
         self.model_name = model
@@ -56,7 +71,9 @@ class GeminiClient:
             "Transcribe ONLY the spoken words in this Instagram reel. "
             "Use the original language of the speaker. "
             "Ignore music and sound effects. "
-            "Return plain text only — no markdown, no timestamps. "
+            "Return plain text only — no markdown, no timestamps, no preamble, "
+            "no reasoning, no meta-commentary about the task. Output NOTHING but "
+            "the transcript itself, starting directly with the first spoken word. "
             "If there is no speech, return an empty string."
         )
         response = client.models.generate_content(
@@ -70,6 +87,7 @@ class GeminiClient:
             ),
         )
         text = (response.text or "").strip()
+        text = _strip_leaked_preamble(text)
         self._log("[transcribe_video]", text[:200])
         return text
 
