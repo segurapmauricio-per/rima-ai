@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, List, Optional
 import uvicorn
 import json
+import logging
 import os
 import shutil
 import time
@@ -154,13 +155,23 @@ def load_data() -> dict:
         try:
             return json.loads(DATA_FILE.read_text(encoding="utf-8"))
         except Exception:
+            # Archivo corrupto (ej. proceso matado a mitad de un write): lo dejamos
+            # de lado para inspeccion en vez de perderlo silenciosamente.
+            try:
+                backup = DATA_FILE.with_suffix(f".corrupt-{int(time.time())}.json")
+                DATA_FILE.replace(backup)
+                logging.error("rima_data.json corrupto, respaldado en %s", backup)
+            except Exception:
+                logging.exception("rima_data.json corrupto y no se pudo respaldar")
             return {}
     return {}
 
 
 def save_data(data: dict):
     DATA_FILE.parent.mkdir(exist_ok=True)
-    DATA_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp = DATA_FILE.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    tmp.replace(DATA_FILE)
 
 
 # â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
