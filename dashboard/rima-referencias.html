@@ -250,7 +250,9 @@ function igProfileUrl(username){
 }
 
 function proxiedPic(url){
-  return url ? `/api/referentes/image?url=${encodeURIComponent(url)}` : '';
+  if (!url) return '';
+  if (url.startsWith('/uploads/')) return url; // ya cacheada localmente, servir directo
+  return `/api/referentes/image?url=${encodeURIComponent(url)}`;
 }
 
 function avatarCellHtml(p){

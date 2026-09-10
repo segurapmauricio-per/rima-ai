@@ -3179,8 +3179,10 @@ def run_market_research(req: MarketResearchRequest, user: dict = Depends(get_cur
             cliente_id=brand_slug,
         )
         if email and result.get("profile_meta"):
+            from core.referentes_photo_cache import cache_referente_photos
+            meta = cache_referente_photos(result["profile_meta"])
             d = load_data()
-            sync_ig_profiles_from_meta(d, email, result["profile_meta"])
+            sync_ig_profiles_from_meta(d, email, meta)
             save_data(d)
         try:
             from core.db import init_db
@@ -3354,11 +3356,15 @@ def _run_scrape_for_user(email: str, slug: str, brief: dict, profiles: list) -> 
             cliente_id=slug,
         )
         # Actualizar referentes: foto, seguidores, nicho, último scrape
+        meta = None
+        if result.get("profile_meta"):
+            from core.referentes_photo_cache import cache_referente_photos
+            meta = cache_referente_photos(result["profile_meta"])
         data = load_data()  # releer: el scrape tarda minutos y otros requests escriben
         user_rec = data["users"].get(email, {})
         now_label = datetime.now().strftime("Lun %d %b · %H:%M")
-        if result.get("profile_meta"):
-            sync_ig_profiles_from_meta(data, email, result["profile_meta"])
+        if meta:
+            sync_ig_profiles_from_meta(data, email, meta)
         for p in user_rec.get("referentes_profiles", {}).get("instagram", []):
             if p.get("username", "").strip():
                 p["ultimo_scraping"] = now_label
@@ -5115,6 +5121,8 @@ def _run_referentes_discovery_background(email: str) -> None:
             return
 
         meta = fetch_profile_meta(existing)  # lento (Apify/IG) -- fuera del lock
+        from core.referentes_photo_cache import cache_referente_photos
+        meta = cache_referente_photos(meta)  # descarga fotos a disco -- tambien fuera del lock
         with data_session() as d:
             sync_ig_profiles_from_meta(d, email, meta)
 
@@ -5321,8 +5329,10 @@ def _trigger_market_research_job(email: str) -> Optional[str]:
             cliente_id=brand_slug,
         )
         if result.get("profile_meta"):
+            from core.referentes_photo_cache import cache_referente_photos
+            meta = cache_referente_photos(result["profile_meta"])
             d = load_data()
-            sync_ig_profiles_from_meta(d, email, result["profile_meta"])
+            sync_ig_profiles_from_meta(d, email, meta)
             save_data(d)
         try:
             from core.db import init_db

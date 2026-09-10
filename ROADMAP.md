@@ -51,6 +51,13 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   data:base64 en correos recibidos, tiene que ser una URL publica real.
 - **(9-sep-2026)** Sentry conectado en producción (`SENTRY_DSN` en Easypanel, solo error
   monitoring). Verificado end-to-end con `/sentry-debug` — ver PYTHON-FASTAPI en sentry.io.
+- **(9-sep-2026)** Cache local de fotos de referentes (`core/referentes_photo_cache.py`) —
+  descarga la foto de perfil una vez a `data/uploads/referentes_fotos/` (ya montado como
+  `/uploads`) y guarda esa URL local estable en vez de la URL firmada de Instagram, que expira
+  en horas. Corre en los 4 puntos donde se sincroniza `profile_pic_url` desde Apify
+  (`sync_ig_profiles_from_meta`), siempre fuera de cualquier lock/`data_session()` porque hace
+  I/O de red. Si la descarga falla pero ya había una foto cacheada de antes, la mantiene en vez
+  de perderla.
 - **(9-sep-2026)** `data_session()` — lock real (`threading.Lock`) para pares load→modify→save
   con riesgo confirmado: scrape de IG en background vs. su propio polling de estado;
   descubrimiento de referentes similares en background vs. edición del usuario en simultáneo; y
@@ -68,8 +75,6 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
       estuvo, y alguien deployaba a mano.
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
-- [ ] Descargar y cachear localmente las fotos de perfil de referentes (hoy se guarda la URL
-      firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
 - [ ] **Lock de escritura — falta migrar el resto de los call-sites (parcial, revisado 9-sep-2026).**
       Migrados con `data_session()`: `_background_scrape` vs. `api_onboarding_status` (scrape de
       onboarding); `_run_referentes_discovery_background` (fetch_profile_meta/discover_similar_referentes
