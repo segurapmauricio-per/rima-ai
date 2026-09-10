@@ -65,6 +65,12 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   polls casi simultáneos no disparen el mismo scrape en background dos veces. Ver nota de
   alcance en "Pendiente antes de primer usuario" — se auditó el resto de call-sites del archivo
   y no quedó ninguno más con riesgo real por ahora.
+- **(9-sep-2026)** Dashboard home (`rima-home.html`) revisado: KPIs, "Estado de los agentes",
+  Pendientes y "Esta semana" YA eran reales (datos del backend), contrario a lo que decía este
+  mismo roadmap. Se eliminaron las 3 secciones que sí eran mockup sin datos reales detrás
+  ("Actividad reciente", "Insight RIMA", "Reel de la semana" — ventas y reels inventados) para no
+  mostrarle a un cliente pagando métricas falsas. Se reponen cuando exista un log de actividad
+  real y el módulo de Ventas deje de ser mock.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -74,7 +80,6 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
       GitHub->Easypanel sigue conectado (Dominios/Fuente del servicio `rima-api`) o si nunca
       estuvo, y alguien deployaba a mano.
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
-- [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
 - [ ] **Lock de escritura — falta migrar el resto de los call-sites (parcial, revisado 9-sep-2026).**
       Migrados con `data_session()`: `_background_scrape` vs. `api_onboarding_status` (scrape de
       onboarding); `_run_referentes_discovery_background` (fetch_profile_meta/discover_similar_referentes
