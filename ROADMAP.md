@@ -51,6 +51,10 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   data:base64 en correos recibidos, tiene que ser una URL publica real.
 - **(9-sep-2026)** Sentry conectado en producción (`SENTRY_DSN` en Easypanel, solo error
   monitoring). Verificado end-to-end con `/sentry-debug` — ver PYTHON-FASTAPI en sentry.io.
+- **(9-sep-2026)** `data_session()` — lock real (`threading.Lock`) para el par load→modify→save
+  que confirmadamente se pisó (scrape de IG en background vs. su propio polling de estado). Ver
+  nota de alcance en "Pendiente antes de primer usuario" — el resto de los call-sites del
+  archivo siguen sin migrar.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -61,18 +65,14 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
       estuvo, y alguien deployaba a mano.
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
-- [ ] Lock real de escritura en `save_data()` — el fix del 9-sep corta la corrupción por proceso
-      matado a mitad de un write, pero dos requests guardando al mismo tiempo (ej. dos scrapes
-      en background) todavía pueden pisarse un `load → modify → save` del otro. Falta un lock
-      (archivo o `asyncio.Lock`) alrededor de esa sección.
 - [ ] Descargar y cachear localmente las fotos de perfil de referentes (hoy se guarda la URL
       firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
-- [ ] `cliente_id` compartido "default": las cuentas de prueba que nunca cargaron un
-      `brand_name` antes de tocar Referencias/Estudio de mercado caen todas en el mismo balde
-      `cliente_id="default"` y se pisan entre sí (pasó el 9-sep-2026 con la cuenta de IG real de
-      Mauricio). `ensure_cliente_id` ya es estable una vez asignado — falta decidir qué hacer con
-      el fallback inicial (¿UUID en vez de "default"? ¿forzar brand_name en el paso 1 del
-      onboarding?).
+- [ ] **Lock de escritura — falta migrar el resto de los call-sites.** El 9-sep-2026 se agregó
+      `data_session()` (context manager con `threading.Lock`, ver main.py) y se migró el par que
+      confirmadamente corrompió datos (`_background_scrape` del onboarding vs. el polling de
+      `api_onboarding_status`). El resto de los ~50 usos de `load_data()`/`save_data()` sueltos en
+      main.py siguen sin lock — migrar de a uno cuando aparezca otro caso concreto de riesgo, no
+      todos juntos.
 
 ---
 

@@ -19,6 +19,8 @@ import calendar as cal_module
 import re
 import urllib.request
 import asyncio
+import contextlib
+import threading
 from datetime import datetime
 
 from core.auth import (
@@ -193,6 +195,37 @@ def save_data(data: dict):
     tmp = DATA_FILE.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(DATA_FILE)
+
+
+# threading.Lock (no asyncio.Lock): el proceso corre con un solo worker
+# (uvicorn.run sin `workers=`, ver Dockerfile) pero mezcla endpoints sync y
+# async -- FastAPI corre los `def` sync en threads de threadpool, donde un
+# asyncio.Lock del event loop no aplica. threading.Lock funciona igual desde
+# ambos. La seccion critica es solo el load+mutar+save en memoria (rapido,
+# sin I/O de red adentro), asi que bloquear brevemente el event loop en el
+# caso async es un costo aceptable a este volumen de trafico.
+_DATA_LOCK = threading.Lock()
+
+
+@contextlib.contextmanager
+def data_session():
+    """Lock real de escritura (paso 7 rima-ia, 9-sep-2026): `with data_session() as d:
+    ... mutar d ...` carga, deja mutar, y guarda en una sola seccion critica atomica
+    respecto a cualquier otro `data_session()` concurrente -- corrige el "lost update"
+    que el fix de escritura atomica del mismo dia NO cubria (ese solo evita que el
+    archivo quede corrupto si se mata el proceso a mitad de un write; no evita que
+    dos requests hagan load -> modificar -> save intercalados y uno pise al otro).
+
+    Migrado por ahora solo en el par que confirmadamente corrompio datos el
+    9-sep-2026: _background_scrape (scrape de IG en el onboarding, background task
+    de varios segundos) contra api_onboarding_status (poll cada 2.5s desde el
+    frontend mientras el scrape corre). El resto de los ~50 call-sites de
+    load_data()/save_data() en este archivo siguen sin lock -- migrarlos de a uno,
+    no todos juntos (ver Backlog acumulado en la skill rima-ia)."""
+    with _DATA_LOCK:
+        d = load_data()
+        yield d
+        save_data(d)
 
 
 # â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
@@ -4756,50 +4789,50 @@ async def _background_scrape(email: str, username: str) -> None:
         return
     _scrape_running.add(email)
     try:
-        d = load_data()
-        user = d.setdefault("users", {}).setdefault(email, {})
-        brand = get_user_brand(d, email)
-        cid = cliente_id_from_brand(brand)
-        user["onboarding_scrape"] = {
-            "status": "running",
-            "username": username,
-            "started_at": int(time.time()),
-            "error": "",
-        }
-        save_data(d)
+        with data_session() as d:
+            user = d.setdefault("users", {}).setdefault(email, {})
+            brand = get_user_brand(d, email)
+            cid = cliente_id_from_brand(brand)
+            user["onboarding_scrape"] = {
+                "status": "running",
+                "username": username,
+                "started_at": int(time.time()),
+                "error": "",
+            }
 
+        # Fuera del lock a propósito: run_client_scrape tarda varios segundos
+        # (llamadas de red reales) y no toca rima_data.json -- mantenerlo
+        # afuera evita bloquear a cualquier otro request por ese rato.
         result = await asyncio.to_thread(run_client_scrape, username, cid, brand)
 
-        d = load_data()
-        user = d.setdefault("users", {}).setdefault(email, {})
-        brand = get_user_brand(d, email)
-        plan = get_user_plan(d, email)
-        if result.get("ok"):
-            brand = apply_scrape_to_brand(brand, result)
-            _save_profile_picture_from_scrape(brand, cid, result.get("profile") or {})
-            set_user_brand(d, email, brand)
-            sync_brand_storage(d, email, brand, plan)
-            user["onboarding_scrape"] = {
-                "status": "done",
-                "username": username,
-                "finished_at": int(time.time()),
-                "posts_count": result.get("posts_count", 0),
-                "insights": result.get("insights"),
-                "marca_visual": result.get("marca_visual"),
-                "profile": result.get("profile"),
-            }
-        else:
-            user["onboarding_scrape"] = {
-                "status": "error",
-                "username": username,
-                "error": result.get("error", "No se pudo analizar el perfil"),
-            }
-        save_data(d)
+        with data_session() as d:
+            user = d.setdefault("users", {}).setdefault(email, {})
+            brand = get_user_brand(d, email)
+            plan = get_user_plan(d, email)
+            if result.get("ok"):
+                brand = apply_scrape_to_brand(brand, result)
+                _save_profile_picture_from_scrape(brand, cid, result.get("profile") or {})
+                set_user_brand(d, email, brand)
+                sync_brand_storage(d, email, brand, plan)
+                user["onboarding_scrape"] = {
+                    "status": "done",
+                    "username": username,
+                    "finished_at": int(time.time()),
+                    "posts_count": result.get("posts_count", 0),
+                    "insights": result.get("insights"),
+                    "marca_visual": result.get("marca_visual"),
+                    "profile": result.get("profile"),
+                }
+            else:
+                user["onboarding_scrape"] = {
+                    "status": "error",
+                    "username": username,
+                    "error": result.get("error", "No se pudo analizar el perfil"),
+                }
     except Exception as e:
-        d = load_data()
-        user = d.setdefault("users", {}).setdefault(email, {})
-        user["onboarding_scrape"] = {"status": "error", "error": str(e)}
-        save_data(d)
+        with data_session() as d:
+            user = d.setdefault("users", {}).setdefault(email, {})
+            user["onboarding_scrape"] = {"status": "error", "error": str(e)}
         print(f"[RIMA] onboarding scrape error: {e}")
     finally:
         _scrape_running.discard(email)
@@ -4830,10 +4863,9 @@ def api_change_password(body: ChangePasswordRequest, user: dict = Depends(get_cu
 
 @app.get("/api/onboarding/status")
 def api_onboarding_status(user: dict = Depends(get_current_user)):
-    data = load_data()
     email = (user.get("email") or "").strip().lower()
-    state = get_onboarding_state(data, email)
-    save_data(data)
+    with data_session() as data:
+        state = get_onboarding_state(data, email)
     scrape = data.get("users", {}).get(email, {}).get("onboarding_scrape") or {}
     brand = get_user_brand(data, email)
     out = {**state}
