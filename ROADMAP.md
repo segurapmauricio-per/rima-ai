@@ -49,6 +49,8 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - **(9-sep-2026)** Correo de bienvenida con plantilla HTML de marca (antes texto plano). Logo
   servido desde `/assets/logo_email.png` (mount de StaticFiles) — Gmail bloquea imagenes
   data:base64 en correos recibidos, tiene que ser una URL publica real.
+- **(9-sep-2026)** Sentry conectado en producción (`SENTRY_DSN` en Easypanel, solo error
+  monitoring). Verificado end-to-end con `/sentry-debug` — ver PYTHON-FASTAPI en sentry.io.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -57,8 +59,6 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
       quedaron sin desplegar hasta hacer clic manual en "Implementar". Revisar si el webhook de
       GitHub->Easypanel sigue conectado (Dominios/Fuente del servicio `rima-api`) o si nunca
       estuvo, y alguien deployaba a mano.
-- [ ] Resend para email de bienvenida con temp_password (reemplaza SMTP manual, 3,000 emails/mes gratis)
-- [ ] Sentry para tracking de errores en producción (KIE, scraping, agentes background)
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
 - [ ] Lock real de escritura en `save_data()` — el fix del 9-sep corta la corrupción por proceso
