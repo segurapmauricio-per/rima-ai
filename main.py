@@ -85,6 +85,18 @@ from core.imagenes_cliente import (
     archivo_url,
 )
 
+SENTRY_DSN = os.getenv("SENTRY_DSN", "")
+if SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=os.getenv("ENVIRONMENT", "development"),
+        # Solo error monitoring (paso 6 rima-ia, 9-sep-2026) -- sin tracing/profiling
+        # para no sumar volumen de datos que no pedimos.
+        traces_sample_rate=0.0,
+        send_default_pii=True,
+    )
+
 app = FastAPI(title="RIMA AI", description="Marketing AI para LATAM")
 
 app.add_middleware(
@@ -126,6 +138,14 @@ app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     return FileResponse(ASSETS_DIR / "favicon.ico")
+
+
+@app.get("/sentry-debug", include_in_schema=False)
+async def trigger_error():
+    """Solo para verificar que Sentry esta conectado (paso 6 rima-ia, 9-sep-2026) --
+    dispara un error a proposito. Sin autenticacion pero sin exponer datos, y el
+    unico efecto es un ZeroDivisionError que Sentry captura."""
+    return 1 / 0
 
 # â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 # Persistencia local en JSON
