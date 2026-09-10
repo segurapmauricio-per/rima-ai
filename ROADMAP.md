@@ -51,10 +51,11 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
   data:base64 en correos recibidos, tiene que ser una URL publica real.
 - **(9-sep-2026)** Sentry conectado en producción (`SENTRY_DSN` en Easypanel, solo error
   monitoring). Verificado end-to-end con `/sentry-debug` — ver PYTHON-FASTAPI en sentry.io.
-- **(9-sep-2026)** `data_session()` — lock real (`threading.Lock`) para el par load→modify→save
-  que confirmadamente se pisó (scrape de IG en background vs. su propio polling de estado). Ver
-  nota de alcance en "Pendiente antes de primer usuario" — el resto de los call-sites del
-  archivo siguen sin migrar.
+- **(9-sep-2026)** `data_session()` — lock real (`threading.Lock`) para pares load→modify→save
+  con riesgo confirmado: scrape de IG en background vs. su propio polling de estado, y
+  descubrimiento de referentes similares en background vs. edición del usuario en simultáneo.
+  Ver nota de alcance en "Pendiente antes de primer usuario" — se auditó el resto de call-sites
+  del archivo y no quedó ninguno más con riesgo real por ahora.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -67,12 +68,15 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - [ ] Dashboard home rediseñado: pantalla de acciones claras, no solo lista de publicaciones
 - [ ] Descargar y cachear localmente las fotos de perfil de referentes (hoy se guarda la URL
       firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
-- [ ] **Lock de escritura — falta migrar el resto de los call-sites.** El 9-sep-2026 se agregó
-      `data_session()` (context manager con `threading.Lock`, ver main.py) y se migró el par que
-      confirmadamente corrompió datos (`_background_scrape` del onboarding vs. el polling de
-      `api_onboarding_status`). El resto de los ~50 usos de `load_data()`/`save_data()` sueltos en
-      main.py siguen sin lock — migrar de a uno cuando aparezca otro caso concreto de riesgo, no
-      todos juntos.
+- [ ] **Lock de escritura — falta migrar el resto de los call-sites (parcial, revisado 9-sep-2026).**
+      Migrados con `data_session()`: `_background_scrape` vs. `api_onboarding_status` (scrape de
+      onboarding), y `_run_referentes_discovery_background` (fetch_profile_meta/discover_similar_referentes
+      tardan segundos con el registro del usuario cargado en memoria). Se auditaron los ~50 usos
+      restantes de `load_data()`/`save_data()` en main.py: ninguno tiene hoy una operación lenta
+      real entre el load y el save (los webhooks de pago guardan ANTES del await lento; el scrape
+      manual `_run_scrape_for_user` ya relee justo antes de guardar; los endpoints de generación
+      KIE guardan en SQLite vía `update_publicacion_field`, no en rima_data.json) — quedan sin
+      lock por ahora, migrar de a uno si un cambio futuro introduce una espera real ahí.
 
 ---
 

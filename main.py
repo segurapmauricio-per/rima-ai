@@ -216,12 +216,17 @@ def data_session():
     archivo quede corrupto si se mata el proceso a mitad de un write; no evita que
     dos requests hagan load -> modificar -> save intercalados y uno pise al otro).
 
-    Migrado por ahora solo en el par que confirmadamente corrompio datos el
-    9-sep-2026: _background_scrape (scrape de IG en el onboarding, background task
-    de varios segundos) contra api_onboarding_status (poll cada 2.5s desde el
-    frontend mientras el scrape corre). El resto de los ~50 call-sites de
-    load_data()/save_data() en este archivo siguen sin lock -- migrarlos de a uno,
-    no todos juntos (ver Backlog acumulado en la skill rima-ia)."""
+    Migrado hasta ahora en los casos que revisamos y confirmamos con ventana de
+    riesgo real (9-sep-2026): _background_scrape (scrape de IG en el onboarding,
+    background task de varios segundos) contra api_onboarding_status (poll cada
+    2.5s desde el frontend mientras el scrape corre); y
+    _run_referentes_discovery_background (fetch_profile_meta/discover_similar_referentes
+    tardan segundos, y el usuario puede seguir escribiendo su propio registro
+    mientras tanto). El resto de los ~50 call-sites de load_data()/save_data() en
+    este archivo se revisaron y NO tienen una operacion lenta entre el load y el
+    save (o ya releen justo antes de guardar), asi que quedan sin lock por ahora
+    -- migrar de a uno si aparece un caso concreto nuevo, no todos juntos (ver
+    Backlog acumulado en la skill rima-ia)."""
     with _DATA_LOCK:
         d = load_data()
         yield d
@@ -5107,26 +5112,24 @@ def _run_referentes_discovery_background(email: str) -> None:
         if not existing:
             return
 
-        meta = fetch_profile_meta(existing)
-        sync_ig_profiles_from_meta(data, email, meta)
-        save_data(data)
+        meta = fetch_profile_meta(existing)  # lento (Apify/IG) -- fuera del lock
+        with data_session() as d:
+            sync_ig_profiles_from_meta(d, email, meta)
 
-        suggestions = discover_similar_referentes(brand, existing, limit=4)
+        suggestions = discover_similar_referentes(brand, existing, limit=4)  # lento -- fuera del lock
         existing_set = {u.lower() for u in existing}
         suggestions = [s for s in suggestions if s["username"] not in existing_set]
 
-        data = load_data()
-        rec = data.setdefault("users", {}).setdefault(email, {})
-        save_referentes_discovery_result(rec, suggestions)
-        save_data(data)
+        with data_session() as d:
+            rec = d.setdefault("users", {}).setdefault(email, {})
+            save_referentes_discovery_result(rec, suggestions)
     except Exception as e:
         print(f"[RIMA] referentes discovery: {e}")
         try:
-            data = load_data()
-            rec = data.get("users", {}).get(email)
-            if rec:
-                save_referentes_discovery_result(rec, [])
-                save_data(data)
+            with data_session() as d:
+                rec = d.get("users", {}).get(email)
+                if rec:
+                    save_referentes_discovery_result(rec, [])
         except Exception:
             pass
 
