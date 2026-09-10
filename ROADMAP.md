@@ -44,9 +44,19 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - **(9-sep-2026)** `save_data()` escribe atómico (temp file + replace) y `load_data()` respalda
   en vez de descartar un `rima_data.json` corrupto — corta el modo de falla que borraba datos
   en silencio al matar el proceso a mitad de un guardado.
+- **(9-sep-2026)** `cliente_id` nunca cae en el slug compartido "default" — ver
+  `ensure_cliente_id` en `core/referentes_store.py`.
+- **(9-sep-2026)** Correo de bienvenida con plantilla HTML de marca (antes texto plano). Logo
+  servido desde `/assets/logo_email.png` (mount de StaticFiles) — Gmail bloquea imagenes
+  data:base64 en correos recibidos, tiene que ser una URL publica real.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
+- [ ] **Auto-deploy por webhook roto** (confirmado 9-sep-2026): pushear a `main` NO dispara el
+      build en Easypanel — el ultimo deploy automatico fue hace 8 dias, los commits de hoy
+      quedaron sin desplegar hasta hacer clic manual en "Implementar". Revisar si el webhook de
+      GitHub->Easypanel sigue conectado (Dominios/Fuente del servicio `rima-api`) o si nunca
+      estuvo, y alguien deployaba a mano.
 - [ ] Resend para email de bienvenida con temp_password (reemplaza SMTP manual, 3,000 emails/mes gratis)
 - [ ] Sentry para tracking de errores en producción (KIE, scraping, agentes background)
 - [ ] Cloudflare para DNS + SSL del dominio en el VPS nuevo
