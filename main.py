@@ -120,6 +120,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
 
 ASSETS_DIR = Path(__file__).resolve().parent / "assets"
+app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -2794,17 +2795,26 @@ RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
 # EMAIL_FROM a una dirección de ese dominio.
 EMAIL_FROM = os.getenv("EMAIL_FROM", "RIMA AI <onboarding@resend.dev>")
 APP_LOGIN_URL = os.getenv("APP_LOGIN_URL", "https://rima.n8n-ghl.com/login")
+# Base pública (sin /login) para assets embebidos en emails — Gmail y otros
+# clientes bloquean imágenes data:base64 en correos recibidos, así que el
+# logo tiene que venir de una URL real (ver /assets, mount de StaticFiles).
+APP_BASE_URL = APP_LOGIN_URL.rsplit("/login", 1)[0]
 
 
-def _send_email_sync(to_email: str, subject: str, body: str) -> None:
+def _send_email_sync(to_email: str, subject: str, body: str, html: Optional[str] = None) -> None:
     """Envía vía Resend API (reemplaza SMTP Gmail — no depende de tu password
-    personal de Google, que revoca los App Passwords cada vez que la cambiás)."""
-    payload = json.dumps({
+    personal de Google, que revoca los App Passwords cada vez que la cambiás).
+    Manda siempre el `text` plano (fallback para clientes sin HTML / lectores
+    de pantalla); `html` es opcional y se agrega al payload solo si viene."""
+    payload_dict = {
         "from": EMAIL_FROM,
         "to": [to_email],
         "subject": subject,
         "text": body,
-    }).encode("utf-8")
+    }
+    if html:
+        payload_dict["html"] = html
+    payload = json.dumps(payload_dict).encode("utf-8")
     req = urllib.request.Request(
         "https://api.resend.com/emails",
         data=payload,
@@ -2818,6 +2828,71 @@ def _send_email_sync(to_email: str, subject: str, body: str) -> None:
     )
     with urllib.request.urlopen(req, timeout=15) as resp:
         resp.read()
+
+
+LOGO_EMAIL_URL = f"{APP_BASE_URL}/assets/logo_email.png"
+
+HTML_EMAIL_WELCOME = """\
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #E4DFF0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+  <tr>
+    <td style="padding:32px 36px 0;text-align:center;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="width:36px;"><img src="{logo_url}" width="36" height="36" alt="RIMA" style="display:block;border-radius:9px;"></td>
+          <td style="padding-left:10px;font-size:17px;font-weight:800;color:#1E1B2E;letter-spacing:-0.2px;">RIMA <span style="color:#7C3AED;">AI</span></td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:28px 36px 4px;text-align:center;">
+      <h1 style="margin:0;font-size:21px;font-weight:800;color:#1E1B2E;letter-spacing:-0.3px;">Tu cuenta ya está lista</h1>
+      <p style="margin:8px 0 0;font-size:14px;color:#6B6580;line-height:1.5;">Hola {name}, RIMA AI ya está generando el plan de contenido de tu negocio.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 36px 4px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#FAF9FD;border:1px solid #E4DFF0;border-radius:12px;">
+        <tr>
+          <td style="padding:16px 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding:6px 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8A84A0;width:110px;">Email</td>
+                <td style="padding:6px 0;font-size:14px;color:#1E1B2E;font-weight:600;">{email}</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 0;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8A84A0;">Contraseña temporal</td>
+                <td style="padding:6px 0;font-size:14px;color:#1E1B2E;font-weight:600;font-family:'SF Mono',Consolas,monospace;">{temp_password}</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:24px 36px 8px;text-align:center;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="border-radius:12px;background:#7C3AED;">
+            <a href="{login_url}" style="display:inline-block;padding:13px 32px;font-size:14px;font-weight:700;color:#FFFFFF;text-decoration:none;">Iniciar sesión →</a>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:12px 36px 32px;text-align:center;">
+      <p style="margin:0;font-size:12px;color:#8A84A0;line-height:1.5;">Por seguridad, cambiá tu contraseña apenas ingreses por primera vez.</p>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:20px 36px;border-top:1px solid #E4DFF0;text-align:center;">
+      <p style="margin:0;font-size:11px;color:#B0AABF;">RIMA AI — Marketing Intelligence para negocios en LATAM</p>
+    </td>
+  </tr>
+</table>
+"""
 
 
 async def send_welcome_email(to_email: str, name: str, temp_password: str) -> None:
@@ -2835,9 +2910,16 @@ async def send_welcome_email(to_email: str, name: str, temp_password: str) -> No
         f"Te recomendamos cambiar tu contraseña luego de tu primer ingreso.\n\n"
         f"Equipo RIMA AI"
     )
+    html = HTML_EMAIL_WELCOME.format(
+        logo_url=LOGO_EMAIL_URL,
+        name=name,
+        email=to_email,
+        temp_password=temp_password,
+        login_url=APP_LOGIN_URL,
+    )
 
     try:
-        await asyncio.to_thread(_send_email_sync, to_email, subject, body)
+        await asyncio.to_thread(_send_email_sync, to_email, subject, body, html)
         print(f"[RIMA] Correo de bienvenida enviado a {to_email}")
     except Exception as e:
         print(f"[RIMA] Error enviando correo de bienvenida a {to_email}: {e}")
