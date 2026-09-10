@@ -219,14 +219,16 @@ def data_session():
     Migrado hasta ahora en los casos que revisamos y confirmamos con ventana de
     riesgo real (9-sep-2026): _background_scrape (scrape de IG en el onboarding,
     background task de varios segundos) contra api_onboarding_status (poll cada
-    2.5s desde el frontend mientras el scrape corre); y
-    _run_referentes_discovery_background (fetch_profile_meta/discover_similar_referentes
-    tardan segundos, y el usuario puede seguir escribiendo su propio registro
-    mientras tanto). El resto de los ~50 call-sites de load_data()/save_data() en
-    este archivo se revisaron y NO tienen una operacion lenta entre el load y el
-    save (o ya releen justo antes de guardar), asi que quedan sin lock por ahora
-    -- migrar de a uno si aparece un caso concreto nuevo, no todos juntos (ver
-    Backlog acumulado en la skill rima-ia)."""
+    2.5s desde el frontend mientras el scrape corre); _run_referentes_discovery_background
+    (fetch_profile_meta/discover_similar_referentes tardan segundos, y el usuario
+    puede seguir escribiendo su propio registro mientras tanto); y api_referentes_discovery
+    (el mismo lock evita que dos polls casi simultaneos lean "pending" antes de
+    que cualquiera guarde "running", lo que disparaba el mismo scrape en
+    background dos veces). El resto de los ~50 call-sites de load_data()/save_data()
+    en este archivo se revisaron y NO tienen una operacion lenta entre el load y
+    el save (o ya releen justo antes de guardar), asi que quedan sin lock por
+    ahora -- migrar de a uno si aparece un caso concreto nuevo, no todos juntos
+    (ver Backlog acumulado en la skill rima-ia)."""
     with _DATA_LOCK:
         d = load_data()
         yield d
@@ -5159,18 +5161,23 @@ def api_referentes_discovery(
     background_tasks: BackgroundTasks,
     user: dict = Depends(get_current_user),
 ):
-    data = load_data()
     email = (user.get("email") or "").strip().lower()
-    rec = data.setdefault("users", {}).setdefault(email, {})
-    if ensure_dashboard_flags(rec):
-        save_data(data)
-    ref_count = len(active_ig_usernames(data, email))
-    state = get_referentes_discovery_state(rec, ref_count)
-    if state.get("should_generate"):
-        mark_referentes_discovery_running(rec)
-        save_data(data)
-        background_tasks.add_task(_run_referentes_discovery_background, email)
+    schedule = False
+    # Chequear should_generate y marcar "running" en una sola seccion atomica:
+    # el frontend hace polling a este endpoint, y sin el lock dos requests casi
+    # simultaneas podian leer "pending" antes de que cualquiera guardara
+    # "running", disparando el mismo scrape en background dos veces.
+    with data_session() as data:
+        rec = data.setdefault("users", {}).setdefault(email, {})
+        ensure_dashboard_flags(rec)
+        ref_count = len(active_ig_usernames(data, email))
         state = get_referentes_discovery_state(rec, ref_count)
+        if state.get("should_generate"):
+            mark_referentes_discovery_running(rec)
+            schedule = True
+            state = get_referentes_discovery_state(rec, ref_count)
+    if schedule:
+        background_tasks.add_task(_run_referentes_discovery_background, email)
     return state
 
 

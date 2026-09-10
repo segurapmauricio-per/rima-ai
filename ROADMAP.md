@@ -52,10 +52,12 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
 - **(9-sep-2026)** Sentry conectado en producción (`SENTRY_DSN` en Easypanel, solo error
   monitoring). Verificado end-to-end con `/sentry-debug` — ver PYTHON-FASTAPI en sentry.io.
 - **(9-sep-2026)** `data_session()` — lock real (`threading.Lock`) para pares load→modify→save
-  con riesgo confirmado: scrape de IG en background vs. su propio polling de estado, y
-  descubrimiento de referentes similares en background vs. edición del usuario en simultáneo.
-  Ver nota de alcance en "Pendiente antes de primer usuario" — se auditó el resto de call-sites
-  del archivo y no quedó ninguno más con riesgo real por ahora.
+  con riesgo confirmado: scrape de IG en background vs. su propio polling de estado;
+  descubrimiento de referentes similares en background vs. edición del usuario en simultáneo; y
+  el propio endpoint de polling (`/api/referentes/discovery`) contra sí mismo, para que dos
+  polls casi simultáneos no disparen el mismo scrape en background dos veces. Ver nota de
+  alcance en "Pendiente antes de primer usuario" — se auditó el resto de call-sites del archivo
+  y no quedó ninguno más con riesgo real por ahora.
 
 ### Pendiente antes de primer usuario ⚠️
 - [ ] Deploy VPS nuevo (en curso — 23 jun 2026)
@@ -70,8 +72,10 @@ No es una herramienta de contenido — es un empleado digital que genera conteni
       firmada de Instagram, que expira — fotos rotas en Estudio de Mercado semanas después).
 - [ ] **Lock de escritura — falta migrar el resto de los call-sites (parcial, revisado 9-sep-2026).**
       Migrados con `data_session()`: `_background_scrape` vs. `api_onboarding_status` (scrape de
-      onboarding), y `_run_referentes_discovery_background` (fetch_profile_meta/discover_similar_referentes
-      tardan segundos con el registro del usuario cargado en memoria). Se auditaron los ~50 usos
+      onboarding); `_run_referentes_discovery_background` (fetch_profile_meta/discover_similar_referentes
+      tardan segundos con el registro del usuario cargado en memoria); y `api_referentes_discovery`
+      (dos polls casi simultáneos podían leer "pending" antes de que cualquiera guardara
+      "running" y disparar el scrape en background dos veces). Se auditaron los ~50 usos
       restantes de `load_data()`/`save_data()` en main.py: ninguno tiene hoy una operación lenta
       real entre el load y el save (los webhooks de pago guardan ANTES del await lento; el scrape
       manual `_run_scrape_for_user` ya relee justo antes de guardar; los endpoints de generación
